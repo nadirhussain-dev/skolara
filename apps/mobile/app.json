@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Skolara",
+    "slug": "skolara",
+    "scheme": "skolara",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "plugins": ["expo-router"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.skolara.app"
+    },
+    "android": {
+      "package": "com.skolara.app"
+    }
+  }
+}
