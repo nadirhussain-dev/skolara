@@ -1,6 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
-import type { CreateSchoolInput, SubscriptionStatus } from "@skolara/types";
+import type {
+  CreateSchoolInput,
+  SubscriptionStatus,
+  UpdateBrandingInput,
+} from "@skolara/types";
 import { PrismaService } from "../prisma/prisma.service";
 
 const TRIAL_DAYS = 14;
@@ -77,6 +81,17 @@ export class SchoolsService {
     return this.prisma.school.update({
       where: { id },
       data: { subscriptionStatus: status },
+    });
+  }
+
+  async updateBranding(id: string, input: UpdateBrandingInput) {
+    await this.findOne(id);
+    return this.prisma.school.update({
+      where: { id },
+      data: {
+        ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl } : {}),
+        ...(input.primaryColor !== undefined ? { primaryColor: input.primaryColor } : {}),
+      },
     });
   }
 }

@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -56,5 +57,12 @@ export class GradesController {
     if (!user.schoolId) throw new ForbiddenException("No school context");
     await this.studentAccess.assertCanAccessStudent(user, studentId);
     return this.gradesService.findForStudent(user.schoolId, studentId);
+  }
+
+  @Patch(":id/generate-comment")
+  @Roles("TEACHER", "SCHOOL_ADMIN")
+  generateComment(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    return this.gradesService.generateComment(user.schoolId, id);
   }
 }

@@ -1,0 +1,92 @@
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from "@nestjs/common";
+import {
+  createAssignmentSchema,
+  gradeAssignmentSchema,
+  submitAssignmentSchema,
+  type CreateAssignmentInput,
+  type GradeAssignmentInput,
+  type SubmitAssignmentInput,
+} from "@skolara/types";
+import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { Roles } from "../common/decorators/roles.decorator";
+import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { RolesGuard } from "../common/guards/roles.guard";
+import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
+import { StudentAccessService } from "../common/student-access.service";
+import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
+import { AssignmentsService } from "./assignments.service";
+
+@Controller("assignments")
+@UseGuards(JwtAuthGuard, RolesGuard)
+export class AssignmentsController {
+  constructor(
+    private assignmentsService: AssignmentsService,
+    private studentAccess: StudentAccessService,
+  ) {}
+
+  @Post()
+  @Roles("TEACHER", "SCHOOL_ADMIN")
+  create(
+    @Body(new ZodValidationPipe(createAssignmentSchema)) body: CreateAssignmentInput,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    return this.assignmentsService.create(user.schoolId, user.id, body);
+  }
+
+  @Get("class/:classId")
+  @Roles("TEACHER", "SCHOOL_ADMIN", "STUDENT", "PARENT")
+  findForClass(
+    @Param("classId") classId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    return this.assignmentsService.findForClass(user.schoolId, classId);
+  }
+
+  @Post(":id/submissions/:studentId")
+  @Roles("STUDENT", "PARENT")
+  async submit(
+    @Param("id") assignmentId: string,
+    @Param("studentId") studentId: string,
+    @Body(new ZodValidationPipe(submitAssignmentSchema)) body: SubmitAssignmentInput,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    await this.studentAccess.assertCanAccessStudent(user, studentId);
+    return this.assignmentsService.submit(studentId, assignmentId, body);
+  }
+
+  @Get(":id/submissions")
+  @Roles("TEACHER", "SCHOOL_ADMIN")
+  findSubmissions(@Param("id") assignmentId: string) {
+    return this.assignmentsService.findSubmissions(assignmentId);
+  }
+
+  @Patch("submissions/:submissionId/grade")
+  @Roles("TEACHER", "SCHOOL_ADMIN")
+  grade(
+    @Param("submissionId") submissionId: string,
+    @Body(new ZodValidationPipe(gradeAssignmentSchema)) body: GradeAssignmentInput,
+  ) {
+    return this.assignmentsService.grade(submissionId, body);
+  }
+
+  @Get("student/:studentId")
+  @Roles("TEACHER", "SCHOOL_ADMIN", "STUDENT", "PARENT")
+  async findForStudent(
+    @Param("studentId") studentId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    await this.studentAccess.assertCanAccessStudent(user, studentId);
+    return this.assignmentsService.findForStudent(studentId);
+  }
+}

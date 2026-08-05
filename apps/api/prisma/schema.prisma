@@ -68,6 +68,12 @@ enum NoticeAudience {
   CLASS
 }
 
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
 model School {
   id                 String              @id @default(uuid())
   name                String
@@ -77,6 +83,8 @@ model School {
   trialEndsAt         DateTime?
   logoUrl             String?
   primaryColor        String?
+  schoolGroupId       String?
+  schoolGroup         SchoolGroup?        @relation(fields: [schoolGroupId], references: [id])
   createdAt           DateTime            @default(now())
 
   users               User[]
@@ -89,6 +97,18 @@ model School {
   paymentReferenceSeqs PaymentReferenceSequence[]
   gradeEntries        GradeEntry[]
   notices             Notice[]
+  assignments         Assignment[]
+  messageThreads      MessageThread[]
+  complaints          Complaint[]
+  bankStatementLines  BankStatementLine[]
+  exams               Exam[]
+  books               Book[]
+  bookLoans           BookLoan[]
+  buses               Bus[]
+  payslips            Payslip[]
+  apiKeys             ApiKey[]
+
+  @@index([schoolGroupId])
 }
 
 model User {
@@ -112,6 +132,13 @@ model User {
   children                ParentStudentLink[]
   gradedEntries           GradeEntry[]        @relation("GradedByUser")
   publishedNotices        Notice[]            @relation("PublishedByUser")
+  createdAssignments      Assignment[]        @relation("CreatedByUser")
+  teacherThreads          MessageThread[]     @relation("ThreadTeacher")
+  parentThreads           MessageThread[]     @relation("ThreadParent")
+  sentMessages            Message[]           @relation("SentMessages")
+  raisedComplaints        Complaint[]         @relation("RaisedByUser")
+  complaintComments       ComplaintComment[]
+  payslips                Payslip[]           @relation("StaffPayslips")
 
   @@index([schoolId])
 }
@@ -141,6 +168,8 @@ model SchoolClass {
   attendanceRecords  AttendanceRecord[]
   gradeEntries       GradeEntry[]
   notices            Notice[]
+  assignments        Assignment[]
+  exams              Exam[]
 
   @@index([schoolId])
 }
@@ -161,6 +190,11 @@ model StudentProfile {
   paymentSubmissions PaymentSubmission[]
   parentLinks        ParentStudentLink[]
   gradeEntries       GradeEntry[]
+  assignmentSubmissions AssignmentSubmission[]
+  messageThreads     MessageThread[]
+  complaints         Complaint[]
+  bookLoans          BookLoan[]
+  busAssignment      BusAssignment?
 
   @@unique([schoolId, admissionNumber])
   @@index([schoolId])
@@ -238,6 +272,7 @@ model PaymentSubmission {
   reviewedByUser     User?                     @relation("ReviewedByUser", fields: [reviewedByUserId], references: [id])
   reviewedAt         DateTime?
   createdAt          DateTime                  @default(now())
+  matchedBankStatementLine BankStatementLine?
 
   @@index([schoolId, status])
   @@index([studentId])
@@ -293,4 +328,237 @@ model Notice {
 
   @@index([schoolId, createdAt])
   @@index([classId])
+}
+
+model SchoolGroup {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  schools School[]
+}
+
+model Assignment {
+  id              String   @id @default(uuid())
+  schoolId        String
+  school          School   @relation(fields: [schoolId], references: [id])
+  classId         String
+  class           SchoolClass @relation(fields: [classId], references: [id])
+  subject         String
+  title           String
+  description     String?
+  dueDate         DateTime
+  createdByUserId String
+  createdByUser   User     @relation("CreatedByUser", fields: [createdByUserId], references: [id])
+  createdAt       DateTime @default(now())
+
+  submissions AssignmentSubmission[]
+
+  @@index([schoolId])
+  @@index([classId])
+}
+
+model AssignmentSubmission {
+  id           String    @id @default(uuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+  studentId    String
+  student      StudentProfile @relation(fields: [studentId], references: [id])
+  fileUrl      String
+  note         String?
+  grade        String?
+  feedback     String?
+  submittedAt  DateTime  @default(now())
+
+  @@unique([assignmentId, studentId])
+  @@index([studentId])
+}
+
+model MessageThread {
+  id            String   @id @default(uuid())
+  schoolId      String
+  school        School   @relation(fields: [schoolId], references: [id])
+  studentId     String
+  student       StudentProfile @relation(fields: [studentId], references: [id])
+  teacherUserId String
+  teacherUser   User     @relation("ThreadTeacher", fields: [teacherUserId], references: [id])
+  parentUserId  String
+  parentUser    User     @relation("ThreadParent", fields: [parentUserId], references: [id])
+  createdAt     DateTime @default(now())
+
+  messages Message[]
+
+  @@unique([studentId, teacherUserId, parentUserId])
+  @@index([schoolId])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  threadId  String
+  thread    MessageThread @relation(fields: [threadId], references: [id])
+  senderId  String
+  sender    User     @relation("SentMessages", fields: [senderId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([threadId, createdAt])
+}
+
+model Complaint {
+  id             String          @id @default(uuid())
+  schoolId       String
+  school         School          @relation(fields: [schoolId], references: [id])
+  raisedByUserId String
+  raisedByUser   User            @relation("RaisedByUser", fields: [raisedByUserId], references: [id])
+  studentId      String?
+  student        StudentProfile? @relation(fields: [studentId], references: [id])
+  subject        String
+  body           String
+  status         ComplaintStatus @default(OPEN)
+  createdAt      DateTime        @default(now())
+  resolvedAt     DateTime?
+
+  comments ComplaintComment[]
+
+  @@index([schoolId, status])
+}
+
+model ComplaintComment {
+  id           String    @id @default(uuid())
+  complaintId  String
+  complaint    Complaint @relation(fields: [complaintId], references: [id])
+  authorUserId String
+  authorUser   User      @relation(fields: [authorUserId], references: [id])
+  body         String
+  createdAt    DateTime  @default(now())
+
+  @@index([complaintId])
+}
+
+// Parsed lines from a school-uploaded bank statement CSV, used to suggest
+// matches against PENDING_VERIFICATION payment submissions by amount.
+model BankStatementLine {
+  id                       String             @id @default(uuid())
+  schoolId                 String
+  school                   School             @relation(fields: [schoolId], references: [id])
+  transactionDate          DateTime
+  amount                   Decimal            @db.Decimal(12, 2)
+  description              String
+  matchedPaymentSubmissionId String?          @unique
+  matchedPaymentSubmission  PaymentSubmission? @relation(fields: [matchedPaymentSubmissionId], references: [id])
+  importedAt               DateTime           @default(now())
+
+  @@index([schoolId])
+}
+
+model Exam {
+  id            String   @id @default(uuid())
+  schoolId      String
+  school        School   @relation(fields: [schoolId], references: [id])
+  classId       String
+  class         SchoolClass @relation(fields: [classId], references: [id])
+  name          String
+  term          String
+  examType      String
+  scheduledDate DateTime
+
+  @@index([schoolId])
+  @@index([classId])
+}
+
+model Book {
+  id              String   @id @default(uuid())
+  schoolId        String
+  school          School   @relation(fields: [schoolId], references: [id])
+  title           String
+  author          String
+  isbn            String?
+  totalCopies     Int
+  availableCopies Int
+
+  loans BookLoan[]
+
+  @@index([schoolId])
+}
+
+model BookLoan {
+  id         String    @id @default(uuid())
+  schoolId   String
+  school     School    @relation(fields: [schoolId], references: [id])
+  bookId     String
+  book       Book      @relation(fields: [bookId], references: [id])
+  studentId  String
+  student    StudentProfile @relation(fields: [studentId], references: [id])
+  borrowedAt DateTime  @default(now())
+  dueAt      DateTime
+  returnedAt DateTime?
+
+  @@index([schoolId])
+  @@index([bookId])
+  @@index([studentId])
+}
+
+model Bus {
+  id           String   @id @default(uuid())
+  schoolId     String
+  school       School   @relation(fields: [schoolId], references: [id])
+  plateNumber  String
+  driverName   String
+  driverPhone  String?
+  routeName    String
+
+  assignments BusAssignment[]
+  locationPings BusLocationPing[]
+
+  @@index([schoolId])
+}
+
+model BusAssignment {
+  busId     String
+  bus       Bus            @relation(fields: [busId], references: [id])
+  studentId String         @unique
+  student   StudentProfile @relation(fields: [studentId], references: [id])
+
+  @@id([busId, studentId])
+}
+
+model BusLocationPing {
+  id         String   @id @default(uuid())
+  busId      String
+  bus        Bus      @relation(fields: [busId], references: [id])
+  latitude   Float
+  longitude  Float
+  recordedAt DateTime @default(now())
+
+  @@index([busId, recordedAt])
+}
+
+model Payslip {
+  id           String   @id @default(uuid())
+  schoolId     String
+  school       School   @relation(fields: [schoolId], references: [id])
+  staffUserId  String
+  staffUser    User     @relation("StaffPayslips", fields: [staffUserId], references: [id])
+  month        String
+  basicSalary  Decimal  @db.Decimal(12, 2)
+  deductions   Decimal  @default(0) @db.Decimal(12, 2)
+  netPay       Decimal  @db.Decimal(12, 2)
+  generatedAt  DateTime @default(now())
+
+  @@unique([staffUserId, month])
+  @@index([schoolId])
+}
+
+model ApiKey {
+  id         String    @id @default(uuid())
+  schoolId   String
+  school     School    @relation(fields: [schoolId], references: [id])
+  name       String
+  keyPrefix  String
+  hashedKey  String
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
+  @@index([schoolId])
 }

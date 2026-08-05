@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { UpsertGradeEntryInput } from "@skolara/types";
+import { AiService } from "../ai/ai.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class GradesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private aiService: AiService,
+  ) {}
 
   async upsert(
     schoolId: string,
@@ -68,6 +72,26 @@ export class GradesService {
     return this.prisma.gradeEntry.findMany({
       where: { schoolId, studentId },
       orderBy: [{ term: "desc" }, { subject: "asc" }],
+    });
+  }
+
+  async generateComment(schoolId: string, gradeEntryId: string) {
+    const entry = await this.prisma.gradeEntry.findFirst({
+      where: { id: gradeEntryId, schoolId },
+      include: { student: { include: { user: true } } },
+    });
+    if (!entry) throw new NotFoundException("Grade entry not found");
+
+    const comment = await this.aiService.generateReportComment({
+      firstName: entry.student.user.firstName,
+      subject: entry.subject,
+      marksObtained: Number(entry.marksObtained),
+      maxMarks: Number(entry.maxMarks),
+    });
+
+    return this.prisma.gradeEntry.update({
+      where: { id: gradeEntryId },
+      data: { comments: comment },
     });
   }
 }
