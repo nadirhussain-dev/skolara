@@ -25,7 +25,7 @@ export default function LoginScreen() {
     });
     await setStoredAccessToken(result.accessToken);
     if (result.user.role === "TEACHER") {
-      router.replace("/attendance");
+      router.replace("/teacher-dashboard");
     } else {
       router.replace("/dashboard");
     }

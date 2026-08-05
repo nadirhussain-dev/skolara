@@ -9,3 +9,7 @@ export * from "./hooks/use-my-children";
 export * from "./hooks/use-invoices";
 export * from "./hooks/use-grades";
 export * from "./hooks/use-notices";
+export * from "./hooks/use-assignments";
+export * from "./hooks/use-complaints";
+export * from "./hooks/use-messaging";
+export * from "./hooks/use-analytics";

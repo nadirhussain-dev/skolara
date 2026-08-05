@@ -1,20 +1,37 @@
 import type {
+  AddComplaintCommentInput,
+  Assignment,
+  AssignmentSubmission,
   AttendanceRecord,
   AuthResponse,
+  Complaint,
+  ComplaintComment,
+  CreateAssignmentInput,
   CreateClassInput,
+  CreateComplaintInput,
   CreateNoticeInput,
   CreateSchoolInput,
+  DefaulterRisk,
+  GradeAssignmentInput,
   GradeEntry,
   Invoice,
   LoginInput,
   MarkAttendanceInput,
+  Message,
+  MessageThread,
   Notice,
   PaymentSubmission,
   PaymentSubmissionStatus,
+  PlatformAnalytics,
   ReviewPaymentInput,
   School,
+  SchoolAnalytics,
   SchoolClass,
+  SendMessageInput,
+  StartThreadInput,
+  SubmitAssignmentInput,
   SubmitPaymentInput,
+  UpdateComplaintStatusInput,
   UpsertGradeEntryInput,
 } from "@skolara/types";
 
@@ -36,6 +53,26 @@ export interface StudentWithUser {
 
 export interface GradeEntryWithStudent extends GradeEntry {
   student: { id: string; user: { firstName: string; lastName: string } };
+}
+
+export interface AssignmentSubmissionWithStudent extends AssignmentSubmission {
+  student: { id: string; user: { id: string; firstName: string; lastName: string } };
+}
+
+export interface AssignmentSubmissionWithAssignment extends AssignmentSubmission {
+  assignment: Assignment;
+}
+
+export interface MessageThreadWithStudent extends MessageThread {
+  student: { id: string; user: { id: string; firstName: string; lastName: string } };
+}
+
+export interface ComplaintWithComments extends Complaint {
+  comments: ComplaintComment[];
+}
+
+export interface DefaulterRiskWithExplanation extends DefaulterRisk {
+  explanation: string;
 }
 
 export class ApiError extends Error {
@@ -162,6 +199,72 @@ export function createApiClient({ baseUrl, getAccessToken }: ApiClientOptions) {
           body: JSON.stringify(input),
         }),
       list: () => request<Notice[]>("/notices"),
+    },
+    assignments: {
+      create: (input: CreateAssignmentInput) =>
+        request<Assignment>("/assignments", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      forClass: (classId: string) =>
+        request<Assignment[]>(`/assignments/class/${classId}`),
+      submit: (assignmentId: string, studentId: string, input: SubmitAssignmentInput) =>
+        request<AssignmentSubmission>(
+          `/assignments/${assignmentId}/submissions/${studentId}`,
+          { method: "POST", body: JSON.stringify(input) },
+        ),
+      submissions: (assignmentId: string) =>
+        request<AssignmentSubmissionWithStudent[]>(
+          `/assignments/${assignmentId}/submissions`,
+        ),
+      grade: (submissionId: string, input: GradeAssignmentInput) =>
+        request<AssignmentSubmission>(`/assignments/submissions/${submissionId}/grade`, {
+          method: "PATCH",
+          body: JSON.stringify(input),
+        }),
+      forStudent: (studentId: string) =>
+        request<AssignmentSubmissionWithAssignment[]>(`/assignments/student/${studentId}`),
+    },
+    complaints: {
+      create: (input: CreateComplaintInput) =>
+        request<Complaint>("/complaints", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      list: () => request<Complaint[]>("/complaints"),
+      mine: () => request<Complaint[]>("/complaints/mine"),
+      findOne: (id: string) => request<ComplaintWithComments>(`/complaints/${id}`),
+      addComment: (id: string, input: AddComplaintCommentInput) =>
+        request<ComplaintComment>(`/complaints/${id}/comments`, {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      updateStatus: (id: string, input: UpdateComplaintStatusInput) =>
+        request<Complaint>(`/complaints/${id}/status`, {
+          method: "PATCH",
+          body: JSON.stringify(input),
+        }),
+    },
+    messaging: {
+      startThread: (input: StartThreadInput) =>
+        request<MessageThread>("/messages/threads", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      threads: () => request<MessageThreadWithStudent[]>("/messages/threads"),
+      messages: (threadId: string) =>
+        request<Message[]>(`/messages/threads/${threadId}/messages`),
+      send: (threadId: string, input: SendMessageInput) =>
+        request<Message>(`/messages/threads/${threadId}/messages`, {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+    },
+    analytics: {
+      platform: () => request<PlatformAnalytics>("/analytics/platform"),
+      school: () => request<SchoolAnalytics>("/analytics/school"),
+      defaulterRisk: (studentId: string) =>
+        request<DefaulterRiskWithExplanation>(`/analytics/defaulter-risk/${studentId}`),
     },
   };
 }

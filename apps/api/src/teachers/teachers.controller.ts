@@ -34,6 +34,7 @@ export class TeachersController {
   }
 
   @Get()
+  @Roles("SCHOOL_ADMIN", "PARENT")
   findAll(@CurrentUser() user: AuthenticatedUser) {
     if (!user.schoolId) throw new ForbiddenException("No school context");
     return this.teachersService.findAllForSchool(user.schoolId);

@@ -15,8 +15,20 @@ export default function RootLayout() {
         />
         <Stack.Screen name="payments/submit" options={{ title: "Submit payment" }} />
         <Stack.Screen name="dashboard" options={{ title: "Skolara" }} />
+        <Stack.Screen name="teacher-dashboard" options={{ title: "Skolara" }} />
         <Stack.Screen name="results/index" options={{ title: "Results" }} />
         <Stack.Screen name="notices/index" options={{ title: "Notices" }} />
+        <Stack.Screen name="assignments/index" options={{ title: "Select class" }} />
+        <Stack.Screen name="assignments/[classId]" options={{ title: "Assignments" }} />
+        <Stack.Screen
+          name="assignments/submissions/[assignmentId]"
+          options={{ title: "Submissions" }}
+        />
+        <Stack.Screen name="assignments/mine" options={{ title: "Homework" }} />
+        <Stack.Screen name="complaints/index" options={{ title: "Complaints" }} />
+        <Stack.Screen name="complaints/[id]" options={{ title: "Complaint" }} />
+        <Stack.Screen name="messages/index" options={{ title: "Messages" }} />
+        <Stack.Screen name="messages/[threadId]" options={{ title: "Conversation" }} />
       </Stack>
     </Providers>
   );

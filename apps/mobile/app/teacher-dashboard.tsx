@@ -2,15 +2,12 @@ import { Link } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 
 const links = [
-  { href: "/payments/submit", label: "Submit a fee payment" },
-  { href: "/results", label: "View results" },
-  { href: "/notices", label: "Notices" },
-  { href: "/assignments/mine", label: "Homework & assignments" },
-  { href: "/complaints", label: "Complaints" },
+  { href: "/attendance", label: "Mark attendance" },
+  { href: "/assignments", label: "Homework & assignments" },
   { href: "/messages", label: "Messages" },
 ] as const;
 
-export default function DashboardScreen() {
+export default function TeacherDashboardScreen() {
   return (
     <View style={styles.container}>
       {links.map((link) => (
