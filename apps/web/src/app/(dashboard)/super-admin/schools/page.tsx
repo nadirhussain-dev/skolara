@@ -1,6 +1,11 @@
 "use client";
 
-import { useCreateSchool, useSchools } from "@skolara/api-client";
+import {
+  useApproveSchool,
+  useCreateSchool,
+  useRejectSchool,
+  useSchools,
+} from "@skolara/api-client";
 import type { SubscriptionPlan } from "@skolara/types";
 import { Badge, Button, Card, CardHeader, CardTitle, Input } from "@skolara/ui";
 import { useState } from "react";
@@ -13,24 +18,44 @@ const planOptions: SubscriptionPlan[] = [
 ];
 
 const statusTone = {
+  PENDING: "warning",
   TRIAL: "info",
   ACTIVE: "success",
   EXPIRED: "warning",
   SUSPENDED: "danger",
+  REJECTED: "danger",
 } as const;
 
 export default function SchoolsPage() {
   const { data: schools, isLoading } = useSchools();
   const createSchool = useCreateSchool();
+  const approveSchool = useApproveSchool();
+  const rejectSchool = useRejectSchool();
   const [name, setName] = useState("");
   const [subdomain, setSubdomain] = useState("");
   const [plan, setPlan] = useState<SubscriptionPlan>("BASIC");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminFirstName, setAdminFirstName] = useState("");
+  const [adminLastName, setAdminLastName] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await createSchool.mutateAsync({ name, subdomain, plan });
+    await createSchool.mutateAsync({
+      name,
+      subdomain,
+      plan,
+      adminEmail,
+      adminPassword,
+      adminFirstName,
+      adminLastName,
+    });
     setName("");
     setSubdomain("");
+    setAdminEmail("");
+    setAdminPassword("");
+    setAdminFirstName("");
+    setAdminLastName("");
   }
 
   return (
@@ -65,6 +90,36 @@ export default function SchoolsPage() {
               </option>
             ))}
           </select>
+          <Input
+            placeholder="Admin first name"
+            required
+            value={adminFirstName}
+            onChange={(e) => setAdminFirstName(e.target.value)}
+            className="max-w-[160px]"
+          />
+          <Input
+            placeholder="Admin last name"
+            required
+            value={adminLastName}
+            onChange={(e) => setAdminLastName(e.target.value)}
+            className="max-w-[160px]"
+          />
+          <Input
+            type="email"
+            placeholder="Admin email"
+            required
+            value={adminEmail}
+            onChange={(e) => setAdminEmail(e.target.value)}
+            className="max-w-xs"
+          />
+          <Input
+            type="password"
+            placeholder="Admin password"
+            required
+            value={adminPassword}
+            onChange={(e) => setAdminPassword(e.target.value)}
+            className="max-w-[180px]"
+          />
           <Button type="submit" disabled={createSchool.isPending}>
             {createSchool.isPending ? "Creating..." : "Create school"}
           </Button>
@@ -88,9 +143,29 @@ export default function SchoolsPage() {
                   {school.subdomain}.skolara.app · {school.plan}
                 </p>
               </div>
-              <Badge tone={statusTone[school.subscriptionStatus]}>
-                {school.subscriptionStatus}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge tone={statusTone[school.subscriptionStatus]}>
+                  {school.subscriptionStatus}
+                </Badge>
+                {school.subscriptionStatus === "PENDING" && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      onClick={() => approveSchool.mutate(school.id)}
+                      disabled={approveSchool.isPending}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => rejectSchool.mutate(school.id)}
+                      disabled={rejectSchool.isPending}
+                    >
+                      Reject
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           ))}
         </div>

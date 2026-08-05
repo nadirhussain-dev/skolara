@@ -7,3 +7,5 @@ export * from "./hooks/use-attendance";
 export * from "./hooks/use-submit-payment";
 export * from "./hooks/use-my-children";
 export * from "./hooks/use-invoices";
+export * from "./hooks/use-grades";
+export * from "./hooks/use-notices";

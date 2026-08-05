@@ -53,7 +53,15 @@ export class AttendanceService {
 
     return this.prisma.attendanceRecord.findMany({
       where: { classId, date },
-      include: { student: { include: { user: true } } },
+      include: {
+        student: {
+          include: {
+            user: {
+              select: { id: true, firstName: true, lastName: true },
+            },
+          },
+        },
+      },
     });
   }
 

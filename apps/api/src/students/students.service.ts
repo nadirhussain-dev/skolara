@@ -3,6 +3,14 @@ import * as bcrypt from "bcrypt";
 import type { AdmitStudentInput } from "@skolara/types";
 import { PrismaService } from "../prisma/prisma.service";
 
+const PUBLIC_USER_SELECT = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  email: true,
+  phone: true,
+} as const;
+
 @Injectable()
 export class StudentsService {
   constructor(private prisma: PrismaService) {}
@@ -49,21 +57,21 @@ export class StudentsService {
   findChildrenForParent(parentUserId: string) {
     return this.prisma.studentProfile.findMany({
       where: { parentLinks: { some: { parentUserId } } },
-      include: { user: true },
+      include: { user: { select: PUBLIC_USER_SELECT } },
     });
   }
 
   findAllForClass(schoolId: string, classId: string) {
     return this.prisma.studentProfile.findMany({
       where: { schoolId, classId },
-      include: { user: true },
+      include: { user: { select: PUBLIC_USER_SELECT } },
     });
   }
 
   async findOne(schoolId: string, id: string) {
     const profile = await this.prisma.studentProfile.findFirst({
       where: { id, schoolId },
-      include: { user: true },
+      include: { user: { select: PUBLIC_USER_SELECT } },
     });
     if (!profile) throw new NotFoundException("Student not found");
     return profile;

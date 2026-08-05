@@ -21,9 +21,9 @@ export const createUserSchema = userSchema
     email: true,
     firstName: true,
     lastName: true,
-    phone: true,
   })
   .extend({
     password: z.string().min(8),
+    phone: z.string().optional(),
   });
 export type CreateUserInput = z.infer<typeof createUserSchema>;

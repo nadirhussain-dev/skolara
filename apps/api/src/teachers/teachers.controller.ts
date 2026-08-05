@@ -6,7 +6,6 @@ import {
   Param,
   Post,
   UseGuards,
-  UsePipes,
 } from "@nestjs/common";
 import { createTeacherSchema, type CreateTeacherInput } from "@skolara/types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -24,8 +23,10 @@ export class TeachersController {
   constructor(private teachersService: TeachersService) {}
 
   @Post()
-  @UsePipes(new ZodValidationPipe(createTeacherSchema))
-  create(@Body() body: CreateTeacherInput, @CurrentUser() user: AuthenticatedUser) {
+  create(
+    @Body(new ZodValidationPipe(createTeacherSchema)) body: CreateTeacherInput,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     if (user.schoolId !== body.schoolId) {
       throw new ForbiddenException("Cannot act outside your own school");
     }

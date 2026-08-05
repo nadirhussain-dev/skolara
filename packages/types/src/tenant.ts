@@ -9,10 +9,12 @@ export const subscriptionPlanSchema = z.enum([
 export type SubscriptionPlan = z.infer<typeof subscriptionPlanSchema>;
 
 export const subscriptionStatusSchema = z.enum([
+  "PENDING",
   "TRIAL",
   "ACTIVE",
   "EXPIRED",
   "SUSPENDED",
+  "REJECTED",
 ]);
 export type SubscriptionStatus = z.infer<typeof subscriptionStatusSchema>;
 
@@ -32,9 +34,16 @@ export const schoolSchema = z.object({
 });
 export type School = z.infer<typeof schoolSchema>;
 
-export const createSchoolSchema = schoolSchema.pick({
-  name: true,
-  subdomain: true,
-  plan: true,
-});
+export const createSchoolSchema = schoolSchema
+  .pick({
+    name: true,
+    subdomain: true,
+    plan: true,
+  })
+  .extend({
+    adminEmail: z.string().email(),
+    adminPassword: z.string().min(8),
+    adminFirstName: z.string().min(1),
+    adminLastName: z.string().min(1),
+  });
 export type CreateSchoolInput = z.infer<typeof createSchoolSchema>;

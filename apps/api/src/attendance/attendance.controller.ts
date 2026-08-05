@@ -7,7 +7,6 @@ import {
   Post,
   Query,
   UseGuards,
-  UsePipes,
 } from "@nestjs/common";
 import { markAttendanceSchema, type MarkAttendanceInput } from "@skolara/types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -25,8 +24,10 @@ export class AttendanceController {
 
   @Post()
   @Roles("TEACHER", "SCHOOL_ADMIN")
-  @UsePipes(new ZodValidationPipe(markAttendanceSchema))
-  mark(@Body() body: MarkAttendanceInput, @CurrentUser() user: AuthenticatedUser) {
+  mark(
+    @Body(new ZodValidationPipe(markAttendanceSchema)) body: MarkAttendanceInput,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     if (!user.schoolId) throw new ForbiddenException("No school context");
     return this.attendanceService.markAttendance(user.schoolId, user.id, body);
   }

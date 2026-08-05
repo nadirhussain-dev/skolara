@@ -6,7 +6,6 @@ import {
   Param,
   Post,
   UseGuards,
-  UsePipes,
 } from "@nestjs/common";
 import { createInvoiceSchema, type CreateInvoiceInput } from "@skolara/types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -24,8 +23,10 @@ export class InvoicesController {
 
   @Post()
   @Roles("SCHOOL_ADMIN")
-  @UsePipes(new ZodValidationPipe(createInvoiceSchema))
-  create(@Body() body: CreateInvoiceInput, @CurrentUser() user: AuthenticatedUser) {
+  create(
+    @Body(new ZodValidationPipe(createInvoiceSchema)) body: CreateInvoiceInput,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     if (user.schoolId !== body.schoolId) {
       throw new ForbiddenException("Cannot act outside your own school");
     }

@@ -6,7 +6,6 @@ import {
   Patch,
   Post,
   UseGuards,
-  UsePipes,
 } from "@nestjs/common";
 import {
   createSchoolSchema,
@@ -30,8 +29,7 @@ export class SchoolsController {
   constructor(private schoolsService: SchoolsService) {}
 
   @Post()
-  @UsePipes(new ZodValidationPipe(createSchoolSchema))
-  create(@Body() body: CreateSchoolInput) {
+  create(@Body(new ZodValidationPipe(createSchoolSchema)) body: CreateSchoolInput) {
     return this.schoolsService.create(body);
   }
 
@@ -40,11 +38,20 @@ export class SchoolsController {
     return this.schoolsService.findAll();
   }
 
+  @Patch(":id/approve")
+  approve(@Param("id") id: string) {
+    return this.schoolsService.approve(id);
+  }
+
+  @Patch(":id/reject")
+  reject(@Param("id") id: string) {
+    return this.schoolsService.reject(id);
+  }
+
   @Patch(":id/subscription-status")
-  @UsePipes(new ZodValidationPipe(updateStatusSchema))
   updateStatus(
     @Param("id") id: string,
-    @Body() body: { status: SubscriptionStatus },
+    @Body(new ZodValidationPipe(updateStatusSchema)) body: { status: SubscriptionStatus },
   ) {
     return this.schoolsService.updateSubscriptionStatus(id, body.status);
   }

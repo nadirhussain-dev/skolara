@@ -6,7 +6,6 @@ import {
   Param,
   Post,
   UseGuards,
-  UsePipes,
 } from "@nestjs/common";
 import { createClassSchema, type CreateClassInput } from "@skolara/types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -24,8 +23,10 @@ export class ClassesController {
 
   @Post()
   @Roles("SCHOOL_ADMIN")
-  @UsePipes(new ZodValidationPipe(createClassSchema))
-  create(@Body() body: CreateClassInput, @CurrentUser() user: AuthenticatedUser) {
+  create(
+    @Body(new ZodValidationPipe(createClassSchema)) body: CreateClassInput,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     this.assertSameSchool(user, body.schoolId);
     return this.classesService.create(body);
   }

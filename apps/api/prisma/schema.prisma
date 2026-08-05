@@ -15,10 +15,12 @@ enum SubscriptionPlan {
 }
 
 enum SubscriptionStatus {
+  PENDING
   TRIAL
   ACTIVE
   EXPIRED
   SUSPENDED
+  REJECTED
 }
 
 enum Role {
@@ -58,12 +60,20 @@ enum PaymentRejectionReason {
   OTHER
 }
 
+enum NoticeAudience {
+  ALL
+  TEACHERS
+  PARENTS
+  STUDENTS
+  CLASS
+}
+
 model School {
   id                 String              @id @default(uuid())
   name                String
   subdomain           String              @unique
   plan                SubscriptionPlan    @default(BASIC)
-  subscriptionStatus  SubscriptionStatus  @default(TRIAL)
+  subscriptionStatus  SubscriptionStatus  @default(PENDING)
   trialEndsAt         DateTime?
   logoUrl             String?
   primaryColor        String?
@@ -77,6 +87,8 @@ model School {
   invoices            Invoice[]
   paymentSubmissions  PaymentSubmission[]
   paymentReferenceSeqs PaymentReferenceSequence[]
+  gradeEntries        GradeEntry[]
+  notices             Notice[]
 }
 
 model User {
@@ -98,6 +110,8 @@ model User {
   submittedPayments       PaymentSubmission[] @relation("SubmittedByUser")
   reviewedPayments        PaymentSubmission[] @relation("ReviewedByUser")
   children                ParentStudentLink[]
+  gradedEntries           GradeEntry[]        @relation("GradedByUser")
+  publishedNotices        Notice[]            @relation("PublishedByUser")
 
   @@index([schoolId])
 }
@@ -125,6 +139,8 @@ model SchoolClass {
 
   students           StudentProfile[]
   attendanceRecords  AttendanceRecord[]
+  gradeEntries       GradeEntry[]
+  notices            Notice[]
 
   @@index([schoolId])
 }
@@ -144,6 +160,7 @@ model StudentProfile {
   invoices           Invoice[]
   paymentSubmissions PaymentSubmission[]
   parentLinks        ParentStudentLink[]
+  gradeEntries       GradeEntry[]
 
   @@unique([schoolId, admissionNumber])
   @@index([schoolId])
@@ -235,4 +252,45 @@ model PaymentReferenceSequence {
   lastSequence  Int    @default(0)
 
   @@id([schoolId, year])
+}
+
+model GradeEntry {
+  id              String         @id @default(uuid())
+  schoolId        String
+  school          School         @relation(fields: [schoolId], references: [id])
+  studentId       String
+  student         StudentProfile @relation(fields: [studentId], references: [id])
+  classId         String
+  class           SchoolClass    @relation(fields: [classId], references: [id])
+  subject         String
+  term            String
+  examType        String
+  marksObtained   Decimal        @db.Decimal(6, 2)
+  maxMarks        Decimal        @db.Decimal(6, 2)
+  comments        String?
+  gradedByUserId  String
+  gradedByUser    User           @relation("GradedByUser", fields: [gradedByUserId], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([studentId, subject, term, examType])
+  @@index([schoolId])
+  @@index([classId])
+}
+
+model Notice {
+  id                String         @id @default(uuid())
+  schoolId          String
+  school            School         @relation(fields: [schoolId], references: [id])
+  title             String
+  body              String
+  audience          NoticeAudience @default(ALL)
+  classId           String?
+  class             SchoolClass?   @relation(fields: [classId], references: [id])
+  publishedByUserId String
+  publishedByUser   User           @relation("PublishedByUser", fields: [publishedByUserId], references: [id])
+  createdAt         DateTime       @default(now())
+
+  @@index([schoolId, createdAt])
+  @@index([classId])
 }

@@ -6,6 +6,8 @@ import type { AuthResponse, LoginInput } from "@skolara/types";
 import { PrismaService } from "../prisma/prisma.service";
 import type { JwtPayload } from "./jwt-payload.interface";
 
+const LOGIN_ALLOWED_STATUSES = new Set(["TRIAL", "ACTIVE"]);
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -22,12 +24,17 @@ export class AuthService {
       throw new UnauthorizedException("Invalid credentials");
     }
 
-    if (input.subdomain) {
+    if (user.schoolId) {
       const school = await this.prisma.school.findUnique({
-        where: { subdomain: input.subdomain },
+        where: { id: user.schoolId },
       });
-      if (!school || user.schoolId !== school.id) {
+      if (!school || (input.subdomain && school.subdomain !== input.subdomain)) {
         throw new UnauthorizedException("Invalid credentials");
+      }
+      if (!LOGIN_ALLOWED_STATUSES.has(school.subscriptionStatus)) {
+        throw new UnauthorizedException(
+          `This school's account is ${school.subscriptionStatus.toLowerCase()} — contact your platform administrator`,
+        );
       }
     }
 

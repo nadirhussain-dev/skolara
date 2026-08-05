@@ -11,11 +11,15 @@ import type {
   SubmitPaymentInput,
 } from "@skolara/types";
 import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
+import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class PaymentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   async assertCanSubmitFor(user: AuthenticatedUser, studentId: string) {
     if (user.role === "STUDENT") {
@@ -80,7 +84,16 @@ export class PaymentsService {
     return this.prisma.paymentSubmission.findMany({
       where: { schoolId, ...(status ? { status } : {}) },
       orderBy: { createdAt: "asc" },
-      include: { student: { include: { user: true } }, invoice: true },
+      include: {
+        student: {
+          include: {
+            user: {
+              select: { id: true, firstName: true, lastName: true },
+            },
+          },
+        },
+        invoice: true,
+      },
     });
   }
 
@@ -92,14 +105,16 @@ export class PaymentsService {
   ) {
     const submission = await this.prisma.paymentSubmission.findFirst({
       where: { id, schoolId },
+      include: { submittedByUser: { select: { phone: true } } },
     });
     if (!submission) throw new NotFoundException("Payment submission not found");
     if (submission.status === "VERIFIED") {
       throw new BadRequestException("Submission already verified");
     }
+    const parentPhone = submission.submittedByUser.phone;
 
     if (input.status === "VERIFIED") {
-      return this.prisma.$transaction(async (tx) => {
+      const updated = await this.prisma.$transaction(async (tx) => {
         const invoice = await tx.invoice.findUniqueOrThrow({
           where: { id: submission.invoiceId },
         });
@@ -122,10 +137,16 @@ export class PaymentsService {
           },
         });
       });
+
+      await this.notifications.sendWhatsApp(
+        parentPhone,
+        `Payment ${submission.referenceId} has been verified. Thank you!`,
+      );
+      return updated;
     }
 
     if (input.status === "REJECTED") {
-      return this.prisma.paymentSubmission.update({
+      const updated = await this.prisma.paymentSubmission.update({
         where: { id },
         data: {
           status: "REJECTED",
@@ -135,9 +156,15 @@ export class PaymentsService {
           reviewedAt: new Date(),
         },
       });
+
+      await this.notifications.sendWhatsApp(
+        parentPhone,
+        `Payment ${submission.referenceId} was rejected (${input.rejectionReason}). Please resubmit.`,
+      );
+      return updated;
     }
 
-    return this.prisma.paymentSubmission.update({
+    const updated = await this.prisma.paymentSubmission.update({
       where: { id },
       data: {
         status: "NEEDS_INFO",
@@ -146,6 +173,12 @@ export class PaymentsService {
         reviewedAt: new Date(),
       },
     });
+
+    await this.notifications.sendWhatsApp(
+      parentPhone,
+      `Payment ${submission.referenceId} needs more info: ${input.reviewNote}`,
+    );
+    return updated;
   }
 
   private async nextReferenceId(schoolId: string): Promise<string> {

@@ -27,7 +27,7 @@ export default function LoginScreen() {
     if (result.user.role === "TEACHER") {
       router.replace("/attendance");
     } else {
-      router.replace("/payments/submit");
+      router.replace("/dashboard");
     }
   }
 

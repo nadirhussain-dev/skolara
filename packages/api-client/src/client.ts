@@ -2,16 +2,20 @@ import type {
   AttendanceRecord,
   AuthResponse,
   CreateClassInput,
+  CreateNoticeInput,
   CreateSchoolInput,
+  GradeEntry,
   Invoice,
   LoginInput,
   MarkAttendanceInput,
+  Notice,
   PaymentSubmission,
   PaymentSubmissionStatus,
   ReviewPaymentInput,
   School,
   SchoolClass,
   SubmitPaymentInput,
+  UpsertGradeEntryInput,
 } from "@skolara/types";
 
 export interface PaymentQueueItem extends PaymentSubmission {
@@ -28,6 +32,10 @@ export interface StudentWithUser {
   admissionNumber: string;
   classId: string | null;
   user: { id: string; firstName: string; lastName: string };
+}
+
+export interface GradeEntryWithStudent extends GradeEntry {
+  student: { id: string; user: { firstName: string; lastName: string } };
 }
 
 export class ApiError extends Error {
@@ -85,6 +93,10 @@ export function createApiClient({ baseUrl, getAccessToken }: ApiClientOptions) {
           method: "POST",
           body: JSON.stringify(input),
         }),
+      approve: (id: string) =>
+        request<School>(`/schools/${id}/approve`, { method: "PATCH" }),
+      reject: (id: string) =>
+        request<School>(`/schools/${id}/reject`, { method: "PATCH" }),
     },
     classes: {
       list: () => request<SchoolClass[]>("/classes"),
@@ -129,6 +141,27 @@ export function createApiClient({ baseUrl, getAccessToken }: ApiClientOptions) {
           method: "PATCH",
           body: JSON.stringify(input),
         }),
+    },
+    grades: {
+      upsert: (input: UpsertGradeEntryInput) =>
+        request<GradeEntry>("/grades", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      forClass: (classId: string, term?: string) =>
+        request<GradeEntryWithStudent[]>(
+          `/grades/class/${classId}${term ? `?term=${term}` : ""}`,
+        ),
+      forStudent: (studentId: string) =>
+        request<GradeEntry[]>(`/grades/student/${studentId}`),
+    },
+    notices: {
+      create: (input: CreateNoticeInput) =>
+        request<Notice>("/notices", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      list: () => request<Notice[]>("/notices"),
     },
   };
 }

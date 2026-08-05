@@ -1,23 +1,39 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import * as bcrypt from "bcrypt";
 import type { CreateSchoolInput, SubscriptionStatus } from "@skolara/types";
 import { PrismaService } from "../prisma/prisma.service";
+
+const TRIAL_DAYS = 14;
 
 @Injectable()
 export class SchoolsService {
   constructor(private prisma: PrismaService) {}
 
-  create(input: CreateSchoolInput) {
-    const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+  async create(input: CreateSchoolInput) {
+    const passwordHash = await bcrypt.hash(input.adminPassword, 10);
 
-    return this.prisma.school.create({
-      data: {
-        name: input.name,
-        subdomain: input.subdomain,
-        plan: input.plan,
-        subscriptionStatus: "TRIAL",
-        trialEndsAt,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const school = await tx.school.create({
+        data: {
+          name: input.name,
+          subdomain: input.subdomain,
+          plan: input.plan,
+          subscriptionStatus: "PENDING",
+        },
+      });
+
+      await tx.user.create({
+        data: {
+          schoolId: school.id,
+          role: "SCHOOL_ADMIN",
+          email: input.adminEmail,
+          passwordHash,
+          firstName: input.adminFirstName,
+          lastName: input.adminLastName,
+        },
+      });
+
+      return school;
     });
   }
 
@@ -29,6 +45,31 @@ export class SchoolsService {
     const school = await this.prisma.school.findUnique({ where: { id } });
     if (!school) throw new NotFoundException("School not found");
     return school;
+  }
+
+  async approve(id: string) {
+    const school = await this.findOne(id);
+    if (school.subscriptionStatus !== "PENDING") {
+      throw new BadRequestException("Only pending schools can be approved");
+    }
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
+
+    return this.prisma.school.update({
+      where: { id },
+      data: { subscriptionStatus: "TRIAL", trialEndsAt },
+    });
+  }
+
+  async reject(id: string) {
+    const school = await this.findOne(id);
+    if (school.subscriptionStatus !== "PENDING") {
+      throw new BadRequestException("Only pending schools can be rejected");
+    }
+    return this.prisma.school.update({
+      where: { id },
+      data: { subscriptionStatus: "REJECTED" },
+    });
   }
 
   async updateSubscriptionStatus(id: string, status: SubscriptionStatus) {

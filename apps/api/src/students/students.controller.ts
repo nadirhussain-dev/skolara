@@ -8,7 +8,6 @@ import {
   Post,
   Query,
   UseGuards,
-  UsePipes,
 } from "@nestjs/common";
 import { admitStudentSchema, type AdmitStudentInput } from "@skolara/types";
 import { z } from "zod";
@@ -29,8 +28,10 @@ export class StudentsController {
   constructor(private studentsService: StudentsService) {}
 
   @Post()
-  @UsePipes(new ZodValidationPipe(admitStudentSchema))
-  admit(@Body() body: AdmitStudentInput, @CurrentUser() user: AuthenticatedUser) {
+  admit(
+    @Body(new ZodValidationPipe(admitStudentSchema)) body: AdmitStudentInput,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     if (user.schoolId !== body.schoolId) {
       throw new ForbiddenException("Cannot act outside your own school");
     }
@@ -59,10 +60,9 @@ export class StudentsController {
   }
 
   @Patch(":id/class")
-  @UsePipes(new ZodValidationPipe(assignClassSchema))
   assignClass(
     @Param("id") id: string,
-    @Body() body: { classId: string },
+    @Body(new ZodValidationPipe(assignClassSchema)) body: { classId: string },
     @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!user.schoolId) throw new ForbiddenException("No school context");

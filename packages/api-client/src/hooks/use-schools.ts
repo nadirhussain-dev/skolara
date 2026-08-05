@@ -20,3 +20,21 @@ export function useCreateSchool() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: schoolsQueryKey }),
   });
 }
+
+export function useApproveSchool() {
+  const api = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.schools.approve(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: schoolsQueryKey }),
+  });
+}
+
+export function useRejectSchool() {
+  const api = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.schools.reject(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: schoolsQueryKey }),
+  });
+}

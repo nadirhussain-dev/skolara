@@ -8,7 +8,6 @@ import {
   Post,
   Query,
   UseGuards,
-  UsePipes,
 } from "@nestjs/common";
 import {
   reviewPaymentSchema,
@@ -32,10 +31,9 @@ export class PaymentsController {
 
   @Post("student/:studentId")
   @Roles("PARENT", "STUDENT")
-  @UsePipes(new ZodValidationPipe(submitPaymentSchema))
   async submit(
     @Param("studentId") studentId: string,
-    @Body() body: SubmitPaymentInput,
+    @Body(new ZodValidationPipe(submitPaymentSchema)) body: SubmitPaymentInput,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!user.schoolId) throw new ForbiddenException("No school context");
@@ -60,10 +58,9 @@ export class PaymentsController {
 
   @Patch(":id/review")
   @Roles("SCHOOL_ADMIN")
-  @UsePipes(new ZodValidationPipe(reviewPaymentSchema))
   review(
     @Param("id") id: string,
-    @Body() body: ReviewPaymentInput,
+    @Body(new ZodValidationPipe(reviewPaymentSchema)) body: ReviewPaymentInput,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!user.schoolId) throw new ForbiddenException("No school context");

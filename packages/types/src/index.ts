@@ -5,3 +5,5 @@ export * from "./auth";
 export * from "./academic";
 export * from "./attendance";
 export * from "./payment";
+export * from "./grades";
+export * from "./notices";
