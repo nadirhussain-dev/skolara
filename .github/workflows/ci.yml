@@ -38,6 +38,12 @@ jobs:
       - name: Typecheck & build all packages
         run: pnpm turbo run typecheck
 
+      - name: Lint all packages
+        run: pnpm turbo run lint
+
+      - name: Run unit tests
+        run: pnpm turbo run test
+
       - name: Validate Prisma schema
         run: pnpm --filter @skolara/api exec prisma validate
 

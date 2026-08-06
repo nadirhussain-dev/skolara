@@ -143,8 +143,42 @@ model User {
   raisedComplaints        Complaint[]         @relation("RaisedByUser")
   complaintComments       ComplaintComment[]
   payslips                Payslip[]           @relation("StaffPayslips")
+  refreshTokens           RefreshToken[]
+  passwordResetTokens     PasswordResetToken[]
 
   @@index([schoolId])
+}
+
+// Server-side tracking for issued refresh tokens, so logout and rotation can
+// actually invalidate a token instead of it just being a stateless JWT that's
+// valid until natural expiry regardless of what the client does with it.
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  // SHA-256 of the raw token — high-entropy already, so a fast hash is
+  // appropriate here (unlike passwords, which need a slow one).
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// Single-use, short-lived tokens for the forgot-password flow. Same hashing
+// rationale as RefreshToken — the raw token is high-entropy and only ever
+// mailed to the user, so a fast hash is fine for the stored copy.
+model PasswordResetToken {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
 }
 
 // Join table backing the parent-facing multi-child switcher: one PARENT user

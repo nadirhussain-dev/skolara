@@ -60,7 +60,11 @@ export const apiClient = createApiClient({
   },
   onAuthFailure: () => {
     clearSession();
+    // Hard navigation is required, not just tolerated: this runs at module
+    // scope in a plain fetch wrapper, outside any component, so there's no
+    // useRouter() to call.
     if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign("/login");
     }
   },

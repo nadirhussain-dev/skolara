@@ -33,6 +33,7 @@ import type {
   CreateTeacherInput,
   CreateUserInput,
   DefaulterRisk,
+  ForgotPasswordInput,
   Exam,
   GradeAssignmentInput,
   GradeEntry,
@@ -49,6 +50,7 @@ import type {
   PlatformAnalytics,
   RankListEntry,
   ReportBusLocationInput,
+  ResetPasswordInput,
   ReviewPaymentInput,
   School,
   SchoolAnalytics,
@@ -217,6 +219,21 @@ export function createApiClient({
     auth: {
       login: (input: LoginInput) =>
         request<AuthResponse>("/auth/login", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      logout: (refreshToken: string) =>
+        request<void>("/auth/logout", {
+          method: "POST",
+          body: JSON.stringify({ refreshToken }),
+        }),
+      forgotPassword: (input: ForgotPasswordInput) =>
+        request<void>("/auth/forgot-password", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      resetPassword: (input: ResetPasswordInput) =>
+        request<void>("/auth/reset-password", {
           method: "POST",
           body: JSON.stringify(input),
         }),

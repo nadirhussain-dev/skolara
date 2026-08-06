@@ -1,6 +1,6 @@
 import { Link, router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { clearSession } from "@/lib/api-client";
+import { apiClient, clearSession, getStoredRefreshToken } from "@/lib/api-client";
 import { colors, radius, shadow, spacing, typography } from "@/lib/theme";
 import { Button } from "@/lib/ui";
 
@@ -17,8 +17,11 @@ const links = [
 
 export default function DashboardScreen() {
   async function signOut() {
+    const refreshToken = await getStoredRefreshToken();
     await clearSession();
     router.replace("/(auth)/login");
+    // Best-effort — local session is already cleared either way.
+    if (refreshToken) apiClient.auth.logout(refreshToken).catch(() => {});
   }
 
   return (

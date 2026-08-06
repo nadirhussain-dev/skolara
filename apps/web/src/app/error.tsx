@@ -27,6 +27,9 @@ export default function GlobalError({
           An unexpected error occurred. You can try again, or head back home.
         </p>
         <div className="mt-6 flex justify-center gap-3">
+          {/* Hard navigation is deliberate here: this is the root error boundary, so
+              the React tree (including the router) may itself be in a broken state. */}
+          {/* eslint-disable-next-line @next/next/no-location-assign-relative-destination */}
           <Button variant="secondary" onClick={() => (window.location.href = "/")}>
             Go home
           </Button>

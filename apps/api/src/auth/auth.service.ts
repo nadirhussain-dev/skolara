@@ -1,12 +1,27 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
-import type { AuthResponse, AuthTokens, LoginInput } from "@skolara/types";
+import { createHash, randomBytes } from "crypto";
+import type {
+  AuthResponse,
+  AuthTokens,
+  ForgotPasswordInput,
+  LoginInput,
+  ResetPasswordInput,
+} from "@skolara/types";
+import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 import type { JwtPayload } from "./jwt-payload.interface";
 
 const LOGIN_ALLOWED_STATUSES = new Set(["TRIAL", "ACTIVE"]);
+
+// Refresh tokens are already high-entropy signed JWTs, not low-entropy
+// secrets like passwords — a fast hash is the right tool here, a slow one
+// (bcrypt) would just add latency to every refresh call for no benefit.
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 @Injectable()
 export class AuthService {
@@ -14,6 +29,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
+    private notifications: NotificationsService,
   ) {}
 
   async login(input: LoginInput): Promise<AuthResponse> {
@@ -68,10 +84,9 @@ export class AuthService {
     };
   }
 
-  // Exchanges a still-valid refresh token for a new token pair (rotation —
-  // each refresh token is single-use in practice since the client immediately
-  // replaces it), re-checking the user/school are still in good standing
-  // rather than trusting whatever was true when the token was issued.
+  // Exchanges a still-valid, still-unrevoked refresh token for a new pair
+  // (rotation — the old one is revoked here, so replaying it after a
+  // legitimate refresh now fails instead of silently working until expiry).
   async refresh(refreshToken: string): Promise<AuthTokens> {
     let payload: JwtPayload;
     try {
@@ -79,6 +94,13 @@ export class AuthService {
         secret: this.config.getOrThrow<string>("JWT_REFRESH_SECRET"),
       });
     } catch {
+      throw new UnauthorizedException("Invalid or expired refresh token");
+    }
+
+    const stored = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash: hashToken(refreshToken) },
+    });
+    if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
       throw new UnauthorizedException("Invalid or expired refresh token");
     }
 
@@ -94,7 +116,86 @@ export class AuthService {
       }
     }
 
+    await this.prisma.refreshToken.update({
+      where: { id: stored.id },
+      data: { revokedAt: new Date() },
+    });
+
     return this.issueTokens({ sub: user.id, role: user.role, schoolId: user.schoolId });
+  }
+
+  // Idempotent by design: an already-revoked or unknown token is treated as
+  // "already logged out" rather than an error the client has to handle.
+  async logout(refreshToken: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { tokenHash: hashToken(refreshToken), revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  // For flows that should kill every session at once — password reset/change
+  // being the main one, so a stolen refresh token stops working the moment
+  // the legitimate owner resets their password.
+  async revokeAllSessionsForUser(userId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  // Always resolves the same way whether or not the email/subdomain match a
+  // real account — the response must not leak account existence. The actual
+  // outcome (an email landing, or nothing happening) is invisible to the caller.
+  async forgotPassword(input: ForgotPasswordInput): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { email: input.email } });
+    if (!user || !user.isActive) return;
+
+    if (user.schoolId) {
+      const school = await this.prisma.school.findUnique({ where: { id: user.schoolId } });
+      if (!school || (input.subdomain && school.subdomain !== input.subdomain)) return;
+    }
+
+    const rawToken = randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await this.prisma.passwordResetToken.create({
+      data: { userId: user.id, tokenHash: hashToken(rawToken), expiresAt },
+    });
+
+    const appUrl = this.config.get<string>("APP_URL", "http://localhost:3000");
+    const resetLink = `${appUrl}/reset-password?token=${rawToken}`;
+
+    await this.notifications.sendEmail(
+      user.email,
+      "Reset your Skolara password",
+      `Hi ${user.firstName},\n\n` +
+        "Someone requested a password reset for your Skolara account. " +
+        `If this was you, set a new password within the next hour:\n\n${resetLink}\n\n` +
+        "If you didn't request this, you can safely ignore this email — your password hasn't been changed.",
+    );
+  }
+
+  async resetPassword(input: ResetPasswordInput): Promise<void> {
+    const stored = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash: hashToken(input.token) },
+    });
+    if (!stored || stored.usedAt || stored.expiresAt < new Date()) {
+      throw new BadRequestException("This reset link is invalid or has expired");
+    }
+
+    const passwordHash = await bcrypt.hash(input.newPassword, 10);
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: stored.userId }, data: { passwordHash } }),
+      this.prisma.passwordResetToken.update({
+        where: { id: stored.id },
+        data: { usedAt: new Date() },
+      }),
+    ]);
+
+    // A stolen refresh token should stop working the moment the legitimate
+    // owner resets their password, not linger until its own natural expiry.
+    await this.revokeAllSessionsForUser(stored.userId);
   }
 
   private async issueTokens(payload: JwtPayload): Promise<AuthTokens> {
@@ -108,6 +209,16 @@ export class AuthService {
         expiresIn: this.config.get<string>("JWT_REFRESH_EXPIRES_IN", "7d"),
       }),
     ]);
+
+    const decoded = this.jwt.decode<{ exp: number }>(refreshToken);
+    await this.prisma.refreshToken.create({
+      data: {
+        userId: payload.sub,
+        tokenHash: hashToken(refreshToken),
+        expiresAt: new Date(decoded.exp * 1000),
+      },
+    });
+
     return { accessToken, refreshToken };
   }
 }

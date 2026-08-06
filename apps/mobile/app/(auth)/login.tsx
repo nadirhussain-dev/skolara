@@ -1,7 +1,7 @@
 import { useLogin } from "@skolara/api-client";
-import { router } from "expo-router";
+import { Link, router } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { setStoredAccessToken, setStoredRefreshToken } from "@/lib/api-client";
 import { colors, spacing, typography } from "@/lib/theme";
 import { Button, Input } from "@/lib/ui";
@@ -52,6 +52,11 @@ export default function LoginScreen() {
         loading={login.isPending}
         style={styles.button}
       />
+      <Link href="/(auth)/forgot-password" asChild>
+        <Pressable>
+          <Text style={styles.link}>Forgot your password?</Text>
+        </Pressable>
+      </Link>
     </View>
   );
 }
@@ -62,4 +67,5 @@ const styles = StyleSheet.create({
   subtitle: { ...typography.body, color: colors.slate[500], marginBottom: spacing.sm },
   button: { marginTop: spacing.sm },
   error: { color: colors.danger, fontSize: 13 },
+  link: { textAlign: "center", color: colors.brand[700], fontSize: 13, marginTop: spacing.sm },
 });

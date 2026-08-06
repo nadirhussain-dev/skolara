@@ -17,6 +17,7 @@ const envSchema = z.object({
   // Comma-separated list of allowed browser origins. Unset = reflect no origin
   // (same-origin/non-browser only) in production; permissive in development.
   CORS_ORIGINS: z.string().optional(),
+  ENABLE_API_DOCS: z.string().optional(),
 
   SUPABASE_URL: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
@@ -24,6 +25,9 @@ const envSchema = z.object({
 
   WHATSAPP_ACCESS_TOKEN: z.string().optional(),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
+  APP_URL: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),

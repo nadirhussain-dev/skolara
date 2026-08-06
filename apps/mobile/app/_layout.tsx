@@ -15,6 +15,7 @@ export default function RootLayout() {
       >
         <Stack.Screen name="index" options={{ title: "Skolara" }} />
         <Stack.Screen name="(auth)/login" options={{ title: "Sign in" }} />
+        <Stack.Screen name="(auth)/forgot-password" options={{ title: "Forgot password" }} />
         <Stack.Screen
           name="attendance/[classId]"
           options={{ title: "Mark attendance" }}

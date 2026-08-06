@@ -10,7 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { clearSession, getStoredUser, setStoredUser } from "./api-client";
+import { apiClient, clearSession, getStoredRefreshToken, getStoredUser, setStoredUser } from "./api-client";
 
 interface AuthContextValue {
   user: User | null;
@@ -27,6 +27,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
+    // Deliberately deferred to an effect (not a lazy useState initializer):
+    // localStorage isn't available during SSR, so reading it eagerly would
+    // return a different value on the server vs. the client's first render
+    // and trigger a hydration mismatch. Running it post-mount keeps both
+    // passes consistent at the cost of one extra render while isLoading.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setUser(getStoredUser());
     setIsLoading(false);
   }, []);
@@ -40,9 +46,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(nextUser);
       },
       logout: () => {
+        const refreshToken = getStoredRefreshToken();
         clearSession();
         setUser(null);
         router.push("/login");
+        // Best-effort — the local session is already cleared either way, so
+        // a failed/slow revoke call shouldn't block navigation.
+        if (refreshToken) apiClient.auth.logout(refreshToken).catch(() => {});
       },
     }),
     [user, isLoading, router],

@@ -13,7 +13,11 @@ export default function BrandingPage() {
   const [savedMessage, setSavedMessage] = useState("");
 
   useEffect(() => {
+    // Syncs local editable form fields from the fetched school record once
+    // it arrives — can't be a lazy useState initializer since `school` isn't
+    // available until the query resolves.
     if (school) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLogoUrl(school.logoUrl ?? "");
       setPrimaryColor(school.primaryColor ?? "#6D28D9");
     }

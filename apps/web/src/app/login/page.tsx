@@ -2,6 +2,7 @@
 
 import { useLogin } from "@skolara/api-client";
 import { Button, Card, Input } from "@skolara/ui";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { setStoredAccessToken, setStoredRefreshToken } from "@/lib/api-client";
@@ -88,6 +89,11 @@ export default function LoginPage() {
             {login.isPending ? "Signing in..." : "Sign in"}
           </Button>
         </form>
+        <p className="mt-4 text-center text-sm text-slate-500">
+          <Link href="/forgot-password" className="text-brand-700 hover:underline">
+            Forgot your password?
+          </Link>
+        </p>
       </Card>
     </main>
   );
