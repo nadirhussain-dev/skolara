@@ -1,15 +1,10 @@
 import { useLogin } from "@skolara/api-client";
 import { router } from "expo-router";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { setStoredAccessToken } from "@/lib/api-client";
+import { colors, spacing, typography } from "@/lib/theme";
+import { Button, Input } from "@/lib/ui";
 
 export default function LoginScreen() {
   const login = useLogin();
@@ -33,56 +28,37 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <TextInput
+      <Text style={styles.title}>Welcome back</Text>
+      <Text style={styles.subtitle}>Sign in to your school account</Text>
+      <Input
         placeholder="School subdomain (optional)"
         autoCapitalize="none"
         value={subdomain}
         onChangeText={setSubdomain}
-        style={styles.input}
       />
-      <TextInput
+      <Input
         placeholder="Email"
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
-        style={styles.input}
       />
-      <TextInput
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-        style={styles.input}
-      />
+      <Input placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
       {login.isError && <Text style={styles.error}>Invalid credentials.</Text>}
-      <Pressable style={styles.button} onPress={handleSubmit} disabled={login.isPending}>
-        {login.isPending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Sign in</Text>
-        )}
-      </Pressable>
+      <Button
+        title="Sign in"
+        onPress={handleSubmit}
+        loading={login.isPending}
+        style={styles.button}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 24, gap: 12 },
-  input: {
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  button: {
-    backgroundColor: "#3730A3",
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  buttonText: { color: "#fff", fontWeight: "600" },
-  error: { color: "#DC2626", fontSize: 13 },
+  container: { flex: 1, justifyContent: "center", padding: spacing.xl, gap: spacing.md, backgroundColor: colors.white },
+  title: { ...typography.title, fontSize: 24 },
+  subtitle: { ...typography.body, color: colors.slate[500], marginBottom: spacing.sm },
+  button: { marginTop: spacing.sm },
+  error: { color: colors.danger, fontSize: 13 },
 });

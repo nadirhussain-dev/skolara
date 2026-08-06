@@ -1,21 +1,10 @@
-import {
-  useInvoicesForStudent,
-  useMyChildren,
-  useSubmitPayment,
-} from "@skolara/api-client";
+import { useInvoicesForStudent, useMyChildren, useSubmitPayment } from "@skolara/api-client";
 import type { PaymentSubmission } from "@skolara/types";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
-import {
-  Alert,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { colors, radius, spacing, typography } from "@/lib/theme";
+import { Button, Card, Chip, Input, SectionLabel } from "@/lib/ui";
 
 export default function SubmitPaymentScreen() {
   const { data: children } = useMyChildren();
@@ -53,67 +42,49 @@ export default function SubmitPaymentScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.label}>Child</Text>
-      <View style={styles.chipRow}>
-        {children?.map((child) => (
-          <Pressable
-            key={child.id}
-            onPress={() => setStudentId(child.id)}
-            style={[styles.chip, studentId === child.id && styles.chipActive]}
-          >
-            <Text
-              style={
-                studentId === child.id ? styles.chipTextActive : styles.chipText
-              }
-            >
-              {child.user.firstName}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      <Card>
+        <SectionLabel>Child</SectionLabel>
+        <View style={styles.chipRow}>
+          {children?.map((child) => (
+            <Chip
+              key={child.id}
+              label={child.user.firstName}
+              active={studentId === child.id}
+              onPress={() => setStudentId(child.id)}
+            />
+          ))}
+        </View>
 
-      <Text style={styles.label}>Invoice</Text>
-      <View style={styles.chipRow}>
-        {invoices?.map((invoice) => (
-          <Pressable
-            key={invoice.id}
-            onPress={() => setInvoiceId(invoice.id)}
-            style={[styles.chip, invoiceId === invoice.id && styles.chipActive]}
-          >
-            <Text
-              style={
-                invoiceId === invoice.id ? styles.chipTextActive : styles.chipText
-              }
-            >
-              {invoice.term}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+        <SectionLabel>Invoice</SectionLabel>
+        <View style={styles.chipRow}>
+          {invoices?.map((invoice) => (
+            <Chip
+              key={invoice.id}
+              label={invoice.term}
+              active={invoiceId === invoice.id}
+              onPress={() => setInvoiceId(invoice.id)}
+            />
+          ))}
+        </View>
 
-      <Text style={styles.label}>Amount paid</Text>
-      <TextInput
-        keyboardType="numeric"
-        value={amount}
-        onChangeText={setAmount}
-        style={styles.input}
-        placeholder="0"
-      />
+        <SectionLabel>Amount paid</SectionLabel>
+        <Input keyboardType="numeric" value={amount} onChangeText={setAmount} placeholder="0" />
 
-      <Pressable style={styles.secondaryButton} onPress={pickScreenshot}>
-        <Text style={styles.secondaryButtonText}>
-          {screenshotUri ? "Change screenshot" : "Upload transfer screenshot"}
-        </Text>
-      </Pressable>
-      {screenshotUri && (
-        <Image source={{ uri: screenshotUri }} style={styles.preview} />
-      )}
+        <Button
+          title={screenshotUri ? "Change screenshot" : "Upload transfer screenshot"}
+          variant="secondary"
+          onPress={pickScreenshot}
+        />
+        {screenshotUri && <Image source={{ uri: screenshotUri }} style={styles.preview} />}
 
-      <Pressable style={styles.button} onPress={submit} disabled={submitPayment.isPending}>
-        <Text style={styles.buttonText}>
-          {submitPayment.isPending ? "Submitting..." : "Submit payment"}
-        </Text>
-      </Pressable>
+        <Button
+          title="Submit payment"
+          variant="accent"
+          onPress={submit}
+          loading={submitPayment.isPending}
+          style={styles.submitButton}
+        />
+      </Card>
 
       {result && (
         <View style={styles.resultBox}>
@@ -126,49 +97,10 @@ export default function SubmitPaymentScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, gap: 8 },
-  label: { fontWeight: "600", marginTop: 12 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: {
-    borderWidth: 1,
-    borderColor: "#3730A3",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  chipActive: { backgroundColor: "#3730A3" },
-  chipText: { color: "#3730A3" },
-  chipTextActive: { color: "#fff" },
-  input: {
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: "#3730A3",
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  secondaryButtonText: { color: "#3730A3", fontWeight: "600" },
-  preview: { width: "100%", height: 180, borderRadius: 8, marginTop: 8 },
-  button: {
-    backgroundColor: "#F59E0B",
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 16,
-  },
-  buttonText: { color: "#fff", fontWeight: "600" },
-  resultBox: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: "#EEF0FC",
-    borderRadius: 8,
-  },
-  resultText: { color: "#3730A3" },
+  container: { padding: spacing.lg, gap: spacing.md, backgroundColor: colors.slate[50] },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  preview: { width: "100%", height: 180, borderRadius: radius.md },
+  submitButton: { marginTop: spacing.xs },
+  resultBox: { padding: spacing.md, backgroundColor: colors.brand[50], borderRadius: radius.md },
+  resultText: { ...typography.body, color: colors.brand[700] },
 });

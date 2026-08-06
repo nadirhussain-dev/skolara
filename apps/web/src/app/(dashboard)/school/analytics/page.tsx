@@ -1,7 +1,7 @@
 "use client";
 
 import { useDefaulterRisk, useSchoolAnalytics } from "@skolara/api-client";
-import { Badge, Button, Card, CardHeader, CardTitle, Input } from "@skolara/ui";
+import { Badge, Button, Card, CardHeader, CardTitle, Input, StatCard } from "@skolara/ui";
 import { useState } from "react";
 
 const RISK_TONE = { LOW: "success", MEDIUM: "warning", HIGH: "danger" } as const;
@@ -59,14 +59,5 @@ export default function SchoolAnalyticsPage() {
         )}
       </Card>
     </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: number | string }) {
-  return (
-    <Card>
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="text-3xl font-semibold text-brand-700">{value}</p>
-    </Card>
   );
 }

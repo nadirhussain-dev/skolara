@@ -1,9 +1,11 @@
 import { useSendMessage, useThreadMessages } from "@skolara/api-client";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, StyleSheet, Text, View } from "react-native";
 import { getStoredAccessToken } from "@/lib/api-client";
 import { decodeJwtSubject } from "@/lib/jwt";
+import { colors, radius, spacing } from "@/lib/theme";
+import { Button, Input, Screen } from "@/lib/ui";
 
 export default function ThreadScreen() {
   const { threadId } = useLocalSearchParams<{ threadId: string }>();
@@ -25,9 +27,11 @@ export default function ThreadScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      {isLoading && <Text>Loading messages...</Text>}
+    <Screen>
+      {isLoading && <Text style={styles.loading}>Loading messages...</Text>}
       <FlatList
+        style={{ flex: 1 }}
+        contentContainerStyle={{ gap: spacing.xs }}
         data={messages}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
@@ -37,50 +41,27 @@ export default function ThreadScreen() {
               item.senderId === currentUserId ? styles.bubbleMine : styles.bubbleTheirs,
             ]}
           >
-            <Text
-              style={item.senderId === currentUserId ? styles.textMine : styles.textTheirs}
-            >
+            <Text style={item.senderId === currentUserId ? styles.textMine : styles.textTheirs}>
               {item.body}
             </Text>
           </View>
         )}
       />
       <View style={styles.inputRow}>
-        <TextInput
-          placeholder="Message"
-          value={body}
-          onChangeText={setBody}
-          style={styles.input}
-        />
-        <Pressable style={styles.sendButton} onPress={submit}>
-          <Text style={styles.sendButtonText}>Send</Text>
-        </Pressable>
+        <Input placeholder="Message" value={body} onChangeText={setBody} style={{ flex: 1 }} />
+        <Button title="Send" onPress={submit} style={styles.sendButton} />
       </View>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  bubble: { maxWidth: "80%", borderRadius: 12, padding: 10, marginVertical: 4 },
-  bubbleMine: { backgroundColor: "#3730A3", alignSelf: "flex-end" },
-  bubbleTheirs: { backgroundColor: "#E2E8F0", alignSelf: "flex-start" },
-  textMine: { color: "#fff" },
-  textTheirs: { color: "#1E293B" },
-  inputRow: { flexDirection: "row", gap: 8, marginTop: 8 },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  sendButton: {
-    backgroundColor: "#3730A3",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    justifyContent: "center",
-  },
-  sendButtonText: { color: "#fff", fontWeight: "600" },
+  loading: { color: colors.slate[500], fontSize: 13, paddingVertical: spacing.sm },
+  bubble: { maxWidth: "80%", borderRadius: radius.lg, padding: 10, marginVertical: 4 },
+  bubbleMine: { backgroundColor: colors.brand[700], alignSelf: "flex-end" },
+  bubbleTheirs: { backgroundColor: colors.slate[200], alignSelf: "flex-start" },
+  textMine: { color: colors.white },
+  textTheirs: { color: colors.slate[800] },
+  inputRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
+  sendButton: { paddingHorizontal: spacing.lg },
 });

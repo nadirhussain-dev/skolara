@@ -1,12 +1,15 @@
 import { useCreateComplaint, useMyComplaints } from "@skolara/api-client";
+import type { ComplaintStatus } from "@skolara/types";
 import { Link } from "expo-router";
 import { useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text } from "react-native";
+import { spacing, typography, type Tone } from "@/lib/theme";
+import { Button, Card, EmptyState, Input, LoadingLine, Pill, Screen, SectionLabel } from "@/lib/ui";
 
-const STATUS_COLOR: Record<string, string> = {
-  OPEN: "#F59E0B",
-  IN_PROGRESS: "#3730A3",
-  RESOLVED: "#059669",
+const STATUS_TONE: Record<ComplaintStatus, Tone> = {
+  OPEN: "warning",
+  IN_PROGRESS: "brand",
+  RESOLVED: "success",
 };
 
 export default function ComplaintsScreen() {
@@ -23,69 +26,45 @@ export default function ComplaintsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.form}>
-        <TextInput
-          placeholder="Subject"
-          value={subject}
-          onChangeText={setSubject}
-          style={styles.input}
-        />
-        <TextInput
+    <Screen>
+      <Card>
+        <SectionLabel>Raise a complaint</SectionLabel>
+        <Input placeholder="Subject" value={subject} onChangeText={setSubject} />
+        <Input
           placeholder="Describe the issue"
           value={body}
           onChangeText={setBody}
           multiline
-          style={[styles.input, styles.textarea]}
         />
-        <Pressable style={styles.button} onPress={submit} disabled={createComplaint.isPending}>
-          <Text style={styles.buttonText}>
-            {createComplaint.isPending ? "Submitting..." : "Submit complaint"}
-          </Text>
-        </Pressable>
-      </View>
+        <Button
+          title="Submit complaint"
+          onPress={submit}
+          loading={createComplaint.isPending}
+        />
+      </Card>
 
-      {isLoading && <Text>Loading...</Text>}
+      {isLoading && <LoadingLine />}
       <FlatList
         data={complaints}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ gap: spacing.sm }}
         renderItem={({ item }) => (
-          <Link href={`/complaints/${item.id}`} style={styles.row}>
-            <Text style={styles.subject}>{item.subject}</Text>
-            <Text style={[styles.status, { color: STATUS_COLOR[item.status] }]}>
-              {item.status}
-            </Text>
+          <Link href={`/complaints/${item.id}`} asChild>
+            <Pressable>
+              <Card style={styles.row}>
+                <Text style={styles.subject}>{item.subject}</Text>
+                <Pill label={item.status.replace("_", " ")} tone={STATUS_TONE[item.status]} />
+              </Card>
+            </Pressable>
           </Link>
         )}
-        ListEmptyComponent={!isLoading ? <Text>No complaints yet.</Text> : null}
+        ListEmptyComponent={!isLoading ? <EmptyState title="No complaints yet" /> : null}
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 12 },
-  form: { gap: 8, marginBottom: 8 },
-  input: {
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  textarea: { minHeight: 80, textAlignVertical: "top" },
-  button: {
-    backgroundColor: "#3730A3",
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  buttonText: { color: "#fff", fontWeight: "600" },
-  row: {
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  subject: { fontSize: 16, fontWeight: "600" },
-  status: { fontSize: 13, fontWeight: "600", marginTop: 2 },
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  subject: { ...typography.subheading },
 });

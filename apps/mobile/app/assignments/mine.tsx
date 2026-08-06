@@ -6,14 +6,9 @@ import {
 } from "@skolara/api-client";
 import * as ImagePicker from "expo-image-picker";
 import { useMemo, useState } from "react";
-import {
-  Alert,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Alert, FlatList, StyleSheet, Text, View } from "react-native";
+import { colors, spacing, typography } from "@/lib/theme";
+import { Button, Card, Chip, EmptyState, Pill, Screen } from "@/lib/ui";
 
 export default function MyAssignmentsScreen() {
   const { data: children } = useMyChildren();
@@ -46,82 +41,51 @@ export default function MyAssignmentsScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <Screen>
       <View style={styles.chipRow}>
         {children?.map((c) => (
-          <Pressable
+          <Chip
             key={c.id}
+            label={c.user.firstName}
+            active={studentId === c.id}
             onPress={() => setStudentId(c.id)}
-            style={[styles.chip, studentId === c.id && styles.chipActive]}
-          >
-            <Text style={studentId === c.id ? styles.chipTextActive : styles.chipText}>
-              {c.user.firstName}
-            </Text>
-          </Pressable>
+          />
         ))}
       </View>
 
       <FlatList
         data={assignments}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ gap: spacing.sm }}
         renderItem={({ item }) => {
           const submission = submittedByAssignmentId.get(item.id);
           return (
-            <View style={styles.row}>
+            <Card>
               <Text style={styles.title}>
                 {item.title} ({item.subject})
               </Text>
-              <Text style={styles.due}>
-                Due {new Date(item.dueDate).toLocaleDateString()}
-              </Text>
+              <Text style={styles.due}>Due {new Date(item.dueDate).toLocaleDateString()}</Text>
               {submission ? (
-                <Text style={styles.submitted}>
-                  Submitted{submission.grade ? ` · Grade: ${submission.grade}` : ""}
-                </Text>
+                <Pill
+                  label={submission.grade ? `Submitted · Grade ${submission.grade}` : "Submitted"}
+                  tone="success"
+                />
               ) : (
-                <Pressable style={styles.button} onPress={() => submit(item.id)}>
-                  <Text style={styles.buttonText}>Submit work</Text>
-                </Pressable>
+                <Button title="Submit work" variant="secondary" onPress={() => submit(item.id)} />
               )}
-            </View>
+            </Card>
           );
         }}
         ListEmptyComponent={
-          studentId ? <Text>No assignments for this class yet.</Text> : null
+          studentId ? <EmptyState title="No assignments for this class yet" /> : null
         }
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 12 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: {
-    borderWidth: 1,
-    borderColor: "#3730A3",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  chipActive: { backgroundColor: "#3730A3" },
-  chipText: { color: "#3730A3" },
-  chipTextActive: { color: "#fff" },
-  row: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-    gap: 4,
-  },
-  title: { fontSize: 16, fontWeight: "600" },
-  due: { color: "#64748B", fontSize: 13 },
-  submitted: { color: "#059669", fontWeight: "600", marginTop: 4 },
-  button: {
-    backgroundColor: "#3730A3",
-    borderRadius: 8,
-    paddingVertical: 8,
-    alignItems: "center",
-    marginTop: 6,
-  },
-  buttonText: { color: "#fff", fontWeight: "600" },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  title: { ...typography.subheading },
+  due: { ...typography.muted, color: colors.slate[500] },
 });

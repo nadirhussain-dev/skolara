@@ -1,7 +1,9 @@
 import { useClassAssignments, useCreateAssignment } from "@skolara/api-client";
 import { Link, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { colors, spacing, typography } from "@/lib/theme";
+import { Button, Card, EmptyState, Input, LoadingLine, Screen, SectionLabel } from "@/lib/ui";
 
 export default function ClassAssignmentsScreen() {
   const { classId } = useLocalSearchParams<{ classId: string }>();
@@ -26,70 +28,50 @@ export default function ClassAssignmentsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.form}>
-        <TextInput
-          placeholder="Subject"
-          value={subject}
-          onChangeText={setSubject}
-          style={styles.input}
-        />
-        <TextInput
-          placeholder="Title"
-          value={title}
-          onChangeText={setTitle}
-          style={styles.input}
-        />
-        <TextInput
+    <Screen>
+      <Card>
+        <SectionLabel>Assign homework</SectionLabel>
+        <Input placeholder="Subject" value={subject} onChangeText={setSubject} />
+        <Input placeholder="Title" value={title} onChangeText={setTitle} />
+        <Input
           placeholder="Due date (YYYY-MM-DD)"
           value={dueDate}
           onChangeText={setDueDate}
-          style={styles.input}
         />
-        <Pressable style={styles.button} onPress={submit} disabled={createAssignment.isPending}>
-          <Text style={styles.buttonText}>
-            {createAssignment.isPending ? "Creating..." : "Assign homework"}
-          </Text>
-        </Pressable>
-      </View>
+        <Button
+          title="Assign homework"
+          onPress={submit}
+          loading={createAssignment.isPending}
+        />
+      </Card>
 
-      {isLoading && <Text>Loading assignments...</Text>}
+      {isLoading && <LoadingLine label="Loading assignments..." />}
       <FlatList
         data={assignments}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ gap: spacing.sm }}
         renderItem={({ item }) => (
-          <Link href={`/assignments/submissions/${item.id}`} style={styles.row}>
-            {item.title} ({item.subject}) — due{" "}
-            {new Date(item.dueDate).toLocaleDateString()}
+          <Link href={`/assignments/submissions/${item.id}`} asChild>
+            <Pressable>
+              <Card>
+                <View style={styles.row}>
+                  <Text style={styles.title}>
+                    {item.title} ({item.subject})
+                  </Text>
+                  <Text style={styles.due}>due {new Date(item.dueDate).toLocaleDateString()}</Text>
+                </View>
+              </Card>
+            </Pressable>
           </Link>
         )}
-        ListEmptyComponent={!isLoading ? <Text>No assignments yet.</Text> : null}
+        ListEmptyComponent={!isLoading ? <EmptyState title="No assignments yet" /> : null}
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 12 },
-  form: { gap: 8, marginBottom: 8 },
-  input: {
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  button: {
-    backgroundColor: "#3730A3",
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  buttonText: { color: "#fff", fontWeight: "600" },
-  row: {
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-    fontSize: 16,
-  },
+  row: { gap: 2 },
+  title: { ...typography.subheading },
+  due: { ...typography.muted, color: colors.slate[500] },
 });

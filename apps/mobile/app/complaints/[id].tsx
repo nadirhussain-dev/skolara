@@ -1,7 +1,16 @@
 import { useAddComplaintComment, useComplaint } from "@skolara/api-client";
+import type { ComplaintStatus } from "@skolara/types";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, StyleSheet, Text, View } from "react-native";
+import { colors, spacing, typography, type Tone } from "@/lib/theme";
+import { Button, Card, Input, LoadingLine, Pill, Screen } from "@/lib/ui";
+
+const STATUS_TONE: Record<ComplaintStatus, Tone> = {
+  OPEN: "warning",
+  IN_PROGRESS: "brand",
+  RESOLVED: "success",
+};
 
 export default function ComplaintDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -15,16 +24,21 @@ export default function ComplaintDetailScreen() {
     setComment("");
   }
 
-  if (isLoading || !complaint) return <Text style={styles.loading}>Loading...</Text>;
+  if (isLoading || !complaint) return <LoadingLine label="Loading complaint..." />;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.subject}>{complaint.subject}</Text>
-      <Text style={styles.status}>{complaint.status}</Text>
-      <Text style={styles.body}>{complaint.body}</Text>
+    <Screen>
+      <Card>
+        <View style={styles.headerRow}>
+          <Text style={styles.subject}>{complaint.subject}</Text>
+          <Pill label={complaint.status.replace("_", " ")} tone={STATUS_TONE[complaint.status]} />
+        </View>
+        <Text style={styles.body}>{complaint.body}</Text>
+      </Card>
 
       <FlatList
-        style={styles.comments}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ gap: spacing.xs }}
         data={complaint.comments}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
@@ -35,47 +49,28 @@ export default function ComplaintDetailScreen() {
       />
 
       <View style={styles.replyRow}>
-        <TextInput
+        <Input
           placeholder="Add a comment"
           value={comment}
           onChangeText={setComment}
-          style={styles.input}
+          style={{ flex: 1 }}
         />
-        <Pressable style={styles.button} onPress={submitComment}>
-          <Text style={styles.buttonText}>Send</Text>
-        </Pressable>
+        <Button title="Send" onPress={submitComment} style={styles.sendButton} />
       </View>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  loading: { padding: 16 },
-  subject: { fontSize: 18, fontWeight: "700" },
-  status: { color: "#3730A3", fontWeight: "600", marginTop: 4 },
-  body: { color: "#334155", marginTop: 8, marginBottom: 12 },
-  comments: { flex: 1 },
+  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  subject: { ...typography.heading, flexShrink: 1 },
+  body: { ...typography.body, marginTop: spacing.xs },
   commentRow: {
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
+    borderBottomColor: colors.slate[200],
   },
-  commentBody: { color: "#334155" },
-  replyRow: { flexDirection: "row", gap: 8, marginTop: 8 },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  button: {
-    backgroundColor: "#3730A3",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    justifyContent: "center",
-  },
-  buttonText: { color: "#fff", fontWeight: "600" },
+  commentBody: { ...typography.body },
+  replyRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
+  sendButton: { paddingHorizontal: spacing.lg },
 });

@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "expo-router";
 import { useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { spacing, typography } from "@/lib/theme";
+import { Card, Chip, EmptyState, LoadingLine, Screen, SectionLabel } from "@/lib/ui";
 
 interface TeacherOption {
   id: string;
@@ -28,75 +30,57 @@ export default function ThreadsScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <Screen>
       {children && children.length > 0 && (
-        <View style={styles.newSection}>
-          <Text style={styles.sectionTitle}>Start a new conversation</Text>
+        <Card>
+          <SectionLabel>Start a new conversation</SectionLabel>
           <View style={styles.chipRow}>
             {children.map((c) => (
-              <Pressable
+              <Chip
                 key={c.id}
+                label={c.user.firstName}
+                active={studentId === c.id}
                 onPress={() => setStudentId(c.id)}
-                style={[styles.chip, studentId === c.id && styles.chipActive]}
-              >
-                <Text style={studentId === c.id ? styles.chipTextActive : styles.chipText}>
-                  {c.user.firstName}
-                </Text>
-              </Pressable>
+              />
             ))}
           </View>
           {studentId && (
             <View style={styles.chipRow}>
               {teachers?.map((t) => (
-                <Pressable
+                <Chip
                   key={t.id}
+                  label={`${t.user.firstName} ${t.user.lastName}`}
                   onPress={() => startWith(t.userId)}
-                  style={styles.chip}
-                >
-                  <Text style={styles.chipText}>
-                    {t.user.firstName} {t.user.lastName}
-                  </Text>
-                </Pressable>
+                />
               ))}
             </View>
           )}
-        </View>
+        </Card>
       )}
 
-      {isLoading && <Text>Loading conversations...</Text>}
+      {isLoading && <LoadingLine label="Loading conversations..." />}
       <FlatList
         data={threads}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ gap: spacing.sm }}
         renderItem={({ item }) => (
-          <Link href={`/messages/${item.id}`} style={styles.row}>
-            {item.student.user.firstName} {item.student.user.lastName}
+          <Link href={`/messages/${item.id}`} asChild>
+            <Pressable>
+              <Card>
+                <Text style={styles.row}>
+                  {item.student.user.firstName} {item.student.user.lastName}
+                </Text>
+              </Card>
+            </Pressable>
           </Link>
         )}
-        ListEmptyComponent={!isLoading ? <Text>No conversations yet.</Text> : null}
+        ListEmptyComponent={!isLoading ? <EmptyState title="No conversations yet" /> : null}
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 12 },
-  newSection: { gap: 8, marginBottom: 8 },
-  sectionTitle: { fontWeight: "600", color: "#334155" },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: {
-    borderWidth: 1,
-    borderColor: "#3730A3",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  chipActive: { backgroundColor: "#3730A3" },
-  chipText: { color: "#3730A3" },
-  chipTextActive: { color: "#fff" },
-  row: {
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-    fontSize: 16,
-  },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  row: { ...typography.subheading },
 });

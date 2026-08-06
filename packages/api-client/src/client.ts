@@ -1,36 +1,63 @@
 import type {
   AddComplaintCommentInput,
+  AdmitStudentInput,
+  ApiKey,
+  AssignSchoolToGroupInput,
+  AssignStudentToBusInput,
   Assignment,
   AssignmentSubmission,
   AttendanceRecord,
   AuthResponse,
+  BankStatementLine,
+  Book,
+  BookLoan,
+  BorrowBookInput,
+  Bus,
+  BusLocationPing,
   Complaint,
   ComplaintComment,
+  CreateApiKeyInput,
+  CreateApiKeyResponse,
   CreateAssignmentInput,
+  CreateBookInput,
+  CreateBusInput,
   CreateClassInput,
   CreateComplaintInput,
+  CreateExamInput,
+  CreateInvoiceInput,
   CreateNoticeInput,
+  CreatePayslipInput,
+  CreateSchoolGroupInput,
   CreateSchoolInput,
+  CreateTeacherInput,
   DefaulterRisk,
+  Exam,
   GradeAssignmentInput,
   GradeEntry,
+  ImportBankStatementInput,
   Invoice,
   LoginInput,
   MarkAttendanceInput,
   Message,
   MessageThread,
   Notice,
+  Payslip,
   PaymentSubmission,
   PaymentSubmissionStatus,
   PlatformAnalytics,
+  RankListEntry,
+  ReportBusLocationInput,
   ReviewPaymentInput,
   School,
   SchoolAnalytics,
   SchoolClass,
+  SchoolGroup,
   SendMessageInput,
   StartThreadInput,
   SubmitAssignmentInput,
   SubmitPaymentInput,
+  SuggestedMatch,
+  UpdateBrandingInput,
   UpdateComplaintStatusInput,
   UpsertGradeEntryInput,
 } from "@skolara/types";
@@ -48,7 +75,13 @@ export interface StudentWithUser {
   id: string;
   admissionNumber: string;
   classId: string | null;
-  user: { id: string; firstName: string; lastName: string };
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string | null;
+  };
 }
 
 export interface GradeEntryWithStudent extends GradeEntry {
@@ -73,6 +106,19 @@ export interface ComplaintWithComments extends Complaint {
 
 export interface DefaulterRiskWithExplanation extends DefaulterRisk {
   explanation: string;
+}
+
+export interface TeacherWithUser {
+  id: string;
+  userId: string;
+  employeeNumber: string;
+  subjects: string[];
+  user: { id: string; firstName: string; lastName: string; email: string; phone: string | null };
+}
+
+export interface BusWithLatestLocation {
+  bus: Bus;
+  latestLocation: BusLocationPing | null;
 }
 
 export class ApiError extends Error {
@@ -134,6 +180,26 @@ export function createApiClient({ baseUrl, getAccessToken }: ApiClientOptions) {
         request<School>(`/schools/${id}/approve`, { method: "PATCH" }),
       reject: (id: string) =>
         request<School>(`/schools/${id}/reject`, { method: "PATCH" }),
+      mine: () => request<School>("/schools/me"),
+      updateBranding: (id: string, input: UpdateBrandingInput) =>
+        request<School>(`/schools/${id}/branding`, {
+          method: "PATCH",
+          body: JSON.stringify(input),
+        }),
+    },
+    schoolGroups: {
+      list: () => request<SchoolGroup[]>("/school-groups"),
+      create: (input: CreateSchoolGroupInput) =>
+        request<SchoolGroup>("/school-groups", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      assignSchool: (groupId: string, input: AssignSchoolToGroupInput) =>
+        request<School>(`/school-groups/${groupId}/schools`, {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      schools: (groupId: string) => request<School[]>(`/school-groups/${groupId}/schools`),
     },
     classes: {
       list: () => request<SchoolClass[]>("/classes"),
@@ -144,11 +210,36 @@ export function createApiClient({ baseUrl, getAccessToken }: ApiClientOptions) {
         }),
     },
     students: {
+      admit: (input: AdmitStudentInput) =>
+        request<StudentWithUser>("/students", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
       byClass: (classId: string) =>
         request<StudentWithUser[]>(`/students?classId=${classId}`),
       mine: () => request<StudentWithUser[]>("/students/mine"),
+      findOne: (id: string) => request<StudentWithUser>(`/students/${id}`),
+      assignClass: (id: string, classId: string) =>
+        request<StudentWithUser>(`/students/${id}/class`, {
+          method: "PATCH",
+          body: JSON.stringify({ classId }),
+        }),
+    },
+    teachers: {
+      create: (input: CreateTeacherInput) =>
+        request<TeacherWithUser>("/teachers", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      list: () => request<TeacherWithUser[]>("/teachers"),
+      findOne: (id: string) => request<TeacherWithUser>(`/teachers/${id}`),
     },
     invoices: {
+      create: (input: CreateInvoiceInput) =>
+        request<Invoice>("/invoices", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
       forStudent: (studentId: string) =>
         request<Invoice[]>(`/invoices/student/${studentId}`),
     },
@@ -265,6 +356,75 @@ export function createApiClient({ baseUrl, getAccessToken }: ApiClientOptions) {
       school: () => request<SchoolAnalytics>("/analytics/school"),
       defaulterRisk: (studentId: string) =>
         request<DefaulterRiskWithExplanation>(`/analytics/defaulter-risk/${studentId}`),
+    },
+    exams: {
+      create: (input: CreateExamInput) =>
+        request<Exam>("/exams", { method: "POST", body: JSON.stringify(input) }),
+      forClass: (classId: string) => request<Exam[]>(`/exams/class/${classId}`),
+      rankList: (examId: string) => request<RankListEntry[]>(`/exams/${examId}/rank-list`),
+    },
+    library: {
+      createBook: (input: CreateBookInput) =>
+        request<Book>("/library/books", { method: "POST", body: JSON.stringify(input) }),
+      books: () => request<Book[]>("/library/books"),
+      borrow: (input: BorrowBookInput) =>
+        request<BookLoan>("/library/loans", { method: "POST", body: JSON.stringify(input) }),
+      returnBook: (loanId: string) =>
+        request<BookLoan>(`/library/loans/${loanId}/return`, { method: "PATCH" }),
+      loansForStudent: (studentId: string) =>
+        request<(BookLoan & { book: Book })[]>(`/library/loans/student/${studentId}`),
+    },
+    transport: {
+      createBus: (input: CreateBusInput) =>
+        request<Bus>("/transport/buses", { method: "POST", body: JSON.stringify(input) }),
+      buses: () => request<Bus[]>("/transport/buses"),
+      assignStudent: (busId: string, input: AssignStudentToBusInput) =>
+        request(`/transport/buses/${busId}/assign`, {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      reportLocation: (busId: string, input: ReportBusLocationInput) =>
+        request<BusLocationPing>(`/transport/buses/${busId}/location`, {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      latestLocation: (busId: string) =>
+        request<BusLocationPing | null>(`/transport/buses/${busId}/location`),
+      forStudent: (studentId: string) =>
+        request<BusWithLatestLocation | null>(`/transport/student/${studentId}`),
+    },
+    payroll: {
+      generate: (input: CreatePayslipInput) =>
+        request<Payslip>("/payroll/payslips", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      forStaff: (staffUserId: string) =>
+        request<Payslip[]>(`/payroll/payslips/staff/${staffUserId}`),
+      mine: () => request<Payslip[]>("/payroll/payslips/mine"),
+    },
+    bankStatement: {
+      import: (input: ImportBankStatementInput) =>
+        request<{ imported: number }>("/bank-statement/import", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      suggestedMatches: () =>
+        request<SuggestedMatch[]>("/bank-statement/suggested-matches"),
+      confirmMatch: (lineId: string, paymentSubmissionId: string) =>
+        request<BankStatementLine>(
+          `/bank-statement/lines/${lineId}/match/${paymentSubmissionId}`,
+          { method: "POST" },
+        ),
+    },
+    apiKeys: {
+      create: (input: CreateApiKeyInput) =>
+        request<CreateApiKeyResponse>("/api-keys", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      list: () => request<ApiKey[]>("/api-keys"),
+      revoke: (id: string) => request<ApiKey>(`/api-keys/${id}`, { method: "DELETE" }),
     },
   };
 }

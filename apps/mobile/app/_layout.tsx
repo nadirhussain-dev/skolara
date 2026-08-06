@@ -29,6 +29,9 @@ export default function RootLayout() {
         <Stack.Screen name="complaints/[id]" options={{ title: "Complaint" }} />
         <Stack.Screen name="messages/index" options={{ title: "Messages" }} />
         <Stack.Screen name="messages/[threadId]" options={{ title: "Conversation" }} />
+        <Stack.Screen name="transport/index" options={{ title: "Bus tracking" }} />
+        <Stack.Screen name="library/index" options={{ title: "Library" }} />
+        <Stack.Screen name="payroll/index" options={{ title: "My payslips" }} />
       </Stack>
     </Providers>
   );

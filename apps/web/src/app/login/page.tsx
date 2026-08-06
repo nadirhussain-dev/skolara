@@ -5,6 +5,13 @@ import { Button, Card, Input } from "@skolara/ui";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { setStoredAccessToken } from "@/lib/api-client";
+import { useAuth } from "@/lib/auth-context";
+
+const ROLE_HOME: Record<string, string> = {
+  SUPER_ADMIN: "/super-admin/schools",
+  SCHOOL_ADMIN: "/school/analytics",
+  TEACHER: "/teacher/gradebook",
+};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,6 +19,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [subdomain, setSubdomain] = useState("");
+
+  const auth = useAuth();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -21,9 +30,8 @@ export default function LoginPage() {
       subdomain: subdomain || undefined,
     });
     setStoredAccessToken(result.accessToken);
-    router.push(
-      result.user.role === "SUPER_ADMIN" ? "/super-admin/schools" : "/school/payments",
-    );
+    auth.login(result.user);
+    router.push(ROLE_HOME[result.user.role] ?? "/mobile-only");
   }
 
   return (
