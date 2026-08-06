@@ -27,6 +27,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/school/students", label: "Students", roles: ["SCHOOL_ADMIN"], group: "People" },
   { href: "/school/teachers", label: "Teachers", roles: ["SCHOOL_ADMIN"], group: "People" },
   { href: "/school/classes", label: "Classes", roles: ["SCHOOL_ADMIN"], group: "People" },
+  { href: "/school/users", label: "Accounts", roles: ["SCHOOL_ADMIN"], group: "People" },
 
   {
     href: "/teacher/gradebook",

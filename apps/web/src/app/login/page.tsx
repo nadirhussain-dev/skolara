@@ -35,11 +35,28 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <Card className="w-full max-w-sm">
-        <h1 className="mb-6 text-xl font-semibold text-brand-700">
-          Sign in to Skolara
-        </h1>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 left-1/2 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-brand-gradient opacity-20 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute bottom-[-10rem] right-[-6rem] h-80 w-80 rounded-full bg-coral-gradient opacity-20 blur-3xl"
+      />
+
+      <Card className="relative w-full max-w-sm">
+        <div className="mb-6 flex flex-col items-center gap-3 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-gradient text-xl font-bold text-white shadow-glow">
+            S
+          </span>
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-50">
+              Welcome back
+            </h1>
+            <p className="text-sm text-slate-500">Sign in to your Skolara account</p>
+          </div>
+        </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input
             type="text"

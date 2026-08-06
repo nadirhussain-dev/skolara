@@ -1,7 +1,7 @@
 "use client";
 
 import { useCreateTeacher, useTeachers } from "@skolara/api-client";
-import { Button, Card, CardHeader, CardTitle, EmptyState, Input } from "@skolara/ui";
+import { Button, Card, CardHeader, CardTitle, EmptyState, Input, PageHeader } from "@skolara/ui";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 
@@ -42,6 +42,7 @@ export default function TeachersPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <PageHeader title="Teachers" description="Add teaching staff and manage their subjects." />
       <Card>
         <CardHeader>
           <CardTitle>Add a teacher</CardTitle>

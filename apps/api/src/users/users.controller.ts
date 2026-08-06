@@ -3,11 +3,19 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  Param,
+  Patch,
   Post,
   Query,
   UseGuards,
 } from "@nestjs/common";
-import { createUserSchema, type CreateUserInput, type RoleType } from "@skolara/types";
+import {
+  createUserSchema,
+  setUserActiveSchema,
+  type CreateUserInput,
+  type RoleType,
+  type SetUserActiveInput,
+} from "@skolara/types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
@@ -45,5 +53,15 @@ export class UsersController {
   ) {
     if (!user.schoolId) throw new ForbiddenException("No school context");
     return this.usersService.findAllBySchool(user.schoolId, role);
+  }
+
+  @Patch(":id/active")
+  setActive(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(setUserActiveSchema)) body: SetUserActiveInput,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    return this.usersService.setActive(user.schoolId, id, body.isActive);
   }
 }

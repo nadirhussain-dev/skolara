@@ -2,7 +2,7 @@
 
 import { useReviewPayment, usePaymentQueue } from "@skolara/api-client";
 import type { PaymentRejectionReason } from "@skolara/types";
-import { Badge, Button, Card, CardHeader, CardTitle } from "@skolara/ui";
+import { Badge, Button, Card, CardHeader, CardTitle, PageHeader } from "@skolara/ui";
 import { formatCurrency } from "@skolara/utils";
 
 const statusTone = {
@@ -36,7 +36,9 @@ export default function PaymentQueuePage() {
   }
 
   return (
-    <Card>
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Payment queue" description="Verify parent-submitted fee payments." />
+      <Card>
       <CardHeader>
         <CardTitle>Payment verification queue</CardTitle>
       </CardHeader>
@@ -92,6 +94,7 @@ export default function PaymentQueuePage() {
           </p>
         )}
       </div>
-    </Card>
+      </Card>
+    </div>
   );
 }

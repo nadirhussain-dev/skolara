@@ -6,15 +6,28 @@
  */
 
 export const colors = {
+  // Deep violet — primary brand hue.
   brand: {
-    50: "#EEF0FC",
-    100: "#DCE0F9",
-    300: "#8B94E0",
-    500: "#4F46C7",
-    700: "#3730A3",
-    900: "#241E6B",
+    50: "#F5F3FF",
+    100: "#EDE9FE",
+    200: "#DDD6FE",
+    300: "#C4B5FD",
+    400: "#A78BFA",
+    500: "#8B5CF6",
+    600: "#7C3AED",
+    700: "#6D28D9",
+    800: "#5B21B6",
+    900: "#4C1D95",
   },
+  // Coral — accent/CTA hue, used sparingly against the violet brand.
   accent: {
+    100: "#FFE4E6",
+    300: "#FDA4AF",
+    500: "#FB7185",
+    700: "#BE123C",
+  },
+  // Amber — kept distinct from the coral accent so "warning" never reads as "danger".
+  warningScale: {
     100: "#FEF3C7",
     300: "#FCD34D",
     500: "#F59E0B",
@@ -38,8 +51,8 @@ export const colors = {
   dangerBg: "#FEE2E2",
   warning: "#F59E0B",
   warningBg: "#FEF3C7",
-  info: "#3730A3",
-  infoBg: "#EEF0FC",
+  info: "#6D28D9",
+  infoBg: "#F5F3FF",
   white: "#FFFFFF",
 } as const;
 
@@ -53,10 +66,10 @@ export const spacing = {
 } as const;
 
 export const radius = {
-  sm: 6,
-  md: 8,
-  lg: 12,
-  xl: 20,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 22,
   pill: 999,
 } as const;
 
@@ -74,7 +87,7 @@ export const tones = {
   neutral: { fg: colors.slate[600], bg: colors.slate[100] },
   brand: { fg: colors.brand[700], bg: colors.brand[50] },
   success: { fg: colors.success, bg: colors.successBg },
-  warning: { fg: colors.accent[700], bg: colors.warningBg },
+  warning: { fg: colors.warningScale[700], bg: colors.warningScale[100] },
   danger: { fg: colors.danger, bg: colors.dangerBg },
 } as const;
 
@@ -87,5 +100,12 @@ export const shadow = {
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 1,
+  },
+  glow: {
+    shadowColor: "#6D28D9",
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
 };

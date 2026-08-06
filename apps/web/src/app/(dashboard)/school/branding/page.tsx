@@ -1,7 +1,7 @@
 "use client";
 
 import { useMySchool, useUpdateBranding } from "@skolara/api-client";
-import { Button, Card, CardHeader, CardTitle, Input } from "@skolara/ui";
+import { Button, Card, CardHeader, CardTitle, Input, PageHeader } from "@skolara/ui";
 import { useEffect, useState } from "react";
 
 export default function BrandingPage() {
@@ -9,13 +9,13 @@ export default function BrandingPage() {
   const updateBranding = useUpdateBranding();
 
   const [logoUrl, setLogoUrl] = useState("");
-  const [primaryColor, setPrimaryColor] = useState("#3730A3");
+  const [primaryColor, setPrimaryColor] = useState("#6D28D9");
   const [savedMessage, setSavedMessage] = useState("");
 
   useEffect(() => {
     if (school) {
       setLogoUrl(school.logoUrl ?? "");
-      setPrimaryColor(school.primaryColor ?? "#3730A3");
+      setPrimaryColor(school.primaryColor ?? "#6D28D9");
     }
   }, [school]);
 
@@ -39,6 +39,7 @@ export default function BrandingPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <PageHeader title="Branding" description="White-label your school's login and dashboard." />
       <Card>
         <CardHeader>
           <CardTitle>{school.name}</CardTitle>
@@ -69,12 +70,12 @@ export default function BrandingPage() {
               <div className="flex items-center gap-2">
                 <input
                   type="color"
-                  value={/^#[0-9A-Fa-f]{6}$/.test(primaryColor) ? primaryColor : "#3730A3"}
+                  value={/^#[0-9A-Fa-f]{6}$/.test(primaryColor) ? primaryColor : "#6D28D9"}
                   onChange={(e) => setPrimaryColor(e.target.value)}
                   className="h-9 w-9 cursor-pointer rounded border border-slate-300 dark:border-slate-700"
                 />
                 <Input
-                  placeholder="#3730A3"
+                  placeholder="#6D28D9"
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
                   className="max-w-[140px]"

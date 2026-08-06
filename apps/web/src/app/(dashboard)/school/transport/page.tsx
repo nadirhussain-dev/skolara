@@ -9,7 +9,7 @@ import {
   useStudentsByClass,
 } from "@skolara/api-client";
 import type { SchoolClass } from "@skolara/types";
-import { Button, Card, CardHeader, CardTitle, EmptyState, Input, Select } from "@skolara/ui";
+import { Button, Card, CardHeader, CardTitle, EmptyState, Input, PageHeader, Select } from "@skolara/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -65,6 +65,7 @@ export default function TransportPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <PageHeader title="Transport" description="Manage the bus fleet and student assignments." />
       <Card>
         <CardHeader>
           <CardTitle>Add a bus</CardTitle>

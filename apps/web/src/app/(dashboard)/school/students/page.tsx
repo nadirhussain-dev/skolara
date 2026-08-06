@@ -2,7 +2,7 @@
 
 import { useAdmitStudent, useApiClient, useStudentsByClass } from "@skolara/api-client";
 import type { SchoolClass } from "@skolara/types";
-import { Button, Card, CardHeader, CardTitle, EmptyState, Input, Select } from "@skolara/ui";
+import { Button, Card, CardHeader, CardTitle, EmptyState, Input, PageHeader, Select } from "@skolara/ui";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
@@ -52,6 +52,7 @@ export default function StudentsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <PageHeader title="Students" description="Admit new students and browse class rosters." />
       <Card>
         <CardHeader>
           <CardTitle>Admit a student</CardTitle>

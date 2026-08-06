@@ -9,6 +9,7 @@ import {
   CardTitle,
   EmptyState,
   Input,
+  PageHeader,
 } from "@skolara/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -50,6 +51,7 @@ export default function ClassesPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <PageHeader title="Classes" description="Set up sections and academic years." />
       <Card>
         <CardHeader>
           <CardTitle>Create a class</CardTitle>

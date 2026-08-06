@@ -1,7 +1,7 @@
 "use client";
 
 import { useGeneratePayslip, usePayslipsForStaff, useTeachers } from "@skolara/api-client";
-import { Button, Card, CardHeader, CardTitle, EmptyState, Input, Select } from "@skolara/ui";
+import { Button, Card, CardHeader, CardTitle, EmptyState, Input, PageHeader, Select } from "@skolara/ui";
 import { formatCurrency } from "@skolara/utils";
 import { useState } from "react";
 
@@ -32,6 +32,7 @@ export default function PayrollPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <PageHeader title="Payroll" description="Generate and review staff payslips." />
       <Card>
         <CardHeader>
           <CardTitle>Select staff member</CardTitle>

@@ -11,6 +11,7 @@ import { ClassesModule } from "./classes/classes.module";
 import { ComplaintsModule } from "./complaints/complaints.module";
 import { ExamsModule } from "./exams/exams.module";
 import { GradesModule } from "./grades/grades.module";
+import { HealthModule } from "./health/health.module";
 import { InvoicesModule } from "./invoices/invoices.module";
 import { LibraryModule } from "./library/library.module";
 import { MessagingModule } from "./messaging/messaging.module";
@@ -31,6 +32,7 @@ import { UsersModule } from "./users/users.module";
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    HealthModule,
     NotificationsModule,
     AiModule,
     AuthModule,

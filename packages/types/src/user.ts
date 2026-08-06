@@ -27,3 +27,8 @@ export const createUserSchema = userSchema
     phone: z.string().optional(),
   });
 export type CreateUserInput = z.infer<typeof createUserSchema>;
+
+export const setUserActiveSchema = z.object({
+  isActive: z.boolean(),
+});
+export type SetUserActiveInput = z.infer<typeof setUserActiveSchema>;

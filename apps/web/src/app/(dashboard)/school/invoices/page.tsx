@@ -2,7 +2,7 @@
 
 import { useApiClient, useCreateInvoice, useInvoicesForStudent, useStudentsByClass } from "@skolara/api-client";
 import type { InvoiceStatus, SchoolClass } from "@skolara/types";
-import { Badge, Button, Card, CardHeader, CardTitle, EmptyState, Input, Select } from "@skolara/ui";
+import { Badge, Button, Card, CardHeader, CardTitle, EmptyState, Input, PageHeader, Select } from "@skolara/ui";
 import { formatCurrency } from "@skolara/utils";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -50,6 +50,7 @@ export default function InvoicesPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <PageHeader title="Invoices" description="Raise fee invoices and track payment status." />
       <Card>
         <CardHeader>
           <CardTitle>Select a student</CardTitle>

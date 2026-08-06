@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner } from "@skolara/ui";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Sidebar } from "@/components/sidebar";
@@ -19,8 +20,9 @@ export default function DashboardLayout({
 
   if (isLoading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-slate-500">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center gap-2 text-slate-500">
+        <Spinner className="h-5 w-5" />
+        <p className="text-sm">Loading...</p>
       </div>
     );
   }

@@ -55,7 +55,8 @@ export class ComplaintsController {
   @Get(":id")
   @Roles("SCHOOL_ADMIN", "PARENT", "STUDENT")
   findOne(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.complaintsService.findOne(user.id, user.role, id);
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    return this.complaintsService.findOne(user.schoolId, user.id, user.role, id);
   }
 
   @Post(":id/comments")
@@ -65,7 +66,8 @@ export class ComplaintsController {
     @Body(new ZodValidationPipe(addComplaintCommentSchema)) body: AddComplaintCommentInput,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.complaintsService.addComment(user.id, user.role, id, body);
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    return this.complaintsService.addComment(user.schoolId, user.id, user.role, id, body);
   }
 
   @Patch(":id/status")
@@ -73,7 +75,9 @@ export class ComplaintsController {
   updateStatus(
     @Param("id") id: string,
     @Body(new ZodValidationPipe(updateComplaintStatusSchema)) body: UpdateComplaintStatusInput,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.complaintsService.updateStatus(id, body.status);
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    return this.complaintsService.updateStatus(user.schoolId, id, body.status);
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { usePlatformAnalytics } from "@skolara/api-client";
-import { Card, CardHeader, CardTitle, StatCard } from "@skolara/ui";
+import { Card, CardHeader, CardTitle, PageHeader, StatCard } from "@skolara/ui";
 
 export default function PlatformAnalyticsPage() {
   const { data, isLoading } = usePlatformAnalytics();
@@ -12,9 +12,13 @@ export default function PlatformAnalyticsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Platform analytics"
+        description="Schools and active users across the whole Skolara platform."
+      />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Total schools" value={data.totalSchools} />
-        <StatCard label="Active users" value={data.totalActiveUsers} />
+        <StatCard label="Total schools" value={data.totalSchools} icon="🏫" />
+        <StatCard label="Active users" value={data.totalActiveUsers} icon="👥" />
       </div>
 
       <Card>

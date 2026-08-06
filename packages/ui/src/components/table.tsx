@@ -31,13 +31,18 @@ export function TBody({ className, ...props }: HTMLAttributes<HTMLTableSectionEl
 }
 
 export function TR({ className, ...props }: HTMLAttributes<HTMLTableRowElement>) {
-  return <tr className={cn(className)} {...props} />;
+  return (
+    <tr
+      className={cn("transition-colors hover:bg-brand-50/50 dark:hover:bg-slate-800/50", className)}
+      {...props}
+    />
+  );
 }
 
 export function TH({ className, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
-  return <th className={cn("py-2 pr-4 font-medium", className)} {...props} />;
+  return <th className={cn("py-2.5 pr-4 font-semibold", className)} {...props} />;
 }
 
 export function TD({ className, ...props }: TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cn("py-3 pr-4", className)} {...props} />;
+  return <td className={cn("py-3.5 pr-4", className)} {...props} />;
 }

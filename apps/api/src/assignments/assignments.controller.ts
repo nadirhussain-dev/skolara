@@ -62,13 +62,15 @@ export class AssignmentsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     await this.studentAccess.assertCanAccessStudent(user, studentId);
-    return this.assignmentsService.submit(studentId, assignmentId, body);
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    return this.assignmentsService.submit(user.schoolId, studentId, assignmentId, body);
   }
 
   @Get(":id/submissions")
   @Roles("TEACHER", "SCHOOL_ADMIN")
-  findSubmissions(@Param("id") assignmentId: string) {
-    return this.assignmentsService.findSubmissions(assignmentId);
+  findSubmissions(@Param("id") assignmentId: string, @CurrentUser() user: AuthenticatedUser) {
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    return this.assignmentsService.findSubmissions(user.schoolId, assignmentId);
   }
 
   @Patch("submissions/:submissionId/grade")
@@ -76,8 +78,10 @@ export class AssignmentsController {
   grade(
     @Param("submissionId") submissionId: string,
     @Body(new ZodValidationPipe(gradeAssignmentSchema)) body: GradeAssignmentInput,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.assignmentsService.grade(submissionId, body);
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    return this.assignmentsService.grade(user.schoolId, submissionId, body);
   }
 
   @Get("student/:studentId")

@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -7,13 +7,21 @@ export class StudentAccessService {
   constructor(private prisma: PrismaService) {}
 
   async assertCanAccessStudent(user: AuthenticatedUser, studentId: string) {
-    if (user.role === "SCHOOL_ADMIN" || user.role === "TEACHER") return;
+    const student = await this.prisma.studentProfile.findUnique({
+      where: { id: studentId },
+      select: { schoolId: true, userId: true },
+    });
+    if (!student) throw new NotFoundException("Student not found");
+
+    if (user.role === "SCHOOL_ADMIN" || user.role === "TEACHER") {
+      if (student.schoolId !== user.schoolId) {
+        throw new ForbiddenException("Not allowed to view this record");
+      }
+      return;
+    }
 
     if (user.role === "STUDENT") {
-      const owned = await this.prisma.studentProfile.findFirst({
-        where: { id: studentId, userId: user.id },
-      });
-      if (!owned) throw new ForbiddenException("Not your record");
+      if (student.userId !== user.id) throw new ForbiddenException("Not your record");
       return;
     }
 

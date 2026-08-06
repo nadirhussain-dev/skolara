@@ -22,3 +22,4 @@ export * from "./hooks/use-payroll";
 export * from "./hooks/use-bank-statement";
 export * from "./hooks/use-school-groups";
 export * from "./hooks/use-api-keys";
+export * from "./hooks/use-users";

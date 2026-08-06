@@ -80,17 +80,28 @@ export function Button({
 }) {
   const v = buttonVariants[variant];
   const isDisabled = disabled || loading;
+  const glow =
+    variant === "primary" || variant === "accent"
+      ? {
+          shadowColor: v.bg,
+          shadowOpacity: 0.32,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 5 },
+          elevation: 4,
+        }
+      : null;
   return (
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
-      style={[
+      style={({ pressed }) => [
         styles.button,
+        glow,
         {
           backgroundColor: v.bg,
           borderColor: v.borderColor ?? "transparent",
           borderWidth: v.borderColor ? 1 : 0,
-          opacity: isDisabled ? 0.5 : 1,
+          opacity: isDisabled ? 0.5 : pressed ? 0.85 : 1,
         },
         style,
       ]}
@@ -142,7 +153,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.slate[50], padding: spacing.lg, gap: spacing.md },
   card: {
     backgroundColor: colors.white,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.slate[100],
@@ -161,8 +172,8 @@ const styles = StyleSheet.create({
   },
   pillText: { fontSize: 12, fontWeight: "700" },
   button: {
-    borderRadius: radius.md,
-    paddingVertical: 12,
+    borderRadius: radius.lg,
+    paddingVertical: 13,
     paddingHorizontal: spacing.lg,
     alignItems: "center",
     justifyContent: "center",

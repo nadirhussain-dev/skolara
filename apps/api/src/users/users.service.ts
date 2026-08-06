@@ -43,17 +43,17 @@ export class UsersService {
     });
   }
 
-  async findOne(id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
+  async findOne(schoolId: string, id: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, schoolId },
       select: PUBLIC_USER_SELECT,
     });
     if (!user) throw new NotFoundException("User not found");
     return user;
   }
 
-  async setActive(id: string, isActive: boolean) {
-    await this.findOne(id);
+  async setActive(schoolId: string, id: string, isActive: boolean) {
+    await this.findOne(schoolId, id);
     return this.prisma.user.update({
       where: { id },
       data: { isActive },

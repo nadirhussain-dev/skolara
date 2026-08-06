@@ -1,0 +1,67 @@
+# Running Skolara on Supabase
+
+Skolara's schema is defined once, in [`apps/api/prisma/schema.prisma`](../apps/api/prisma/schema.prisma),
+and Prisma Migrate is the source of truth for applying it. Supabase is just Postgres underneath, so no
+schema changes were needed to move onto it — only connection wiring.
+
+The [`supabase/migrations/`](../supabase/migrations/) folder is a 1:1 SQL mirror of
+[`apps/api/prisma/migrations/`](../apps/api/prisma/migrations/), kept in sync so the Supabase CLI/dashboard
+(schema visualizer, `supabase db diff`, branching/previews) can see the same history. **Don't apply both** —
+pick one deploy path per environment (see below) or you'll get "relation already exists" errors from running
+the same DDL twice under two different migration-tracking tables.
+
+## 1. Create the project
+
+Create a project at [supabase.com](https://supabase.com/dashboard), then go to
+**Project Settings → Database → Connection string** and copy both variants:
+
+- **Connection pooling** (port `6543`, transaction mode) → `DATABASE_URL`
+- **Direct connection** (port `5432`) → `DIRECT_URL`
+
+Put them in `apps/api/.env` (see `.env.example`):
+
+```bash
+DATABASE_URL="postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
+DIRECT_URL="postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres"
+```
+
+The pooled URL is what the running app uses for every query; the direct URL is only used by
+`prisma migrate` (the pooler's transaction mode can't hold the advisory lock migrations need).
+
+## 2. Apply the schema
+
+From `apps/api`:
+
+```bash
+pnpm prisma:deploy   # prisma migrate deploy — applies apps/api/prisma/migrations/* in order
+pnpm prisma:generate # regenerate the Prisma Client
+```
+
+This is the one and only path that should touch schema in a real Supabase project. If you also want the
+Supabase CLI linked to the project for dashboard/branching purposes:
+
+```bash
+supabase link --project-ref <project-ref>
+```
+
+Don't run `supabase db push`/`db reset` against the same database you're deploying to with Prisma — it
+tracks history in its own `supabase_migrations.schema_migrations` table and will re-run DDL Prisma already
+applied.
+
+## 3. Seed data
+
+```bash
+pnpm prisma:seed
+```
+
+## 4. Optional: file uploads via Supabase Storage
+
+Set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_STORAGE_BUCKET` in `apps/api/.env` to route
+payment-screenshot / assignment-submission / book-cover / logo uploads through a Supabase Storage bucket
+instead of raw client-supplied URIs. Leave them unset to keep the current behavior (clients pass a URL/URI
+directly).
+
+## Local development without Supabase
+
+Nothing changes for local dev — keep `DATABASE_URL`/`DIRECT_URL` pointed at your local Postgres (see the
+default in `.env.example`) and use `pnpm prisma:migrate` (`prisma migrate dev`) as before.

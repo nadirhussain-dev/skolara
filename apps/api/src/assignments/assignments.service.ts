@@ -31,9 +31,14 @@ export class AssignmentsService {
     });
   }
 
-  async submit(studentId: string, assignmentId: string, input: SubmitAssignmentInput) {
-    const assignment = await this.prisma.assignment.findUnique({
-      where: { id: assignmentId },
+  async submit(
+    schoolId: string,
+    studentId: string,
+    assignmentId: string,
+    input: SubmitAssignmentInput,
+  ) {
+    const assignment = await this.prisma.assignment.findFirst({
+      where: { id: assignmentId, schoolId },
     });
     if (!assignment) throw new NotFoundException("Assignment not found");
 
@@ -53,7 +58,12 @@ export class AssignmentsService {
     });
   }
 
-  findSubmissions(assignmentId: string) {
+  async findSubmissions(schoolId: string, assignmentId: string) {
+    const assignment = await this.prisma.assignment.findFirst({
+      where: { id: assignmentId, schoolId },
+    });
+    if (!assignment) throw new NotFoundException("Assignment not found");
+
     return this.prisma.assignmentSubmission.findMany({
       where: { assignmentId },
       include: {
@@ -65,9 +75,9 @@ export class AssignmentsService {
     });
   }
 
-  async grade(submissionId: string, input: GradeAssignmentInput) {
-    const submission = await this.prisma.assignmentSubmission.findUnique({
-      where: { id: submissionId },
+  async grade(schoolId: string, submissionId: string, input: GradeAssignmentInput) {
+    const submission = await this.prisma.assignmentSubmission.findFirst({
+      where: { id: submissionId, assignment: { schoolId } },
     });
     if (!submission) throw new NotFoundException("Submission not found");
 

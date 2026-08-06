@@ -2,7 +2,7 @@
 
 import { useComplaints, useUpdateComplaintStatus } from "@skolara/api-client";
 import type { ComplaintStatus } from "@skolara/types";
-import { Badge, Card, CardHeader, CardTitle } from "@skolara/ui";
+import { Badge, Card, CardHeader, CardTitle, PageHeader } from "@skolara/ui";
 
 const STATUS_TONE = {
   OPEN: "warning",
@@ -21,7 +21,9 @@ export default function ComplaintsPage() {
   const updateStatus = useUpdateComplaintStatus();
 
   return (
-    <Card>
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Complaints" description="Track and resolve parent- and student-raised issues." />
+      <Card>
       <CardHeader>
         <CardTitle>Complaints</CardTitle>
       </CardHeader>
@@ -55,6 +57,7 @@ export default function ComplaintsPage() {
           <p className="py-8 text-center text-sm text-slate-500">No complaints.</p>
         )}
       </div>
-    </Card>
+      </Card>
+    </div>
   );
 }

@@ -7,7 +7,7 @@ import {
   useSchools,
   useSchoolsInGroup,
 } from "@skolara/api-client";
-import { Button, Card, CardHeader, CardTitle, EmptyState, Input, Select } from "@skolara/ui";
+import { Button, Card, CardHeader, CardTitle, EmptyState, Input, PageHeader, Select } from "@skolara/ui";
 import { useState } from "react";
 
 export default function SchoolGroupsPage() {
@@ -40,6 +40,10 @@ export default function SchoolGroupsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <PageHeader
+        title="School groups"
+        description="Organize multi-branch schools under a shared group."
+      />
       <Card>
         <CardHeader>
           <CardTitle>Create a school group</CardTitle>

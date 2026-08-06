@@ -1,7 +1,7 @@
 "use client";
 
 import { useConfirmBankStatementMatch, useImportBankStatement, useSuggestedMatches } from "@skolara/api-client";
-import { Button, Card, CardHeader, CardTitle, EmptyState, Textarea } from "@skolara/ui";
+import { Button, Card, CardHeader, CardTitle, EmptyState, PageHeader, Textarea } from "@skolara/ui";
 import { formatCurrency } from "@skolara/utils";
 import { useState } from "react";
 
@@ -23,6 +23,10 @@ export default function BankStatementPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Bank statement"
+        description="Import statements and reconcile pending payments."
+      />
       <Card>
         <CardHeader>
           <CardTitle>Import bank statement</CardTitle>

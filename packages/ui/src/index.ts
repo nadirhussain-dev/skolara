@@ -4,6 +4,7 @@ export * from "./components/button";
 export * from "./components/card";
 export * from "./components/empty-state";
 export * from "./components/input";
+export * from "./components/page-header";
 export * from "./components/select";
 export * from "./components/spinner";
 export * from "./components/stat-card";

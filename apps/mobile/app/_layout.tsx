@@ -1,12 +1,18 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Providers } from "@/lib/providers";
+import { colors } from "@/lib/theme";
 
 export default function RootLayout() {
   return (
     <Providers>
       <StatusBar style="auto" />
-      <Stack screenOptions={{ headerTintColor: "#3730A3" }}>
+      <Stack
+        screenOptions={{
+          headerTintColor: colors.brand[700],
+          headerTitleStyle: { color: colors.slate[900] },
+        }}
+      >
         <Stack.Screen name="index" options={{ title: "Skolara" }} />
         <Stack.Screen name="(auth)/login" options={{ title: "Sign in" }} />
         <Stack.Screen

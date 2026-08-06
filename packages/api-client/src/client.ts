@@ -30,6 +30,7 @@ import type {
   CreateSchoolGroupInput,
   CreateSchoolInput,
   CreateTeacherInput,
+  CreateUserInput,
   DefaulterRisk,
   Exam,
   GradeAssignmentInput,
@@ -60,6 +61,8 @@ import type {
   UpdateBrandingInput,
   UpdateComplaintStatusInput,
   UpsertGradeEntryInput,
+  User,
+  RoleType,
 } from "@skolara/types";
 
 export interface PaymentQueueItem extends PaymentSubmission {
@@ -425,6 +428,17 @@ export function createApiClient({ baseUrl, getAccessToken }: ApiClientOptions) {
         }),
       list: () => request<ApiKey[]>("/api-keys"),
       revoke: (id: string) => request<ApiKey>(`/api-keys/${id}`, { method: "DELETE" }),
+    },
+    users: {
+      create: (input: CreateUserInput) =>
+        request<User>("/users", { method: "POST", body: JSON.stringify(input) }),
+      list: (role?: RoleType) =>
+        request<User[]>(`/users${role ? `?role=${role}` : ""}`),
+      setActive: (id: string, isActive: boolean) =>
+        request<User>(`/users/${id}/active`, {
+          method: "PATCH",
+          body: JSON.stringify({ isActive }),
+        }),
     },
   };
 }

@@ -36,9 +36,14 @@ export class ComplaintsService {
     });
   }
 
-  private async assertCanView(userId: string, role: string, complaintId: string) {
-    const complaint = await this.prisma.complaint.findUnique({
-      where: { id: complaintId },
+  private async assertCanView(
+    schoolId: string,
+    userId: string,
+    role: string,
+    complaintId: string,
+  ) {
+    const complaint = await this.prisma.complaint.findFirst({
+      where: { id: complaintId, schoolId },
     });
     if (!complaint) throw new NotFoundException("Complaint not found");
     if (role !== "SCHOOL_ADMIN" && complaint.raisedByUserId !== userId) {
@@ -47,8 +52,8 @@ export class ComplaintsService {
     return complaint;
   }
 
-  async findOne(userId: string, role: string, complaintId: string) {
-    const complaint = await this.assertCanView(userId, role, complaintId);
+  async findOne(schoolId: string, userId: string, role: string, complaintId: string) {
+    const complaint = await this.assertCanView(schoolId, userId, role, complaintId);
     const comments = await this.prisma.complaintComment.findMany({
       where: { complaintId },
       orderBy: { createdAt: "asc" },
@@ -57,20 +62,21 @@ export class ComplaintsService {
   }
 
   async addComment(
+    schoolId: string,
     userId: string,
     role: string,
     complaintId: string,
     input: AddComplaintCommentInput,
   ) {
-    await this.assertCanView(userId, role, complaintId);
+    await this.assertCanView(schoolId, userId, role, complaintId);
     return this.prisma.complaintComment.create({
       data: { complaintId, authorUserId: userId, body: input.body },
     });
   }
 
-  async updateStatus(complaintId: string, status: ComplaintStatus) {
-    const complaint = await this.prisma.complaint.findUnique({
-      where: { id: complaintId },
+  async updateStatus(schoolId: string, complaintId: string, status: ComplaintStatus) {
+    const complaint = await this.prisma.complaint.findFirst({
+      where: { id: complaintId, schoolId },
     });
     if (!complaint) throw new NotFoundException("Complaint not found");
 

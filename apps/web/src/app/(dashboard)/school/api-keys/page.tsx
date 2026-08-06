@@ -1,7 +1,7 @@
 "use client";
 
 import { useApiKeys, useCreateApiKey, useRevokeApiKey } from "@skolara/api-client";
-import { Badge, Button, Card, CardHeader, CardTitle, EmptyState, Input } from "@skolara/ui";
+import { Badge, Button, Card, CardHeader, CardTitle, EmptyState, Input, PageHeader } from "@skolara/ui";
 import { useState } from "react";
 
 export default function ApiKeysPage() {
@@ -21,6 +21,10 @@ export default function ApiKeysPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <PageHeader
+        title="API keys"
+        description="Create and revoke keys for third-party integrations."
+      />
       <Card>
         <CardHeader>
           <CardTitle>Create an API key</CardTitle>
@@ -38,7 +42,7 @@ export default function ApiKeysPage() {
           </Button>
         </form>
         {rawKey && (
-          <div className="mt-4 rounded-lg border border-accent-200 bg-accent-50 p-4 text-sm dark:border-accent-700 dark:bg-accent-900/20">
+          <div className="mt-4 rounded-lg border border-warning-200 bg-warning-50 p-4 text-sm dark:border-warning-700 dark:bg-warning-900/20">
             <p className="font-medium">Copy this key now — it won&apos;t be shown again.</p>
             <code className="mt-1 block break-all rounded bg-white px-2 py-1 text-xs dark:bg-slate-950">
               {rawKey}
