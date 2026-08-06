@@ -54,7 +54,26 @@ applied.
 pnpm prisma:seed
 ```
 
-## 4. Optional: file uploads via Supabase Storage
+## 4. Row Level Security
+
+Every table has RLS enabled with **no policies** (migration `20260806125602_enable_row_level_security`).
+That's deliberate, not a placeholder to fill in later:
+
+- Supabase auto-exposes every `public` table through its PostgREST API and the `supabase-js` client to the
+  `anon`/`authenticated` Postgres roles. Without RLS, anyone holding the project's anon/publishable key could
+  read or write any row directly — bypassing the NestJS API's auth entirely.
+- With RLS on and zero policies, Postgres denies every command for any role subject to row security. Verified
+  live: `curl .../rest/v1/User` with the anon key returns `[]` even though the table has real rows.
+- This app has no legitimate use for that API surface — the NestJS backend is the only intended access path —
+  so deny-by-default is exactly right, and there's nothing more to configure here.
+- **The app itself is unaffected.** Prisma connects as the `postgres` role, which has `BYPASSRLS` on this
+  project (confirmed via `pg_roles`), so it continues to see and modify every row exactly as before.
+  Tenant isolation stays enforced in the NestJS service layer, same as always.
+- If you ever add a table that genuinely should be reachable via Supabase's client-side API (e.g. driving a
+  realtime feature straight from the mobile app), give it actual policies scoped to `auth.uid()` — don't just
+  leave it policy-less expecting inherited access from elsewhere; RLS is per-table.
+
+## 5. Optional: file uploads via Supabase Storage
 
 Set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_STORAGE_BUCKET` in `apps/api/.env` to route
 payment-screenshot / assignment-submission / book-cover / logo uploads through a Supabase Storage bucket
