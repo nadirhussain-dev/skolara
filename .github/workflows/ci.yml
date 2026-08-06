@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck-and-build:
+    runs-on: ubuntu-latest
+    env:
+      # Dummy values — enough for `prisma generate`/schema parsing during
+      # typecheck/build. No database connection is actually made in CI.
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/skolara?schema=public"
+      DIRECT_URL: "postgresql://postgres:postgres@localhost:5432/skolara?schema=public"
+      JWT_ACCESS_SECRET: "ci-access-secret"
+      JWT_REFRESH_SECRET: "ci-refresh-secret"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @skolara/api exec prisma generate
+
+      - name: Typecheck & build all packages
+        run: pnpm turbo run typecheck
+
+      - name: Validate Prisma schema
+        run: pnpm --filter @skolara/api exec prisma validate
+
+      - name: Validate Supabase migrations stay in sync with Prisma migrations
+        run: |
+          diff <(ls apps/api/prisma/migrations | grep -v migration_lock.toml) \
+               <(ls supabase/migrations | sed 's/\.sql$//')

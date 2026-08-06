@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
+import { APP_FILTER, APP_GUARD } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AiModule } from "./ai/ai.module";
 import { ApiKeysModule } from "./api-keys/api-keys.module";
 import { AnalyticsModule } from "./analytics/analytics.module";
@@ -27,10 +29,15 @@ import { StudentsModule } from "./students/students.module";
 import { TeachersModule } from "./teachers/teachers.module";
 import { TransportModule } from "./transport/transport.module";
 import { UsersModule } from "./users/users.module";
+import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
+import { validateEnv } from "./env.validation";
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+    // Default: 100 requests / minute per IP across the API. Individual routes
+    // (e.g. login) can tighten this further with @Throttle(...).
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     PrismaModule,
     HealthModule,
     NotificationsModule,
@@ -58,6 +65,10 @@ import { UsersModule } from "./users/users.module";
     PayrollModule,
     AnalyticsModule,
     ApiKeysModule,
+  ],
+  providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
   ],
 })
 export class AppModule {}

@@ -1,7 +1,8 @@
-import type { User } from "@skolara/types";
+import type { AuthTokens, User } from "@skolara/types";
 import { createApiClient } from "@skolara/api-client";
 
 const TOKEN_STORAGE_KEY = "skolara_access_token";
+const REFRESH_TOKEN_STORAGE_KEY = "skolara_refresh_token";
 const USER_STORAGE_KEY = "skolara_user";
 
 export function getStoredAccessToken(): string | null {
@@ -13,6 +14,17 @@ export function setStoredAccessToken(token: string | null) {
   if (typeof window === "undefined") return;
   if (token) window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
   else window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+}
+
+export function getStoredRefreshToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+}
+
+export function setStoredRefreshToken(token: string | null) {
+  if (typeof window === "undefined") return;
+  if (token) window.localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, token);
+  else window.localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
 }
 
 export function getStoredUser(): User | null {
@@ -34,10 +46,22 @@ export function setStoredUser(user: User | null) {
 
 export function clearSession() {
   setStoredAccessToken(null);
+  setStoredRefreshToken(null);
   setStoredUser(null);
 }
 
 export const apiClient = createApiClient({
   baseUrl: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000",
   getAccessToken: () => getStoredAccessToken(),
+  getRefreshToken: () => getStoredRefreshToken(),
+  onTokensRefreshed: (tokens: AuthTokens) => {
+    setStoredAccessToken(tokens.accessToken);
+    setStoredRefreshToken(tokens.refreshToken);
+  },
+  onAuthFailure: () => {
+    clearSession();
+    if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+      window.location.assign("/login");
+    }
+  },
 });

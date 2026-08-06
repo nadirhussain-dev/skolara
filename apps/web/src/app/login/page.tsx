@@ -4,7 +4,7 @@ import { useLogin } from "@skolara/api-client";
 import { Button, Card, Input } from "@skolara/ui";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { setStoredAccessToken } from "@/lib/api-client";
+import { setStoredAccessToken, setStoredRefreshToken } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 
 const ROLE_HOME: Record<string, string> = {
@@ -30,6 +30,7 @@ export default function LoginPage() {
       subdomain: subdomain || undefined,
     });
     setStoredAccessToken(result.accessToken);
+    setStoredRefreshToken(result.refreshToken);
     auth.login(result.user);
     router.push(ROLE_HOME[result.user.role] ?? "/mobile-only");
   }

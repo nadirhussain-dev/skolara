@@ -8,6 +8,7 @@ import type {
   AssignmentSubmission,
   AttendanceRecord,
   AuthResponse,
+  AuthTokens,
   BankStatementLine,
   Book,
   BookLoan,
@@ -137,12 +138,55 @@ export class ApiError extends Error {
 export interface ApiClientOptions {
   baseUrl: string;
   getAccessToken: () => string | null | Promise<string | null>;
+  /** Enables silent token refresh on 401s. Omit to disable (e.g. before login). */
+  getRefreshToken?: () => string | null | Promise<string | null>;
+  onTokensRefreshed?: (tokens: AuthTokens) => void | Promise<void>;
+  /** Called once a 401 survives a refresh attempt (or there's no refresh token) — sign the user out. */
+  onAuthFailure?: () => void | Promise<void>;
 }
 
-export function createApiClient({ baseUrl, getAccessToken }: ApiClientOptions) {
+export function createApiClient({
+  baseUrl,
+  getAccessToken,
+  getRefreshToken,
+  onTokensRefreshed,
+  onAuthFailure,
+}: ApiClientOptions) {
+  // Dedupes concurrent refreshes: if five requests 401 at once, only one
+  // actual /auth/refresh call happens and the rest await its result.
+  let refreshInFlight: Promise<string | null> | null = null;
+
+  async function refreshAccessToken(): Promise<string | null> {
+    if (!refreshInFlight) {
+      refreshInFlight = (async () => {
+        const refreshToken = await getRefreshToken?.();
+        if (!refreshToken) return null;
+        try {
+          const res = await fetch(`${baseUrl}/auth/refresh`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refreshToken }),
+          });
+          if (!res.ok) return null;
+          const tokens = (await res.json()) as AuthTokens;
+          await onTokensRefreshed?.(tokens);
+          return tokens.accessToken;
+        } catch {
+          return null;
+        }
+      })();
+    }
+    try {
+      return await refreshInFlight;
+    } finally {
+      refreshInFlight = null;
+    }
+  }
+
   async function request<T>(
     path: string,
     init: RequestInit = {},
+    isRetry = false,
   ): Promise<T> {
     const token = await getAccessToken();
     const res = await fetch(`${baseUrl}${path}`, {
@@ -155,6 +199,11 @@ export function createApiClient({ baseUrl, getAccessToken }: ApiClientOptions) {
     });
 
     if (!res.ok) {
+      if (res.status === 401 && !isRetry && getRefreshToken && path !== "/auth/login" && path !== "/auth/refresh") {
+        const newToken = await refreshAccessToken();
+        if (newToken) return request<T>(path, init, true);
+        await onAuthFailure?.();
+      }
       const body = await res.json().catch(() => undefined);
       throw new ApiError(res.status, body?.message ?? res.statusText, body);
     }

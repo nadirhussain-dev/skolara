@@ -1,6 +1,8 @@
-import { Link } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Link, router } from "expo-router";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { clearSession } from "@/lib/api-client";
 import { colors, radius, shadow, spacing, typography } from "@/lib/theme";
+import { Button } from "@/lib/ui";
 
 const links = [
   { href: "/attendance", label: "Mark attendance", icon: "✅" },
@@ -10,8 +12,13 @@ const links = [
 ] as const;
 
 export default function TeacherDashboardScreen() {
+  async function signOut() {
+    await clearSession();
+    router.replace("/(auth)/login");
+  }
+
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       {links.map((link) => (
         <Link key={link.href} href={link.href} asChild>
           <Pressable style={styles.card}>
@@ -20,12 +27,15 @@ export default function TeacherDashboardScreen() {
           </Pressable>
         </Link>
       ))}
-    </View>
+      <View style={styles.footer}>
+        <Button title="Sign out" variant="ghost" onPress={signOut} />
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: spacing.lg, gap: spacing.md, backgroundColor: colors.slate[50] },
+  container: { padding: spacing.lg, gap: spacing.md, backgroundColor: colors.slate[50] },
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -39,4 +49,5 @@ const styles = StyleSheet.create({
   },
   icon: { fontSize: 22 },
   label: { ...typography.subheading, flex: 1 },
+  footer: { alignItems: "center", marginTop: spacing.sm },
 });

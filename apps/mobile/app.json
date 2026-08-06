@@ -6,13 +6,27 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
+    "backgroundColor": "#6D28D9",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#6D28D9"
+    },
     "plugins": ["expo-router"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.skolara.app"
     },
     "android": {
-      "package": "com.skolara.app"
+      "package": "com.skolara.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#6D28D9"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
     }
   }
 }

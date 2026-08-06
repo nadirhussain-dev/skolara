@@ -1,10 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Skolara",
+  title: {
+    default: "Skolara",
+    template: "%s · Skolara",
+  },
   description: "Modern, AI-assisted school management SaaS",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#6D28D9",
 };
 
 export default function RootLayout({

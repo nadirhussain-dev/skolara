@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
-import type { AuthResponse, LoginInput } from "@skolara/types";
+import type { AuthResponse, AuthTokens, LoginInput } from "@skolara/types";
 import { PrismaService } from "../prisma/prisma.service";
 import type { JwtPayload } from "./jwt-payload.interface";
 
@@ -46,26 +46,14 @@ export class AuthService {
       throw new UnauthorizedException("Invalid credentials");
     }
 
-    const payload: JwtPayload = {
+    const tokens = await this.issueTokens({
       sub: user.id,
       role: user.role,
       schoolId: user.schoolId,
-    };
-
-    const [accessToken, refreshToken] = await Promise.all([
-      this.jwt.signAsync(payload, {
-        secret: this.config.getOrThrow<string>("JWT_ACCESS_SECRET"),
-        expiresIn: this.config.get<string>("JWT_ACCESS_EXPIRES_IN", "15m"),
-      }),
-      this.jwt.signAsync(payload, {
-        secret: this.config.getOrThrow<string>("JWT_REFRESH_SECRET"),
-        expiresIn: this.config.get<string>("JWT_REFRESH_EXPIRES_IN", "7d"),
-      }),
-    ]);
+    });
 
     return {
-      accessToken,
-      refreshToken,
+      ...tokens,
       user: {
         id: user.id,
         schoolId: user.schoolId,
@@ -78,5 +66,48 @@ export class AuthService {
         createdAt: user.createdAt,
       },
     };
+  }
+
+  // Exchanges a still-valid refresh token for a new token pair (rotation —
+  // each refresh token is single-use in practice since the client immediately
+  // replaces it), re-checking the user/school are still in good standing
+  // rather than trusting whatever was true when the token was issued.
+  async refresh(refreshToken: string): Promise<AuthTokens> {
+    let payload: JwtPayload;
+    try {
+      payload = await this.jwt.verifyAsync<JwtPayload>(refreshToken, {
+        secret: this.config.getOrThrow<string>("JWT_REFRESH_SECRET"),
+      });
+    } catch {
+      throw new UnauthorizedException("Invalid or expired refresh token");
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException("Invalid or expired refresh token");
+    }
+
+    if (user.schoolId) {
+      const school = await this.prisma.school.findUnique({ where: { id: user.schoolId } });
+      if (!school || !LOGIN_ALLOWED_STATUSES.has(school.subscriptionStatus)) {
+        throw new UnauthorizedException("Invalid or expired refresh token");
+      }
+    }
+
+    return this.issueTokens({ sub: user.id, role: user.role, schoolId: user.schoolId });
+  }
+
+  private async issueTokens(payload: JwtPayload): Promise<AuthTokens> {
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwt.signAsync(payload, {
+        secret: this.config.getOrThrow<string>("JWT_ACCESS_SECRET"),
+        expiresIn: this.config.get<string>("JWT_ACCESS_EXPIRES_IN", "15m"),
+      }),
+      this.jwt.signAsync(payload, {
+        secret: this.config.getOrThrow<string>("JWT_REFRESH_SECRET"),
+        expiresIn: this.config.get<string>("JWT_REFRESH_EXPIRES_IN", "7d"),
+      }),
+    ]);
+    return { accessToken, refreshToken };
   }
 }

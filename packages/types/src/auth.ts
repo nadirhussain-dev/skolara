@@ -18,3 +18,8 @@ export const authResponseSchema = authTokensSchema.extend({
   user: userSchema,
 });
 export type AuthResponse = z.infer<typeof authResponseSchema>;
+
+export const refreshTokenSchema = z.object({
+  refreshToken: z.string().min(1),
+});
+export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;

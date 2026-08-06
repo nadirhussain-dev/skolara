@@ -2,7 +2,7 @@ import { useLogin } from "@skolara/api-client";
 import { router } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { setStoredAccessToken } from "@/lib/api-client";
+import { setStoredAccessToken, setStoredRefreshToken } from "@/lib/api-client";
 import { colors, spacing, typography } from "@/lib/theme";
 import { Button, Input } from "@/lib/ui";
 
@@ -19,6 +19,7 @@ export default function LoginScreen() {
       subdomain: subdomain || undefined,
     });
     await setStoredAccessToken(result.accessToken);
+    await setStoredRefreshToken(result.refreshToken);
     if (result.user.role === "TEACHER") {
       router.replace("/teacher-dashboard");
     } else {
