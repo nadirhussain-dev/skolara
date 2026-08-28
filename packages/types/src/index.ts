@@ -23,3 +23,4 @@ export * from "./payment-gateway";
 export * from "./uploads";
 export * from "./devices";
 export * from "./audit";
+export * from "./pricing";

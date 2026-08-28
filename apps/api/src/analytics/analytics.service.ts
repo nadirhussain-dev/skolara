@@ -1,5 +1,10 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { DefaulterRisk, PlatformAnalytics, SchoolAnalytics } from "@skolara/types";
+import {
+  monthlyRevenueFor,
+  type DefaulterRisk,
+  type PlatformAnalytics,
+  type SchoolAnalytics,
+} from "@skolara/types";
 import { AiService } from "../ai/ai.service";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -21,11 +26,39 @@ export class AnalyticsService {
       schoolsByPlan[school.plan] = (schoolsByPlan[school.plan] ?? 0) + 1;
     }
 
+    const now = Date.now();
+    const sevenDaysFromNow = new Date(now + 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+
+    // Trials are not revenue: a school that hasn't paid yet shouldn't inflate
+    // MRR, and counting it would make the conversion rate invisible.
+    const payingSchools = schools.filter((school) => school.subscriptionStatus === "ACTIVE");
+    const mrrPkr = payingSchools.reduce(
+      (total, school) => total + monthlyRevenueFor(school.plan),
+      0,
+    );
+
     return {
       totalSchools: schools.length,
       schoolsByStatus,
       schoolsByPlan,
       totalActiveUsers,
+      mrrPkr,
+      arrPkr: mrrPkr * 12,
+      trialsEndingSoon: schools.filter(
+        (school) =>
+          school.subscriptionStatus === "TRIAL" &&
+          school.trialEndsAt !== null &&
+          school.trialEndsAt <= sevenDaysFromNow,
+      ).length,
+      pendingApprovals: schoolsByStatus.PENDING ?? 0,
+      schoolsAddedLast30Days: schools.filter((school) => school.createdAt >= thirtyDaysAgo)
+        .length,
+      // Enterprise is quoted individually, so it contributes 0 above rather
+      // than a guess. Surfaced so the number isn't silently understated.
+      enterpriseSchoolsExcludedFromMrr: payingSchools.filter(
+        (school) => school.plan === "ENTERPRISE",
+      ).length,
     };
   }
 

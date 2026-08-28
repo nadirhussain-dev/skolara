@@ -1,4 +1,5 @@
 import { ExecutionContext, ForbiddenException, UnauthorizedException } from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
 import { createHash } from "node:crypto";
 import { JwtOrApiKeyGuard } from "./jwt-or-api-key.guard";
 import type { PrismaService } from "../../prisma/prisma.service";
@@ -41,7 +42,7 @@ describe("JwtOrApiKeyGuard", () => {
         update: jest.fn().mockResolvedValue({}),
       },
     };
-    guard = new JwtOrApiKeyGuard(prisma as unknown as PrismaService);
+    guard = new JwtOrApiKeyGuard(prisma as unknown as PrismaService, new Reflector());
     request = makeRequest("GET", { "x-api-key": RAW_KEY });
   });
 

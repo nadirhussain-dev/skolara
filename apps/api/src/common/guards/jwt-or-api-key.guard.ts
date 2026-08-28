@@ -5,6 +5,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
 import { createHash } from "node:crypto";
 import type { Request } from "express";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -25,11 +26,17 @@ const LAST_USED_REFRESH_MS = 60_000;
  */
 @Injectable()
 export class JwtOrApiKeyGuard implements CanActivate {
-  // Instantiated directly rather than injected so that every controller can
-  // use this guard without its module having to register the passport guard.
-  private readonly jwtGuard = new JwtAuthGuard();
+  // Constructed directly rather than injected so that every controller can use
+  // this guard without its module having to register the passport guard. The
+  // reflector is handed over so @Public() still works underneath it.
+  private readonly jwtGuard: JwtAuthGuard;
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    reflector: Reflector,
+  ) {
+    this.jwtGuard = new JwtAuthGuard(reflector);
+  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();

@@ -52,6 +52,8 @@ import type {
   PlatformAnalytics,
   RankListEntry,
   RegisterDeviceInput,
+  RegisterSchoolInput,
+  RegisterSchoolResponse,
   ReportBusLocationInput,
   ResetPasswordInput,
   ReviewPaymentInput,
@@ -290,6 +292,15 @@ export function createApiClient({
     },
     schools: {
       list: () => request<School[]>("/schools"),
+      register: (input: RegisterSchoolInput) =>
+        request<RegisterSchoolResponse>("/schools/register", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      subdomainAvailable: (subdomain: string) =>
+        request<{ available: boolean }>(
+          `/schools/subdomain-available/${encodeURIComponent(subdomain)}`,
+        ),
       create: (input: CreateSchoolInput) =>
         request<School>("/schools", {
           method: "POST",
