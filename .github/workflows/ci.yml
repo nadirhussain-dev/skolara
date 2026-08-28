@@ -80,6 +80,13 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Required explicitly: pnpm doesn't run dependencies' postinstall hooks
+      # by default, so @prisma/client stays an ungenerated stub otherwise, and
+      # `migrate deploy` doesn't generate one either. The seed below needs the
+      # real client at runtime, not just its types.
+      - name: Generate Prisma client
+        run: pnpm --filter @skolara/api exec prisma generate
+
       # Typecheck alone can't catch a hand-written migration with a typo, a
       # wrong column type, or DDL that conflicts with an earlier migration.
       # Applying the whole history to an empty database can.
