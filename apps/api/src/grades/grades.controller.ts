@@ -12,7 +12,7 @@ import {
 import { upsertGradeEntrySchema, type UpsertGradeEntryInput } from "@skolara/types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
-import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { JwtOrApiKeyGuard } from "../common/guards/jwt-or-api-key.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import { StudentAccessService } from "../common/student-access.service";
@@ -20,7 +20,7 @@ import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
 import { GradesService } from "./grades.service";
 
 @Controller("grades")
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtOrApiKeyGuard, RolesGuard)
 export class GradesController {
   constructor(
     private gradesService: GradesService,

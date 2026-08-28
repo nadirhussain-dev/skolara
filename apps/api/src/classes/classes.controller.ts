@@ -10,14 +10,14 @@ import {
 import { createClassSchema, type CreateClassInput } from "@skolara/types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
-import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { JwtOrApiKeyGuard } from "../common/guards/jwt-or-api-key.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
 import { ClassesService } from "./classes.service";
 
 @Controller("classes")
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtOrApiKeyGuard, RolesGuard)
 export class ClassesController {
   constructor(private classesService: ClassesService) {}
 

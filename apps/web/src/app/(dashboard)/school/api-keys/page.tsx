@@ -4,6 +4,8 @@ import { useApiKeys, useCreateApiKey, useRevokeApiKey } from "@skolara/api-clien
 import { Badge, Button, Card, CardHeader, CardTitle, EmptyState, Input, PageHeader } from "@skolara/ui";
 import { useState } from "react";
 
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
 export default function ApiKeysPage() {
   const { data: apiKeys, isLoading } = useApiKeys();
   const createApiKey = useCreateApiKey();
@@ -23,8 +25,24 @@ export default function ApiKeysPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="API keys"
-        description="Create and revoke keys for third-party integrations."
+        description="Create and revoke read-only keys for third-party integrations."
       />
+      <Card>
+        <CardHeader>
+          <CardTitle>Using a key</CardTitle>
+        </CardHeader>
+        <p className="text-sm text-slate-500">
+          Send the key as an <code className="text-xs">x-api-key</code> header. Keys are
+          scoped to this school and are <strong>read-only</strong> — they can fetch
+          students, classes, attendance, grades, invoices, and analytics, but any write
+          is rejected. Use a signed-in account for changes so the action is attributable
+          to a person.
+        </p>
+        <code className="mt-3 block overflow-x-auto rounded bg-slate-100 px-3 py-2 text-xs dark:bg-slate-900">
+          curl -H &quot;x-api-key: sk_skolara_...&quot; {apiBaseUrl}/students
+        </code>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Create an API key</CardTitle>

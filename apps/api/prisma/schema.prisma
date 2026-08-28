@@ -594,7 +594,7 @@ model ApiKey {
   school     School    @relation(fields: [schoolId], references: [id])
   name       String
   keyPrefix  String
-  hashedKey  String
+  hashedKey  String    @unique
   createdAt  DateTime  @default(now())
   lastUsedAt DateTime?
   revokedAt  DateTime?
