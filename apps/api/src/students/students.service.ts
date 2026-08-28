@@ -84,4 +84,51 @@ export class StudentsService {
       data: { classId },
     });
   }
+
+  /**
+   * Links an existing parent account to a student after admission. Without
+   * this, parents could only ever be attached at the moment a student was
+   * created, so a second child — or a parent account created later — could
+   * never be connected, and the app's multi-child switcher stayed empty.
+   */
+  async linkParent(schoolId: string, studentId: string, parentUserId: string) {
+    const [student, parent] = await Promise.all([
+      this.prisma.studentProfile.findFirst({ where: { id: studentId, schoolId } }),
+      this.prisma.user.findFirst({
+        where: { id: parentUserId, schoolId, role: "PARENT" },
+      }),
+    ]);
+    if (!student) throw new NotFoundException("Student not found");
+    // Checked against the same school, so this can't link a parent across tenants.
+    if (!parent) throw new NotFoundException("Parent not found in this school");
+
+    // Idempotent: re-linking an existing pair shouldn't be an error the UI
+    // has to special-case.
+    await this.prisma.parentStudentLink.upsert({
+      where: { parentUserId_studentId: { parentUserId, studentId } },
+      create: { parentUserId, studentId },
+      update: {},
+    });
+
+    return this.findParents(schoolId, studentId);
+  }
+
+  async unlinkParent(schoolId: string, studentId: string, parentUserId: string) {
+    const student = await this.prisma.studentProfile.findFirst({
+      where: { id: studentId, schoolId },
+    });
+    if (!student) throw new NotFoundException("Student not found");
+
+    await this.prisma.parentStudentLink.deleteMany({ where: { parentUserId, studentId } });
+    return this.findParents(schoolId, studentId);
+  }
+
+  async findParents(schoolId: string, studentId: string) {
+    const student = await this.prisma.studentProfile.findFirst({
+      where: { id: studentId, schoolId },
+      include: { parentLinks: { include: { parentUser: { select: PUBLIC_USER_SELECT } } } },
+    });
+    if (!student) throw new NotFoundException("Student not found");
+    return student.parentLinks.map((link) => link.parentUser);
+  }
 }

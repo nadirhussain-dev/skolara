@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -20,6 +21,7 @@ import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
 import { StudentsService } from "./students.service";
 
 const assignClassSchema = z.object({ classId: z.string().uuid() });
+const linkParentSchema = z.object({ parentUserId: z.string().uuid() });
 
 @Controller("students")
 @UseGuards(JwtOrApiKeyGuard, RolesGuard)
@@ -67,5 +69,31 @@ export class StudentsController {
   ) {
     if (!user.schoolId) throw new ForbiddenException("No school context");
     return this.studentsService.assignClass(user.schoolId, id, body.classId);
+  }
+
+  @Get(":id/parents")
+  findParents(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    return this.studentsService.findParents(user.schoolId, id);
+  }
+
+  @Post(":id/parents")
+  linkParent(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(linkParentSchema)) body: { parentUserId: string },
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    return this.studentsService.linkParent(user.schoolId, id, body.parentUserId);
+  }
+
+  @Delete(":id/parents/:parentUserId")
+  unlinkParent(
+    @Param("id") id: string,
+    @Param("parentUserId") parentUserId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    return this.studentsService.unlinkParent(user.schoolId, id, parentUserId);
   }
 }

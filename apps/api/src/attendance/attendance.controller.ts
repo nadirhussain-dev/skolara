@@ -32,6 +32,16 @@ export class AttendanceController {
     return this.attendanceService.markAttendance(user.schoolId, user.id, body);
   }
 
+  @Get("school-day")
+  @Roles("SCHOOL_ADMIN")
+  schoolDaySummary(
+    @Query("date") date: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    return this.attendanceService.schoolDaySummary(user.schoolId, new Date(date));
+  }
+
   @Get("class/:classId")
   @Roles("TEACHER", "SCHOOL_ADMIN")
   findByClass(

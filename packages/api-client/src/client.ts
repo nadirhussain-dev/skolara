@@ -127,6 +127,25 @@ export interface TeacherWithUser {
   user: { id: string; firstName: string; lastName: string; email: string; phone: string | null };
 }
 
+export interface ClassAttendanceSummary {
+  classId: string;
+  name: string;
+  section: string | null;
+  marked: boolean;
+  presentCount: number;
+  totalCount: number;
+  attendanceRate: number | null;
+}
+
+export interface SchoolDayAttendance {
+  date: string;
+  classes: ClassAttendanceSummary[];
+  unmarkedClassCount: number;
+  presentCount: number;
+  totalCount: number;
+  attendanceRate: number | null;
+}
+
 export interface BusWithLatestLocation {
   bus: Bus;
   latestLocation: BusLocationPing | null;
@@ -324,6 +343,14 @@ export function createApiClient({
           method: "PATCH",
           body: JSON.stringify({ classId }),
         }),
+      parents: (id: string) => request<User[]>(`/students/${id}/parents`),
+      linkParent: (id: string, parentUserId: string) =>
+        request<User[]>(`/students/${id}/parents`, {
+          method: "POST",
+          body: JSON.stringify({ parentUserId }),
+        }),
+      unlinkParent: (id: string, parentUserId: string) =>
+        request<User[]>(`/students/${id}/parents/${parentUserId}`, { method: "DELETE" }),
     },
     teachers: {
       create: (input: CreateTeacherInput) =>
@@ -353,6 +380,8 @@ export function createApiClient({
         request<AttendanceRecord[]>(
           `/attendance/class/${classId}?date=${date}`,
         ),
+      schoolDay: (date: string) =>
+        request<SchoolDayAttendance>(`/attendance/school-day?date=${date}`),
     },
     payments: {
       submit: (studentId: string, input: SubmitPaymentInput) =>
