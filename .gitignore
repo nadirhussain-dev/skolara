@@ -33,6 +33,10 @@ pnpm-debug.log*
 .vscode/*
 !.vscode/extensions.json
 
+# local file-upload fallback (used when Supabase Storage isn't configured)
+.uploads/
+apps/api/.uploads/
+
 # misc
 coverage/
 *.tsbuildinfo

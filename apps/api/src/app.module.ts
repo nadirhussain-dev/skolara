@@ -25,6 +25,7 @@ import { PayrollModule } from "./payroll/payroll.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { SchoolGroupsModule } from "./school-groups/school-groups.module";
 import { SchoolsModule } from "./schools/schools.module";
+import { StorageModule } from "./storage/storage.module";
 import { StudentsModule } from "./students/students.module";
 import { TeachersModule } from "./teachers/teachers.module";
 import { TransportModule } from "./transport/transport.module";
@@ -41,6 +42,7 @@ import { validateEnv } from "./env.validation";
     PrismaModule,
     HealthModule,
     NotificationsModule,
+    StorageModule,
     AiModule,
     AuthModule,
     SchoolsModule,

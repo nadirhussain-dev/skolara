@@ -63,6 +63,8 @@ import type {
   SuggestedMatch,
   UpdateBrandingInput,
   UpdateComplaintStatusInput,
+  UploadPurpose,
+  UploadedFile,
   UpsertGradeEntryInput,
   User,
   RoleType,
@@ -212,6 +214,32 @@ export function createApiClient({
 
     if (res.status === 204) return undefined as T;
     return res.json() as Promise<T>;
+  }
+
+  /**
+   * Multipart sibling of `request`. Deliberately does NOT set Content-Type —
+   * the runtime has to add its own `multipart/form-data` boundary, and setting
+   * the header by hand strips it and breaks the parse server-side.
+   */
+  async function upload(body: FormData, isRetry = false): Promise<UploadedFile> {
+    const token = await getAccessToken();
+    const res = await fetch(`${baseUrl}/uploads`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body,
+    });
+
+    if (!res.ok) {
+      if (res.status === 401 && !isRetry && getRefreshToken) {
+        const newToken = await refreshAccessToken();
+        if (newToken) return upload(body, true);
+        await onAuthFailure?.();
+      }
+      const detail = await res.json().catch(() => undefined);
+      throw new ApiError(res.status, detail?.message ?? res.statusText, detail);
+    }
+
+    return res.json() as Promise<UploadedFile>;
   }
 
   return {
@@ -494,6 +522,22 @@ export function createApiClient({
         }),
       list: () => request<ApiKey[]>("/api-keys"),
       revoke: (id: string) => request<ApiKey>(`/api-keys/${id}`, { method: "DELETE" }),
+    },
+    uploads: {
+      /**
+       * `file` is a browser File/Blob on web, or a `{ uri, name, type }`
+       * descriptor on React Native — both are accepted by the FormData
+       * implementation in their respective runtimes.
+       */
+      upload: (
+        file: Blob | { uri: string; name: string; type: string },
+        purpose: UploadPurpose,
+      ) => {
+        const form = new FormData();
+        form.append("file", file as Blob);
+        form.append("purpose", purpose);
+        return upload(form);
+      },
     },
     users: {
       create: (input: CreateUserInput) =>

@@ -22,6 +22,12 @@ const envSchema = z.object({
   SUPABASE_URL: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   SUPABASE_STORAGE_BUCKET: z.string().optional(),
+  // How long an upload's signed URL stays valid. Stored on the record, so it
+  // needs to outlive the record's useful life (default: one year).
+  STORAGE_SIGNED_URL_TTL_SECONDS: z.coerce.number().int().positive().optional(),
+  // Local-disk fallback used only when the Supabase storage vars are unset.
+  STORAGE_LOCAL_DIR: z.string().optional(),
+  PUBLIC_API_URL: z.string().optional(),
 
   WHATSAPP_ACCESS_TOKEN: z.string().optional(),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),

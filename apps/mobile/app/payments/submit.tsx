@@ -1,9 +1,15 @@
-import { useInvoicesForStudent, useMyChildren, useSubmitPayment } from "@skolara/api-client";
+import {
+  useInvoicesForStudent,
+  useMyChildren,
+  useSubmitPayment,
+  useUploadFile,
+} from "@skolara/api-client";
 import type { PaymentSubmission } from "@skolara/types";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import { Alert, Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { colors, radius, spacing, typography } from "@/lib/theme";
+import { assetToUploadable } from "@/lib/upload";
 import { Button, Card, Chip, Input, SectionLabel } from "@/lib/ui";
 
 export default function SubmitPaymentScreen() {
@@ -12,32 +18,47 @@ export default function SubmitPaymentScreen() {
   const { data: invoices } = useInvoicesForStudent(studentId);
   const [invoiceId, setInvoiceId] = useState<string>();
   const [amount, setAmount] = useState("");
-  const [screenshotUri, setScreenshotUri] = useState<string>();
+  const [screenshot, setScreenshot] = useState<ImagePicker.ImagePickerAsset>();
   const submitPayment = useSubmitPayment();
+  const uploadFile = useUploadFile();
   const [result, setResult] = useState<PaymentSubmission | null>(null);
 
   async function pickScreenshot() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) return;
     const picked = await ImagePicker.launchImageLibraryAsync({ quality: 0.7 });
-    if (!picked.canceled) setScreenshotUri(picked.assets[0].uri);
+    if (!picked.canceled) setScreenshot(picked.assets[0]);
   }
 
   async function submit() {
-    if (!studentId || !invoiceId || !screenshotUri) {
+    if (!studentId || !invoiceId || !screenshot) {
       Alert.alert("Missing info", "Select a child, an invoice, and a screenshot.");
       return;
     }
-    // Local file URI stands in until image upload to storage is wired up (Phase 2).
-    const response = await submitPayment.mutateAsync({
-      studentId,
-      input: {
-        invoiceId,
-        amountClaimed: Number(amount),
-        screenshotUrl: screenshotUri,
-      },
-    });
-    setResult(response);
+
+    try {
+      // Upload first: the reviewing admin opens this URL from their own
+      // browser, so it has to outlive this device's local file path.
+      const uploaded = await uploadFile.mutateAsync({
+        file: assetToUploadable(screenshot),
+        purpose: "PAYMENT_SCREENSHOT",
+      });
+
+      const response = await submitPayment.mutateAsync({
+        studentId,
+        input: {
+          invoiceId,
+          amountClaimed: Number(amount),
+          screenshotUrl: uploaded.url,
+        },
+      });
+      setResult(response);
+    } catch (error) {
+      Alert.alert(
+        "Couldn't submit",
+        error instanceof Error ? error.message : "Please try again.",
+      );
+    }
   }
 
   return (
@@ -71,17 +92,17 @@ export default function SubmitPaymentScreen() {
         <Input keyboardType="numeric" value={amount} onChangeText={setAmount} placeholder="0" />
 
         <Button
-          title={screenshotUri ? "Change screenshot" : "Upload transfer screenshot"}
+          title={screenshot ? "Change screenshot" : "Upload transfer screenshot"}
           variant="secondary"
           onPress={pickScreenshot}
         />
-        {screenshotUri && <Image source={{ uri: screenshotUri }} style={styles.preview} />}
+        {screenshot && <Image source={{ uri: screenshot.uri }} style={styles.preview} />}
 
         <Button
           title="Submit payment"
           variant="accent"
           onPress={submit}
-          loading={submitPayment.isPending}
+          loading={uploadFile.isPending || submitPayment.isPending}
           style={styles.submitButton}
         />
       </Card>
