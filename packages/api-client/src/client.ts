@@ -7,6 +7,7 @@ import type {
   Assignment,
   AssignmentSubmission,
   AttendanceRecord,
+  AuditLogPage,
   AuthResponse,
   AuthTokens,
   BankStatementLine,
@@ -524,6 +525,16 @@ export function createApiClient({
         }),
       list: () => request<ApiKey[]>("/api-keys"),
       revoke: (id: string) => request<ApiKey>(`/api-keys/${id}`, { method: "DELETE" }),
+    },
+    audit: {
+      list: (params: { outcome?: "SUCCESS" | "FAILURE"; cursor?: string; limit?: number } = {}) => {
+        const query = new URLSearchParams();
+        if (params.outcome) query.set("outcome", params.outcome);
+        if (params.cursor) query.set("cursor", params.cursor);
+        if (params.limit) query.set("limit", String(params.limit));
+        const suffix = query.toString();
+        return request<AuditLogPage>(`/audit-logs${suffix ? `?${suffix}` : ""}`);
+      },
     },
     devices: {
       register: (input: RegisterDeviceInput) =>

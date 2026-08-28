@@ -111,6 +111,7 @@ model School {
   buses               Bus[]
   payslips            Payslip[]
   apiKeys             ApiKey[]
+  auditLogs           AuditLog[]
 
   @@index([schoolGroupId])
 }
@@ -146,6 +147,7 @@ model User {
   refreshTokens           RefreshToken[]
   passwordResetTokens     PasswordResetToken[]
   deviceTokens            DeviceToken[]
+  auditLogs               AuditLog[]          @relation("AuditActor")
 
   @@index([schoolId])
 }
@@ -622,4 +624,37 @@ model DeviceToken {
   lastSeenAt DateTime       @default(now())
 
   @@index([userId])
+}
+
+enum AuditOutcome {
+  SUCCESS
+  FAILURE
+}
+
+// Append-only record of every state-changing request. Written by
+// AuditInterceptor rather than by each service, so a new endpoint is covered
+// the moment it exists instead of whenever someone remembers to instrument it.
+model AuditLog {
+  id           String       @id @default(uuid())
+  // Null for platform-level actions by a SUPER_ADMIN, who sits outside any school.
+  schoolId     String?
+  school       School?      @relation(fields: [schoolId], references: [id])
+  // Null when the actor was an API key or an unauthenticated request.
+  actorUserId  String?
+  actorUser    User?        @relation("AuditActor", fields: [actorUserId], references: [id])
+  // Survives the actor being deleted, and names non-user actors (e.g. "api-key:<id>").
+  actorLabel   String
+  actorRole    String?
+  action       String
+  method       String
+  path         String
+  entityId     String?
+  outcome      AuditOutcome
+  statusCode   Int
+  ipAddress    String?
+  metadata     Json?
+  createdAt    DateTime     @default(now())
+
+  @@index([schoolId, createdAt])
+  @@index([actorUserId])
 }

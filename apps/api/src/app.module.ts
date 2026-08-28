@@ -1,11 +1,13 @@
 import { Module } from "@nestjs/common";
-import { APP_FILTER, APP_GUARD } from "@nestjs/core";
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AiModule } from "./ai/ai.module";
 import { ApiKeysModule } from "./api-keys/api-keys.module";
 import { AnalyticsModule } from "./analytics/analytics.module";
 import { AssignmentsModule } from "./assignments/assignments.module";
+import { AuditModule } from "./audit/audit.module";
+import { AuditInterceptor } from "./audit/audit.interceptor";
 import { AttendanceModule } from "./attendance/attendance.module";
 import { AuthModule } from "./auth/auth.module";
 import { BankStatementModule } from "./bank-statement/bank-statement.module";
@@ -41,6 +43,7 @@ import { validateEnv } from "./env.validation";
     // (e.g. login) can tighten this further with @Throttle(...).
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     PrismaModule,
+    AuditModule,
     HealthModule,
     NotificationsModule,
     StorageModule,
@@ -73,6 +76,9 @@ import { validateEnv } from "./env.validation";
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
+    // Global rather than per-controller: a new write endpoint is audited the
+    // moment it exists, instead of whenever someone remembers to add it.
+    { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
 })
 export class AppModule {}

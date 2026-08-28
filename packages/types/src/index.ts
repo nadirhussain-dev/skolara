@@ -22,3 +22,4 @@ export * from "./api-keys";
 export * from "./payment-gateway";
 export * from "./uploads";
 export * from "./devices";
+export * from "./audit";

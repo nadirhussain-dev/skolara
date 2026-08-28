@@ -71,4 +71,10 @@ export const NAV_ITEMS: NavItem[] = [
 
   { href: "/school/branding", label: "Branding", roles: ["SCHOOL_ADMIN"], group: "Settings" },
   { href: "/school/api-keys", label: "API keys", roles: ["SCHOOL_ADMIN"], group: "Settings" },
+  {
+    href: "/school/audit-logs",
+    label: "Audit log",
+    roles: ["SUPER_ADMIN", "SCHOOL_ADMIN"],
+    group: "Settings",
+  },
 ];
