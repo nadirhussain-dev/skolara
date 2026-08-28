@@ -1,0 +1,33 @@
+# Local Postgres for development. Supabase is the target for real deployments
+# (see docs/SUPABASE.md); this exists so `pnpm dev` works with no cloud account
+# and no network, and so migrations can be exercised against a real database.
+#
+#   pnpm dev:db          start it
+#   pnpm dev:db:stop     stop it, keeping data
+#   pnpm dev:db:reset    stop it and destroy the volume
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: skolara-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: skolara
+    ports:
+      # 5432 is very often already taken by a system Postgres; this keeps the
+      # container out of its way while matching the default in .env.example.
+      - "5432:5432"
+    volumes:
+      - skolara-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # Migrations run immediately after `docker compose up`, so the compose
+      # command needs a real readiness signal rather than a fixed sleep.
+      test: ["CMD-SHELL", "pg_isready -U postgres -d skolara"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  skolara-postgres-data:

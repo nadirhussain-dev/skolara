@@ -49,3 +49,49 @@ jobs:
 
       - name: Validate Supabase migrations stay in sync with Prisma migrations
         run: ./scripts/check-migrations.sh
+
+  migrations:
+    name: Migrations apply cleanly
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: skolara
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/skolara?schema=public"
+      DIRECT_URL: "postgresql://postgres:postgres@localhost:5432/skolara?schema=public"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Typecheck alone can't catch a hand-written migration with a typo, a
+      # wrong column type, or DDL that conflicts with an earlier migration.
+      # Applying the whole history to an empty database can.
+      - name: Apply every migration from scratch
+        run: pnpm --filter @skolara/api exec prisma migrate deploy
+
+      # Deliberately not `prisma migrate diff --exit-code` against the
+      # datamodel: the platform-admin email constraint is a partial unique
+      # index, which Prisma can't express for PostgreSQL, so an exact-
+      # equivalence check would demand dropping a constraint we want. Applying
+      # the full history and then seeding through the generated client covers
+      # the failure this was meant to catch — a schema and a migration history
+      # that disagree — because the seed would fail against a wrong shape.
+      - name: Seed through the generated client
+        run: pnpm --filter @skolara/api exec prisma db seed

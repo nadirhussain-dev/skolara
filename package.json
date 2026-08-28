@@ -10,7 +10,16 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "dev:db": "docker compose up -d --wait",
+    "dev:db:stop": "docker compose stop",
+    "dev:db:reset": "docker compose down -v",
+    "db:migrate": "pnpm --filter @skolara/api prisma:migrate",
+    "db:deploy": "pnpm --filter @skolara/api prisma:deploy",
+    "db:seed": "pnpm --filter @skolara/api prisma:seed",
+    "db:studio": "pnpm --filter @skolara/api prisma:studio",
+    "check:migrations": "./scripts/check-migrations.sh",
+    "new:migration": "./scripts/new-migration.sh"
   },
   "devDependencies": {
     "eslint": "^9.39.5",

@@ -156,6 +156,11 @@ model User {
   @@unique([schoolId, email])
   @@index([schoolId])
   @@index([email])
+  // Platform admins have a null schoolId, and Postgres treats nulls as
+  // distinct in a unique constraint, so the composite above doesn't stop two
+  // of them sharing an address. That's covered by a partial unique index
+  // created in the per_school_email_uniqueness migration — Prisma can't
+  // express partial indexes for PostgreSQL, so it lives in SQL only.
 }
 
 // Server-side tracking for issued refresh tokens, so logout and rotation can
@@ -218,6 +223,7 @@ model SchoolClass {
   assignments        Assignment[]
   exams              Exam[]
 
+  @@unique([schoolId, name, section, academicYear])
   @@index([schoolId])
 }
 
