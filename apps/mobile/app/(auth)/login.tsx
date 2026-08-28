@@ -3,6 +3,7 @@ import { Link, router } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { setStoredAccessToken, setStoredRefreshToken } from "@/lib/api-client";
+import { registerPushToken } from "@/lib/push";
 import { colors, spacing, typography } from "@/lib/theme";
 import { Button, Input } from "@/lib/ui";
 
@@ -20,6 +21,8 @@ export default function LoginScreen() {
     });
     await setStoredAccessToken(result.accessToken);
     await setStoredRefreshToken(result.refreshToken);
+    // Needs the access token in place first — the register call is authenticated.
+    await registerPushToken();
     if (result.user.role === "TEACHER") {
       router.replace("/teacher-dashboard");
     } else {

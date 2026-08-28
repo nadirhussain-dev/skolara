@@ -33,6 +33,7 @@ import type {
   CreateTeacherInput,
   CreateUserInput,
   DefaulterRisk,
+  DeviceToken,
   ForgotPasswordInput,
   Exam,
   GradeAssignmentInput,
@@ -49,6 +50,7 @@ import type {
   PaymentSubmissionStatus,
   PlatformAnalytics,
   RankListEntry,
+  RegisterDeviceInput,
   ReportBusLocationInput,
   ResetPasswordInput,
   ReviewPaymentInput,
@@ -522,6 +524,15 @@ export function createApiClient({
         }),
       list: () => request<ApiKey[]>("/api-keys"),
       revoke: (id: string) => request<ApiKey>(`/api-keys/${id}`, { method: "DELETE" }),
+    },
+    devices: {
+      register: (input: RegisterDeviceInput) =>
+        request<DeviceToken>("/devices", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      unregister: (token: string) =>
+        request<void>(`/devices/${encodeURIComponent(token)}`, { method: "DELETE" }),
     },
     uploads: {
       /**

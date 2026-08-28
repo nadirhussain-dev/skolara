@@ -29,6 +29,11 @@ const envSchema = z.object({
   STORAGE_LOCAL_DIR: z.string().optional(),
   PUBLIC_API_URL: z.string().optional(),
 
+  // Push notifications go through Expo, which needs no credentials for a
+  // standard project. Set EXPO_PUSH_ENABLED="false" to log instead of send.
+  EXPO_PUSH_ENABLED: z.string().optional(),
+  EXPO_ACCESS_TOKEN: z.string().optional(),
+
   WHATSAPP_ACCESS_TOKEN: z.string().optional(),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),

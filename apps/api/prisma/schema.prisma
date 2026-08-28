@@ -145,6 +145,7 @@ model User {
   payslips                Payslip[]           @relation("StaffPayslips")
   refreshTokens           RefreshToken[]
   passwordResetTokens     PasswordResetToken[]
+  deviceTokens            DeviceToken[]
 
   @@index([schoolId])
 }
@@ -599,4 +600,26 @@ model ApiKey {
   revokedAt  DateTime?
 
   @@index([schoolId])
+}
+
+enum DevicePlatform {
+  IOS
+  ANDROID
+  WEB
+}
+
+// One row per install of the mobile app that a user has signed into. Tokens
+// are rotated by the OS and can be revoked at any time, so `lastSeenAt` lets
+// stale rows be pruned and the push provider's "not registered" errors are
+// treated as a signal to delete rather than an error to retry.
+model DeviceToken {
+  id         String         @id @default(uuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String         @unique
+  platform   DevicePlatform
+  createdAt  DateTime       @default(now())
+  lastSeenAt DateTime       @default(now())
+
+  @@index([userId])
 }

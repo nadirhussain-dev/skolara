@@ -11,6 +11,7 @@ import { AuthModule } from "./auth/auth.module";
 import { BankStatementModule } from "./bank-statement/bank-statement.module";
 import { ClassesModule } from "./classes/classes.module";
 import { ComplaintsModule } from "./complaints/complaints.module";
+import { DevicesModule } from "./devices/devices.module";
 import { ExamsModule } from "./exams/exams.module";
 import { GradesModule } from "./grades/grades.module";
 import { HealthModule } from "./health/health.module";
@@ -45,6 +46,7 @@ import { validateEnv } from "./env.validation";
     StorageModule,
     AiModule,
     AuthModule,
+    DevicesModule,
     SchoolsModule,
     SchoolGroupsModule,
     UsersModule,

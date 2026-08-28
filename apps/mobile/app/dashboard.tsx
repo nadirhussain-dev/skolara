@@ -1,6 +1,12 @@
 import { Link, router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { apiClient, clearSession, getStoredRefreshToken } from "@/lib/api-client";
+import {
+  apiClient,
+  clearSession,
+  getStoredPushToken,
+  getStoredRefreshToken,
+} from "@/lib/api-client";
+import { unregisterPushToken } from "@/lib/push";
 import { colors, radius, shadow, spacing, typography } from "@/lib/theme";
 import { Button } from "@/lib/ui";
 
@@ -18,6 +24,11 @@ const links = [
 export default function DashboardScreen() {
   async function signOut() {
     const refreshToken = await getStoredRefreshToken();
+    const pushToken = await getStoredPushToken();
+    // Detach the device before clearing the session — the unregister call
+    // needs the access token, and the next person to sign in on this handset
+    // shouldn't inherit these notifications.
+    await unregisterPushToken(pushToken);
     await clearSession();
     router.replace("/(auth)/login");
     // Best-effort — local session is already cleared either way.

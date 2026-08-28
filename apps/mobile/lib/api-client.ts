@@ -5,6 +5,7 @@ import { createApiClient } from "@skolara/api-client";
 
 const TOKEN_KEY = "skolara_access_token";
 const REFRESH_TOKEN_KEY = "skolara_refresh_token";
+const PUSH_TOKEN_KEY = "skolara_push_token";
 
 export async function getStoredAccessToken(): Promise<string | null> {
   return SecureStore.getItemAsync(TOKEN_KEY);
@@ -24,9 +25,19 @@ export async function setStoredRefreshToken(token: string | null) {
   else await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
 }
 
+export async function getStoredPushToken(): Promise<string | null> {
+  return SecureStore.getItemAsync(PUSH_TOKEN_KEY);
+}
+
+export async function setStoredPushToken(token: string | null) {
+  if (token) await SecureStore.setItemAsync(PUSH_TOKEN_KEY, token);
+  else await SecureStore.deleteItemAsync(PUSH_TOKEN_KEY);
+}
+
 export async function clearSession() {
   await setStoredAccessToken(null);
   await setStoredRefreshToken(null);
+  await setStoredPushToken(null);
 }
 
 export const apiClient = createApiClient({

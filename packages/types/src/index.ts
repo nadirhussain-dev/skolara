@@ -21,3 +21,4 @@ export * from "./school-group";
 export * from "./api-keys";
 export * from "./payment-gateway";
 export * from "./uploads";
+export * from "./devices";

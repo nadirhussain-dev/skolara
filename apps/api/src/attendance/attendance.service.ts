@@ -1,10 +1,14 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { MarkAttendanceInput } from "@skolara/types";
+import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class AttendanceService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   async markAttendance(
     schoolId: string,
@@ -16,7 +20,7 @@ export class AttendanceService {
     });
     if (!schoolClass) throw new NotFoundException("Class not found");
 
-    return this.prisma.$transaction(
+    const records = await this.prisma.$transaction(
       input.entries.map((entry) =>
         this.prisma.attendanceRecord.upsert({
           where: {
@@ -41,6 +45,43 @@ export class AttendanceService {
             markedOffline: input.markedOffline,
           },
         }),
+      ),
+    );
+
+    await this.alertAbsentees(input);
+    return records;
+  }
+
+  /**
+   * Real-time absence alerts to parents — one of the things parents actually
+   * open the app for. Fired after the write commits so a notification failure
+   * can never roll back the register.
+   */
+  private async alertAbsentees(input: MarkAttendanceInput) {
+    const absentStudentIds = input.entries
+      .filter((entry) => entry.status === "ABSENT")
+      .map((entry) => entry.studentId);
+    if (absentStudentIds.length === 0) return;
+
+    const students = await this.prisma.studentProfile.findMany({
+      where: { id: { in: absentStudentIds } },
+      include: {
+        user: { select: { firstName: true } },
+        parentLinks: { select: { parentUserId: true } },
+      },
+    });
+
+    const formattedDate = input.date.toLocaleDateString("en-GB");
+    await Promise.all(
+      students.map((student) =>
+        this.notifications.sendPush(
+          student.parentLinks.map((link) => link.parentUserId),
+          {
+            title: "Absence recorded",
+            body: `${student.user.firstName} was marked absent on ${formattedDate}.`,
+            data: { type: "ATTENDANCE", studentId: student.id },
+          },
+        ),
       ),
     );
   }
