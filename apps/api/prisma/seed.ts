@@ -132,6 +132,9 @@ async function main() {
         schoolId: school.id,
         classId: classes[index % classes.length].id,
         admissionNumber: `ADM-2026-${String(index + 1).padStart(4, "0")}`,
+        // Roughly 11-14 years old, staggered so the demo data isn't a class
+        // of identical birthdays.
+        dateOfBirth: new Date(2013 - (index % 3), (index * 3) % 12, 1 + index),
       },
       update: {},
     });
