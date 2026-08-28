@@ -1,6 +1,7 @@
 "use client";
 
 import { useLogin } from "@skolara/api-client";
+import { useTranslation } from "@skolara/i18n";
 import { Button, Card, Input } from "@skolara/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -27,6 +28,7 @@ export function LoginForm({
   const [typedSubdomain, setTypedSubdomain] = useState("");
 
   const auth = useAuth();
+  const { t } = useTranslation();
   // Arriving on acme.skolara.app already says which school this is — asking
   // again would be redundant, and letting it be overridden would make the
   // URL lie about which tenant is being signed into.
@@ -63,12 +65,12 @@ export function LoginForm({
           </span>
           <div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-50">
-              Welcome back
+              {t("auth.welcomeBack")}
             </h1>
             <p className="text-sm text-slate-500">
               {hostSubdomain
-                ? `Sign in to ${hostSubdomain}`
-                : "Sign in to your Skolara account"}
+                ? t("auth.signInToSchool", { school: hostSubdomain })
+                : t("auth.signInSubtitle")}
             </p>
           </div>
         </div>
@@ -76,37 +78,35 @@ export function LoginForm({
           {!hostSubdomain && (
             <Input
               type="text"
-              placeholder="School subdomain (optional)"
+              placeholder={`${t("auth.schoolSubdomain")} (${t("common.optional")})`}
               value={typedSubdomain}
               onChange={(e) => setTypedSubdomain(e.target.value)}
             />
           )}
           <Input
             type="email"
-            placeholder="Email"
+            placeholder={t("auth.email")}
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <Input
             type="password"
-            placeholder="Password"
+            placeholder={t("auth.password")}
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
           {login.isError && (
-            <p className="text-sm text-red-600">
-              Invalid credentials. Please try again.
-            </p>
+            <p className="text-sm text-red-600">{t("auth.invalidCredentials")}</p>
           )}
           <Button type="submit" disabled={login.isPending}>
-            {login.isPending ? "Signing in..." : "Sign in"}
+            {login.isPending ? t("auth.signingIn") : t("auth.signIn")}
           </Button>
         </form>
         <p className="mt-4 text-center text-sm text-slate-500">
           <Link href="/forgot-password" className="text-brand-700 hover:underline">
-            Forgot your password?
+            {t("auth.forgotPassword")}
           </Link>
         </p>
       </Card>

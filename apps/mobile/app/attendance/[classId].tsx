@@ -1,4 +1,5 @@
 import { useMarkAttendance, useStudentsByClass } from "@skolara/api-client";
+import { useTranslation } from "@skolara/i18n";
 import type { AttendanceStatus } from "@skolara/types";
 import { useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -31,6 +32,7 @@ export default function MarkAttendanceScreen() {
   const { classId } = useLocalSearchParams<{ classId: string }>();
   const { data: students, isLoading } = useStudentsByClass(classId);
   const markAttendance = useMarkAttendance();
+  const { t } = useTranslation();
   const [statuses, setStatuses] = useState<Record<string, AttendanceStatus>>({});
   const [pending, setPending] = useState(0);
   const [syncing, setSyncing] = useState(false);
@@ -88,17 +90,14 @@ export default function MarkAttendanceScreen() {
         markedOffline: false,
         entries,
       });
-      Alert.alert("Saved", "Attendance submitted.");
+      Alert.alert(t("common.save"), t("attendance.submitAttendance"));
     } catch {
       // Marking attendance can't depend on connectivity — a teacher standing
       // in a classroom with no signal still needs the register taken. Park it
       // and let the next successful sync push it up.
       await enqueueAttendance({ classId, date: date.toISOString(), entries });
       setPending(await queuedCount());
-      Alert.alert(
-        "Saved offline",
-        "No connection right now — this register is stored on your phone and will sync automatically.",
-      );
+      Alert.alert(t("attendance.savedOffline"), t("attendance.savedOfflineBody"));
     }
   }
 
@@ -109,16 +108,18 @@ export default function MarkAttendanceScreen() {
       {pending > 0 && (
         <Card style={styles.pendingCard}>
           <Text style={styles.pendingText}>
-            {pending} register{pending === 1 ? "" : "s"} waiting to sync
+            {pending === 1
+              ? t("attendance.waitingToSync", { count: pending })
+              : t("attendance.waitingToSyncPlural", { count: pending })}
           </Text>
           <Button
-            title={syncing ? "Syncing..." : "Sync now"}
+            title={syncing ? t("attendance.syncing") : t("attendance.syncNow")}
             variant="secondary"
             loading={syncing}
             onPress={async () => {
               const result = await syncNow();
               if (result.remaining > 0) {
-                Alert.alert("Still offline", "Couldn't reach the server — will retry later.");
+                Alert.alert(t("attendance.savedOffline"), t("attendance.stillOffline"));
               }
             }}
           />
@@ -145,7 +146,9 @@ export default function MarkAttendanceScreen() {
         }}
       />
       <Button
-        title={markAttendance.isPending ? "Saving..." : "Submit attendance"}
+        title={
+          markAttendance.isPending ? t("common.saving") : t("attendance.submitAttendance")
+        }
         onPress={submit}
         loading={markAttendance.isPending}
       />

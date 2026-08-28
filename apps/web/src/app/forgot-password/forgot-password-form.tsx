@@ -1,6 +1,7 @@
 "use client";
 
 import { useForgotPassword } from "@skolara/api-client";
+import { useTranslation } from "@skolara/i18n";
 import { Button, Card, Input } from "@skolara/ui";
 import Link from "next/link";
 import { useState } from "react";
@@ -12,6 +13,7 @@ export function ForgotPasswordForm({
   hostSubdomain: string | null;
 }) {
   const forgotPassword = useForgotPassword();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [typedSubdomain, setTypedSubdomain] = useState("");
   // On acme.skolara.app the school is already known from the URL.
@@ -42,22 +44,19 @@ export function ForgotPasswordForm({
           </span>
           <div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-50">
-              Forgot your password?
+              {t("auth.forgotPasswordTitle")}
             </h1>
-            <p className="text-sm text-slate-500">
-              We&apos;ll email you a link to set a new one.
-            </p>
+            <p className="text-sm text-slate-500">{t("auth.forgotPasswordSubtitle")}</p>
           </div>
         </div>
 
         {submitted ? (
           <div className="text-center">
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              If an account exists for <span className="font-medium">{email}</span>, a reset
-              link is on its way. Check your inbox.
+              {t("auth.resetLinkSent", { email })}
             </p>
             <Link href="/login" className="mt-4 inline-block text-sm text-brand-700 hover:underline">
-              Back to sign in
+              {t("auth.backToSignIn")}
             </Link>
           </div>
         ) : (
@@ -65,28 +64,26 @@ export function ForgotPasswordForm({
             {!hostSubdomain && (
               <Input
                 type="text"
-                placeholder="School subdomain (optional)"
+                placeholder={`${t("auth.schoolSubdomain")} (${t("common.optional")})`}
                 value={typedSubdomain}
                 onChange={(e) => setTypedSubdomain(e.target.value)}
               />
             )}
             <Input
               type="email"
-              placeholder="Email"
+              placeholder={t("auth.email")}
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
             {forgotPassword.isError && (
-              <p className="text-sm text-red-600">
-                Something went wrong. Please try again in a moment.
-              </p>
+              <p className="text-sm text-red-600">{t("common.somethingWentWrong")}</p>
             )}
             <Button type="submit" disabled={forgotPassword.isPending}>
-              {forgotPassword.isPending ? "Sending..." : "Send reset link"}
+              {forgotPassword.isPending ? t("auth.sending") : t("auth.sendResetLink")}
             </Button>
             <Link href="/login" className="text-center text-sm text-slate-500 hover:underline">
-              Back to sign in
+              {t("auth.backToSignIn")}
             </Link>
           </form>
         )}

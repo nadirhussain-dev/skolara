@@ -1,5 +1,7 @@
+import { LOCALE_META } from "@skolara/i18n";
 import type { Metadata, Viewport } from "next";
 import { Providers } from "@/components/providers";
+import { currentLocale } from "@/lib/locale";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,15 +16,17 @@ export const viewport: Viewport = {
   themeColor: "#6D28D9",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale = await currentLocale();
+
   return (
-    <html lang="en">
+    <html lang={locale} dir={LOCALE_META[locale].dir}>
       <body className="font-sans">
-        <Providers>{children}</Providers>
+        <Providers initialLocale={locale}>{children}</Providers>
       </body>
     </html>
   );

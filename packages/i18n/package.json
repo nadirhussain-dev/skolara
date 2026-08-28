@@ -1,38 +1,25 @@
 {
-  "name": "@skolara/web",
+  "name": "@skolara/i18n",
   "version": "0.0.0",
   "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "scripts": {
-    "build": "next build",
-    "dev": "next dev --port 3000",
-    "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "jest"
   },
-  "dependencies": {
-    "@skolara/api-client": "workspace:*",
-    "@skolara/i18n": "workspace:*",
-    "@skolara/types": "workspace:*",
-    "@skolara/ui": "workspace:*",
-    "@skolara/utils": "workspace:*",
-    "@tanstack/react-query": "^5.62.11",
-    "next": "^15.1.3",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+  "peerDependencies": {
+    "react": "^19.0.0"
   },
   "devDependencies": {
     "@skolara/config": "workspace:*",
     "@types/jest": "^30.0.0",
-    "@types/node": "^22.10.2",
+    "@types/node": "^22.20.1",
     "@types/react": "^19.0.2",
-    "@types/react-dom": "^19.0.2",
-    "autoprefixer": "^10.4.20",
-    "eslint-config-next": "^16.3.0",
     "jest": "^30.4.2",
     "jest-environment-node": "30.4.1",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.17",
+    "react": "^19.0.0",
     "ts-jest": "^29.4.12",
     "typescript": "^5.7.2"
   },
@@ -55,9 +42,6 @@
           }
         }
       ]
-    },
-    "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/$1"
     }
   }
 }

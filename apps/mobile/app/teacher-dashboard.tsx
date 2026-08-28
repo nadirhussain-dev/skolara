@@ -6,6 +6,8 @@ import {
   getStoredPushToken,
   getStoredRefreshToken,
 } from "@/lib/api-client";
+import { useTranslation } from "@skolara/i18n";
+import { LanguageToggle } from "@/lib/language-toggle";
 import { unregisterPushToken } from "@/lib/push";
 import { colors, radius, shadow, spacing, typography } from "@/lib/theme";
 import { Button } from "@/lib/ui";
@@ -18,6 +20,8 @@ const links = [
 ] as const;
 
 export default function TeacherDashboardScreen() {
+  const { t } = useTranslation();
+
   async function signOut() {
     const refreshToken = await getStoredRefreshToken();
     const pushToken = await getStoredPushToken();
@@ -42,7 +46,8 @@ export default function TeacherDashboardScreen() {
         </Link>
       ))}
       <View style={styles.footer}>
-        <Button title="Sign out" variant="ghost" onPress={signOut} />
+        <LanguageToggle />
+        <Button title={t("auth.signOut")} variant="ghost" onPress={signOut} />
       </View>
     </ScrollView>
   );
