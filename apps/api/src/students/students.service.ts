@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { PLANS } from "@skolara/types";
 import * as bcrypt from "bcrypt";
 import type { AdmitStudentInput } from "@skolara/types";
 import { PrismaService } from "../prisma/prisma.service";
@@ -15,7 +16,33 @@ const PUBLIC_USER_SELECT = {
 export class StudentsService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Refuses an admission that would take the school past its plan's cap.
+   * Checked here rather than in a guard because the limit is about the row
+   * being created, not about who is calling.
+   */
+  private async assertUnderStudentCap(schoolId: string) {
+    const school = await this.prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { plan: true },
+    });
+    if (!school) throw new NotFoundException("School not found");
+
+    const cap = PLANS[school.plan].maxStudents;
+    if (cap === null) return;
+
+    const enrolled = await this.prisma.studentProfile.count({ where: { schoolId } });
+    if (enrolled >= cap) {
+      throw new ForbiddenException(
+        `Your ${PLANS[school.plan].name} plan covers up to ${cap} students. ` +
+          "Upgrade your plan to admit more.",
+      );
+    }
+  }
+
   async admit(input: AdmitStudentInput) {
+    await this.assertUnderStudentCap(input.schoolId);
+
     const passwordHash = await bcrypt.hash(input.password, 10);
 
     return this.prisma.$transaction(async (tx) => {

@@ -17,15 +17,18 @@ import {
   type UpdateComplaintStatusInput,
 } from "@skolara/types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { RequiresFeature } from "../common/decorators/requires-feature.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { FeatureGuard } from "../common/guards/feature.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
 import { ComplaintsService } from "./complaints.service";
 
 @Controller("complaints")
-@UseGuards(JwtAuthGuard, RolesGuard)
+@RequiresFeature("COMPLAINTS")
+@UseGuards(JwtAuthGuard, RolesGuard, FeatureGuard)
 export class ComplaintsController {
   constructor(private complaintsService: ComplaintsService) {}
 

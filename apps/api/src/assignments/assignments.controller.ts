@@ -17,29 +17,37 @@ import {
   type SubmitAssignmentInput,
 } from "@skolara/types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { RequiresFeature } from "../common/decorators/requires-feature.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { FeatureGuard } from "../common/guards/feature.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import { StudentAccessService } from "../common/student-access.service";
 import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
+import { ClassAccessService } from "../common/class-access.service";
 import { AssignmentsService } from "./assignments.service";
 
 @Controller("assignments")
-@UseGuards(JwtAuthGuard, RolesGuard)
+@RequiresFeature("ASSIGNMENTS")
+@UseGuards(JwtAuthGuard, RolesGuard, FeatureGuard)
 export class AssignmentsController {
   constructor(
     private assignmentsService: AssignmentsService,
+    private classAccess: ClassAccessService,
     private studentAccess: StudentAccessService,
   ) {}
 
   @Post()
   @Roles("TEACHER", "SCHOOL_ADMIN")
-  create(
+  async create(
     @Body(new ZodValidationPipe(createAssignmentSchema)) body: CreateAssignmentInput,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!user.schoolId) throw new ForbiddenException("No school context");
+    // Students and parents read assignments for their own class; only someone
+    // who teaches the class may set them.
+    await this.classAccess.assertCanTeachClass(user, body.classId);
     return this.assignmentsService.create(user.schoolId, user.id, body);
   }
 

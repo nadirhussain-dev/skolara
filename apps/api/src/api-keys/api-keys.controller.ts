@@ -10,15 +10,18 @@ import {
 } from "@nestjs/common";
 import { createApiKeySchema, type CreateApiKeyInput } from "@skolara/types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { RequiresFeature } from "../common/decorators/requires-feature.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { FeatureGuard } from "../common/guards/feature.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
 import { ApiKeysService } from "./api-keys.service";
 
 @Controller("api-keys")
-@UseGuards(JwtAuthGuard, RolesGuard)
+@RequiresFeature("API_ACCESS")
+@UseGuards(JwtAuthGuard, RolesGuard, FeatureGuard)
 @Roles("SCHOOL_ADMIN")
 export class ApiKeysController {
   constructor(private apiKeysService: ApiKeysService) {}

@@ -22,8 +22,10 @@ import {
 import { z } from "zod";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { Public } from "../common/decorators/public.decorator";
+import { RequiresFeature } from "../common/decorators/requires-feature.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { FeatureGuard } from "../common/guards/feature.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
@@ -32,7 +34,7 @@ import { SchoolsService } from "./schools.service";
 const updateStatusSchema = z.object({ status: subscriptionStatusSchema });
 
 @Controller("schools")
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, FeatureGuard)
 export class SchoolsController {
   constructor(private schoolsService: SchoolsService) {}
 
@@ -94,6 +96,7 @@ export class SchoolsController {
 
   @Patch(":id/branding")
   @Roles("SUPER_ADMIN", "SCHOOL_ADMIN")
+  @RequiresFeature("WHITE_LABEL")
   updateBranding(
     @Param("id") id: string,
     @Body(new ZodValidationPipe(updateBrandingSchema)) body: UpdateBrandingInput,

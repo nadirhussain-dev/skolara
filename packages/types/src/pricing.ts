@@ -99,3 +99,64 @@ export const PLAN_ORDER: SubscriptionPlan[] = [
 export function monthlyRevenueFor(plan: SubscriptionPlan): number {
   return PLANS[plan].monthlyPricePkr ?? 0;
 }
+
+/**
+ * Gated capabilities. Separate from the marketing `features` copy above:
+ * those are sentences on a pricing page, these are enforced at the API.
+ */
+export const FEATURES = [
+  "EXAMS",
+  "ASSIGNMENTS",
+  "MESSAGING",
+  "COMPLAINTS",
+  "LIBRARY",
+  "TRANSPORT",
+  "BANK_STATEMENT",
+  "PAYROLL",
+  "ANALYTICS",
+  "AI",
+  "WHITE_LABEL",
+  "API_ACCESS",
+  "SCHOOL_GROUPS",
+] as const;
+export type Feature = (typeof FEATURES)[number];
+
+const BASIC_FEATURES: Feature[] = [];
+
+const STANDARD_FEATURES: Feature[] = [
+  ...BASIC_FEATURES,
+  "EXAMS",
+  "ASSIGNMENTS",
+  "MESSAGING",
+  "COMPLAINTS",
+  "LIBRARY",
+  "TRANSPORT",
+  "BANK_STATEMENT",
+];
+
+const PREMIUM_FEATURES: Feature[] = [
+  ...STANDARD_FEATURES,
+  "PAYROLL",
+  "ANALYTICS",
+  "AI",
+  "WHITE_LABEL",
+  "API_ACCESS",
+];
+
+const ENTERPRISE_FEATURES: Feature[] = [...PREMIUM_FEATURES, "SCHOOL_GROUPS"];
+
+/**
+ * Cumulative by construction — each tier spreads the one below it — so a
+ * feature can never be present in Standard and accidentally absent from
+ * Premium, which is the way this kind of table usually rots.
+ */
+export const PLAN_ENTITLEMENTS: Record<SubscriptionPlan, readonly Feature[]> = {
+  BASIC: BASIC_FEATURES,
+  STANDARD: STANDARD_FEATURES,
+  PREMIUM: PREMIUM_FEATURES,
+  ENTERPRISE: ENTERPRISE_FEATURES,
+};
+
+export function planIncludes(plan: SubscriptionPlan, feature: Feature): boolean {
+  return PLAN_ENTITLEMENTS[plan].includes(feature);
+}

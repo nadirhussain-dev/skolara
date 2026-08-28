@@ -152,6 +152,7 @@ model User {
   passwordResetTokens     PasswordResetToken[]
   deviceTokens            DeviceToken[]
   auditLogs               AuditLog[]          @relation("AuditActor")
+  classAssignments        ClassTeacher[]      @relation("ClassTeachers")
 
   @@unique([schoolId, email])
   @@index([schoolId])
@@ -222,6 +223,7 @@ model SchoolClass {
   notices            Notice[]
   assignments        Assignment[]
   exams              Exam[]
+  classTeachers      ClassTeacher[]
 
   @@unique([schoolId, name, section, academicYear])
   @@index([schoolId])
@@ -669,4 +671,19 @@ model AuditLog {
 
   @@index([schoolId, createdAt])
   @@index([actorUserId])
+}
+
+// Which classes a teacher is responsible for. A teacher usually takes several
+// classes and a class is usually taught by several teachers, so this is a
+// join table rather than the single `SchoolClass.classTeacherId` column —
+// that one names the form teacher, this one governs who may act on the class.
+model ClassTeacher {
+  classId       String
+  class         SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacherUserId String
+  teacherUser   User        @relation("ClassTeachers", fields: [teacherUserId], references: [id], onDelete: Cascade)
+  assignedAt    DateTime    @default(now())
+
+  @@id([classId, teacherUserId])
+  @@index([teacherUserId])
 }
