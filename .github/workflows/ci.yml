@@ -48,6 +48,4 @@ jobs:
         run: pnpm --filter @skolara/api exec prisma validate
 
       - name: Validate Supabase migrations stay in sync with Prisma migrations
-        run: |
-          diff <(ls apps/api/prisma/migrations | grep -v migration_lock.toml) \
-               <(ls supabase/migrations | sed 's/\.sql$//')
+        run: ./scripts/check-migrations.sh
