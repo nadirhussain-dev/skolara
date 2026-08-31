@@ -39,6 +39,7 @@ export default function RootLayout() {
         <Stack.Screen name="transport/index" options={{ title: "Bus tracking" }} />
         <Stack.Screen name="library/index" options={{ title: "Library" }} />
         <Stack.Screen name="payroll/index" options={{ title: "My payslips" }} />
+        <Stack.Screen name="timetable/index" options={{ title: "Timetable" }} />
       </Stack>
     </Providers>
   );

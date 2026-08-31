@@ -68,6 +68,12 @@ export const NAV_ITEMS: NavItem[] = [
     groupKey: "nav.academics",
   },
   {
+    href: "/teacher/timetable",
+    labelKey: "nav.timetable",
+    roles: ["TEACHER"],
+    groupKey: "nav.academics",
+  },
+  {
     href: "/teacher/gradebook",
     labelKey: "nav.gradebook",
     roles: ["TEACHER"],

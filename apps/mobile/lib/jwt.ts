@@ -1,3 +1,5 @@
+import type { RoleType } from "@skolara/types";
+
 const BASE64_CHARS =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -20,12 +22,26 @@ function base64Decode(input: string): string {
   return output;
 }
 
-export function decodeJwtSubject(token: string): string | undefined {
+export interface JwtClaims {
+  sub: string;
+  role: RoleType;
+  schoolId: string | null;
+}
+
+/**
+ * Reads the access token's claims. Purely for deciding what to render — the
+ * API re-verifies the signature on every request, so a tampered token gets a
+ * different UI and exactly the same permissions.
+ */
+export function decodeJwtClaims(token: string): JwtClaims | undefined {
   try {
     const payload = token.split(".")[1];
-    const json = base64Decode(payload);
-    return JSON.parse(json).sub;
+    return JSON.parse(base64Decode(payload)) as JwtClaims;
   } catch {
     return undefined;
   }
+}
+
+export function decodeJwtSubject(token: string): string | undefined {
+  return decodeJwtClaims(token)?.sub;
 }
