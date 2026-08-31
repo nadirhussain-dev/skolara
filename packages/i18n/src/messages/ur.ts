@@ -88,6 +88,8 @@ export const ur: Messages = {
     gradebook: "نتائج رجسٹر",
     exams: "امتحانات",
     assignments: "اسائنمنٹس",
+    timetable: "ٹائم ٹیبل",
+    calendar: "کیلنڈر",
     invoices: "فیس بل",
     paymentQueue: "ادائیگی کی قطار",
     bankStatement: "بینک اسٹیٹمنٹ",

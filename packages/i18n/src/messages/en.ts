@@ -85,6 +85,8 @@ export const en = {
     gradebook: "Gradebook",
     exams: "Exams",
     assignments: "Assignments",
+    timetable: "Timetable",
+    calendar: "Calendar",
     invoices: "Invoices",
     paymentQueue: "Payment queue",
     bankStatement: "Bank statement",
