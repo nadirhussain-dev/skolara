@@ -111,6 +111,9 @@ model School {
   buses               Bus[]
   payslips            Payslip[]
   apiKeys             ApiKey[]
+  periods             Period[]
+  timetableEntries    TimetableEntry[]
+  calendarEvents      CalendarEvent[]
   auditLogs           AuditLog[]
 
   @@index([schoolGroupId])
@@ -151,6 +154,8 @@ model User {
   refreshTokens           RefreshToken[]
   passwordResetTokens     PasswordResetToken[]
   deviceTokens            DeviceToken[]
+  timetableLessons        TimetableEntry[]    @relation("TimetableTeacher")
+  authoredCalendarEvents  CalendarEvent[]     @relation("CalendarEventAuthor")
   auditLogs               AuditLog[]          @relation("AuditActor")
   classAssignments        ClassTeacher[]      @relation("ClassTeachers")
 
@@ -224,6 +229,8 @@ model SchoolClass {
   assignments        Assignment[]
   exams              Exam[]
   classTeachers      ClassTeacher[]
+  timetableEntries   TimetableEntry[]
+  calendarEvents     CalendarEvent[]
 
   @@unique([schoolId, name, section, academicYear])
   @@index([schoolId])
@@ -686,4 +693,105 @@ model ClassTeacher {
 
   @@id([classId, teacherUserId])
   @@index([teacherUserId])
+}
+
+// ISO-8601 day numbering, declared Monday-first so Postgres orders a week
+// correctly by the enum's own declaration order. Saturday is a normal teaching
+// day in much of Pakistan, so the week deliberately runs Monday–Sunday rather
+// than assuming a five-day week.
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum CalendarEventCategory {
+  HOLIDAY
+  EXAM
+  MEETING
+  ACTIVITY
+  TERM_START
+  TERM_END
+  OTHER
+}
+
+// A named slot in the school's teaching day — "Period 1", 08:00–08:45.
+//
+// Times are wall-clock strings ("HH:MM"), not DateTime: a period repeats every
+// week and has no single instant attached. Storing a DateTime would drag a
+// meaningless date along with it and invite timezone bugs on a field where the
+// timezone is always "whatever the school's clock says".
+model Period {
+  id        String @id @default(uuid())
+  schoolId  String
+  school    School @relation(fields: [schoolId], references: [id])
+  name      String
+  startTime String
+  endTime   String
+  // Explicit ordering rather than sorting on startTime, so a school can place
+  // a break or an assembly wherever it belongs in the day.
+  sortOrder Int
+
+  entries TimetableEntry[]
+
+  @@unique([schoolId, name])
+  @@index([schoolId, sortOrder])
+}
+
+// One lesson: a class, on a day, in a period, taught by someone.
+//
+// The two unique constraints are the conflict detection. Enforcing them in the
+// database rather than only in the service means two admins editing the
+// timetable at the same time can't both win — the second write fails rather
+// than silently double-booking a teacher.
+model TimetableEntry {
+  id            String      @id @default(uuid())
+  schoolId      String
+  school        School      @relation(fields: [schoolId], references: [id])
+  classId       String
+  class         SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  periodId      String
+  period        Period      @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  dayOfWeek     DayOfWeek
+  subject       String
+  teacherUserId String
+  teacherUser   User        @relation("TimetableTeacher", fields: [teacherUserId], references: [id])
+  room          String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // A class can only be in one lesson at a time.
+  @@unique([classId, dayOfWeek, periodId])
+  // A teacher can only be in one place at a time.
+  @@unique([teacherUserId, dayOfWeek, periodId])
+  // Room clashes are enforced too, but as a partial unique index over
+  // non-null rooms — see the migration. Prisma can't express a partial index,
+  // so it isn't declared here.
+  @@index([schoolId])
+  @@index([teacherUserId])
+}
+
+model CalendarEvent {
+  id              String                @id @default(uuid())
+  schoolId        String
+  school          School                @relation(fields: [schoolId], references: [id])
+  title           String
+  description     String?
+  category        CalendarEventCategory @default(OTHER)
+  startsAt        DateTime
+  endsAt          DateTime
+  allDay          Boolean               @default(false)
+  // Null means the whole school; set means the event only concerns one class.
+  classId         String?
+  class           SchoolClass?          @relation(fields: [classId], references: [id], onDelete: Cascade)
+  createdByUserId String
+  createdByUser   User                  @relation("CalendarEventAuthor", fields: [createdByUserId], references: [id])
+  createdAt       DateTime              @default(now())
+
+  @@index([schoolId, startsAt])
+  @@index([classId])
 }

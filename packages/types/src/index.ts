@@ -22,5 +22,7 @@ export * from "./api-keys";
 export * from "./payment-gateway";
 export * from "./uploads";
 export * from "./devices";
+export * from "./timetable";
+export * from "./calendar";
 export * from "./audit";
 export * from "./pricing";
