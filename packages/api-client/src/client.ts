@@ -16,6 +16,7 @@ import type {
   BorrowBookInput,
   Bus,
   BusLocationPing,
+  CalendarEvent,
   Complaint,
   ComplaintComment,
   CreateApiKeyInput,
@@ -23,11 +24,13 @@ import type {
   CreateAssignmentInput,
   CreateBookInput,
   CreateBusInput,
+  CreateCalendarEventInput,
   CreateClassInput,
   CreateComplaintInput,
   CreateExamInput,
   CreateInvoiceInput,
   CreateNoticeInput,
+  CreatePeriodInput,
   CreatePayslipInput,
   CreateSchoolGroupInput,
   CreateSchoolInput,
@@ -46,6 +49,7 @@ import type {
   Message,
   MessageThread,
   Notice,
+  Period,
   Payslip,
   PaymentSubmission,
   PaymentSubmissionStatus,
@@ -67,10 +71,12 @@ import type {
   SubmitPaymentInput,
   SuggestedMatch,
   UpdateBrandingInput,
+  TimetableEntry,
   UpdateComplaintStatusInput,
   UploadPurpose,
   UploadedFile,
   UpsertGradeEntryInput,
+  UpsertTimetableEntryInput,
   User,
   RoleType,
 } from "@skolara/types";
@@ -146,6 +152,12 @@ export interface SchoolDayAttendance {
   presentCount: number;
   totalCount: number;
   attendanceRate: number | null;
+}
+
+export interface TimetableEntryDetail extends TimetableEntry {
+  period: Period;
+  teacherUser: { id: string; firstName: string; lastName: string };
+  class: { id: string; name: string; section: string };
 }
 
 export interface BusWithLatestLocation {
@@ -575,6 +587,47 @@ export function createApiClient({
         const suffix = query.toString();
         return request<AuditLogPage>(`/audit-logs${suffix ? `?${suffix}` : ""}`);
       },
+    },
+    timetable: {
+      periods: () => request<Period[]>("/timetable/periods"),
+      createPeriod: (input: CreatePeriodInput) =>
+        request<Period>("/timetable/periods", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      deletePeriod: (id: string) =>
+        request<void>(`/timetable/periods/${id}`, { method: "DELETE" }),
+      // PUT, not POST: placing a lesson replaces whatever the class had in
+      // that slot, so the call is idempotent.
+      upsertEntry: (input: UpsertTimetableEntryInput) =>
+        request<TimetableEntryDetail>("/timetable/entries", {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      deleteEntry: (id: string) =>
+        request<void>(`/timetable/entries/${id}`, { method: "DELETE" }),
+      forClass: (classId: string) =>
+        request<TimetableEntryDetail[]>(`/timetable/class/${classId}`),
+      mine: () => request<TimetableEntryDetail[]>("/timetable/mine"),
+      forTeacher: (teacherUserId: string) =>
+        request<TimetableEntryDetail[]>(`/timetable/teacher/${teacherUserId}`),
+      forStudent: (studentId: string) =>
+        request<TimetableEntryDetail[]>(`/timetable/student/${studentId}`),
+    },
+    calendar: {
+      list: (from?: string, to?: string) => {
+        const query = new URLSearchParams();
+        if (from) query.set("from", from);
+        if (to) query.set("to", to);
+        const suffix = query.toString();
+        return request<CalendarEvent[]>(`/calendar${suffix ? `?${suffix}` : ""}`);
+      },
+      create: (input: CreateCalendarEventInput) =>
+        request<CalendarEvent>("/calendar", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      remove: (id: string) => request<void>(`/calendar/${id}`, { method: "DELETE" }),
     },
     devices: {
       register: (input: RegisterDeviceInput) =>

@@ -24,6 +24,8 @@ export * from "./hooks/use-school-groups";
 export * from "./hooks/use-api-keys";
 export * from "./hooks/use-users";
 export * from "./hooks/use-upload";
+export * from "./hooks/use-timetable";
+export * from "./hooks/use-calendar";
 export * from "./hooks/use-audit";
 export * from "./hooks/use-school-attendance";
 export * from "./hooks/use-signup";

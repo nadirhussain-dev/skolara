@@ -11,6 +11,7 @@ import { AuditInterceptor } from "./audit/audit.interceptor";
 import { AttendanceModule } from "./attendance/attendance.module";
 import { AuthModule } from "./auth/auth.module";
 import { BankStatementModule } from "./bank-statement/bank-statement.module";
+import { CalendarModule } from "./calendar/calendar.module";
 import { ClassesModule } from "./classes/classes.module";
 import { ComplaintsModule } from "./complaints/complaints.module";
 import { DevicesModule } from "./devices/devices.module";
@@ -31,6 +32,7 @@ import { SchoolsModule } from "./schools/schools.module";
 import { StorageModule } from "./storage/storage.module";
 import { StudentsModule } from "./students/students.module";
 import { TeachersModule } from "./teachers/teachers.module";
+import { TimetableModule } from "./timetable/timetable.module";
 import { TransportModule } from "./transport/transport.module";
 import { UsersModule } from "./users/users.module";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
@@ -55,7 +57,9 @@ import { validateEnv } from "./env.validation";
     UsersModule,
     StudentsModule,
     TeachersModule,
+    TimetableModule,
     ClassesModule,
+    CalendarModule,
     AttendanceModule,
     InvoicesModule,
     PaymentsModule,
