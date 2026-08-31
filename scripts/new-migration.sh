@@ -22,10 +22,21 @@ fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# Prisma stamps migration directories with a UTC timestamp. Matching that
-# keeps hand-written migrations ordered correctly against generated ones.
-STAMP="$(date -u '+%Y%m%d%H%M%S')"
-DIR_NAME="${STAMP}_${NAME}"
+# Migrations are numbered sequentially (001, 002, ...) rather than stamped with
+# Prisma's default UTC timestamp. Prisma applies them in lexicographic order of
+# directory name either way, so a zero-padded counter orders correctly and reads
+# far better than a 14-digit stamp.
+#
+# Note: `prisma migrate dev` still generates timestamp-named directories. Rename
+# any it produces to the next number in sequence before committing, or the two
+# conventions will sit side by side.
+LAST="$(ls "${REPO_ROOT}/apps/api/prisma/migrations" \
+  | grep -E '^[0-9]{3}_' \
+  | sort \
+  | tail -1 \
+  | cut -d_ -f1)"
+NEXT="$(printf '%03d' $(( 10#${LAST:-0} + 1 )))"
+DIR_NAME="${NEXT}_${NAME}"
 
 PRISMA_DIR="${REPO_ROOT}/apps/api/prisma/migrations/${DIR_NAME}"
 SUPABASE_FILE="${REPO_ROOT}/supabase/migrations/${DIR_NAME}.sql"
@@ -35,7 +46,7 @@ cat > "${PRISMA_DIR}/migration.sql" <<SQL
 -- ${NAME}
 --
 -- Every new table needs RLS enabled to match the stance set in
--- 20260806125602_enable_row_level_security: Supabase auto-exposes public
+-- 005_enable_row_level_security: Supabase auto-exposes public
 -- tables through PostgREST, and a table without RLS is readable by anyone
 -- holding the anon key. Prisma's connection role has BYPASSRLS, so this does
 -- not affect the API.

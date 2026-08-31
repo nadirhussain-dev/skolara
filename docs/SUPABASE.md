@@ -15,25 +15,47 @@ the same DDL twice under two different migration-tracking tables.
 Prisma Migrate is the source of truth. `supabase/migrations/` is a byte-for-byte mirror kept only so
 the Supabase CLI and dashboard can see the same history — never edit one without the other.
 
-**Naming.** `<14-digit UTC timestamp>_<lower_snake_case_name>`, exactly what `prisma migrate dev`
-produces (`20260828065653_device_tokens`). The timestamp is what orders migrations, so it must be a
-real UTC stamp from when the migration was authored — never a made-up or future value.
+**Naming.** `<3-digit sequence>_<lower_snake_case_name>` — `001_init`,
+`002_add_subscription_status_enum_values`, and so on. Prisma applies migrations in lexicographic
+order of directory name, so a zero-padded counter orders correctly and reads far better than
+Prisma's default 14-digit UTC timestamp.
+
+Numbers must be contiguous. A gap is harmless to Postgres but almost always means a migration was
+dropped, or two branches wrote against the same number and one got lost — so the checker treats it
+as an error.
+
+⚠️ `prisma migrate dev` still *generates* timestamp-named directories. Rename anything it produces
+to the next number in sequence, in both trees, before committing.
 
 **Creating one.**
 
 - Schema-driven (preferred): edit `schema.prisma`, then run `pnpm --filter @skolara/api prisma:migrate`
-  from a machine with a database. Copy the generated SQL across:
+  from a machine with a database. Rename the generated directory from its timestamp to the next
+  sequence number, then mirror the SQL:
   `cp apps/api/prisma/migrations/<name>/migration.sql supabase/migrations/<name>.sql`
-- By hand (no database to hand): `./scripts/new-migration.sh <name>` stamps both files with a correct
-  UTC timestamp and seeds the RLS reminder. Edit the Prisma copy, then mirror it.
+- By hand (no database available): `./scripts/new-migration.sh <name>` creates both files at the
+  next number and seeds the RLS reminder. Edit the Prisma copy, then mirror it.
 
 **Every new table needs `ENABLE ROW LEVEL SECURITY`.** Supabase auto-exposes every `public` table
 through PostgREST, so a table without RLS is readable by anyone holding the project's anon key —
 see section 4 below. This is easy to forget on a hand-written migration and impossible to notice
 until it matters.
 
+**Renaming a migration that a database has already applied.** Prisma records applied migrations in
+`_prisma_migrations` by directory name. A database that ran the old timestamp-named migrations will
+see the renamed ones as brand new, try to re-apply them, and fail with "relation already exists".
+On a database you can't rebuild, update the recorded names rather than re-running any DDL:
+
+```sql
+UPDATE "_prisma_migrations" SET migration_name = '001_init'
+  WHERE migration_name = '20260805103205_init';
+-- ...one row per renamed migration
+```
+
+Any database created after this change needs none of that.
+
 **Checking.** `./scripts/check-migrations.sh` verifies both trees hold the same migrations with
-identical contents and well-formed names. CI runs it on every push.
+identical contents, well-formed names, and no gaps in the sequence. CI runs it on every push.
 
 ---
 
@@ -83,7 +105,7 @@ pnpm prisma:seed
 
 ## 4. Row Level Security
 
-Every table has RLS enabled with **no policies** (migration `20260806125602_enable_row_level_security`).
+Every table has RLS enabled with **no policies** (migration `005_enable_row_level_security`).
 That's deliberate, not a placeholder to fill in later:
 
 - Supabase auto-exposes every `public` table through its PostgREST API and the `supabase-js` client to the

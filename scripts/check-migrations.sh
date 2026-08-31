@@ -34,13 +34,26 @@ while IFS= read -r name; do
   fi
 done <<< "$prisma_names"
 
-# Prisma stamps directories YYYYMMDDHHMMSS_name. A malformed stamp sorts
-# wrongly and silently applies out of order.
+# Migrations are numbered 001, 002, ... and applied in lexicographic order of
+# directory name. A malformed or duplicated number applies them out of order.
+expected=0
 while IFS= read -r name; do
   [[ -z "$name" ]] && continue
-  if [[ ! "$name" =~ ^[0-9]{14}_[a-z0-9]+(_[a-z0-9]+)*$ ]]; then
-    echo "error: '${name}' is not <14-digit UTC timestamp>_<lower_snake_case>" >&2
+  if [[ ! "$name" =~ ^[0-9]{3}_[a-z0-9]+(_[a-z0-9]+)*$ ]]; then
+    echo "error: '${name}' is not <3-digit sequence>_<lower_snake_case>" >&2
+    echo "       (a timestamp-named directory from \`prisma migrate dev\` needs renaming)" >&2
     status=1
+    continue
+  fi
+
+  # Gaps are harmless to Postgres but almost always mean a migration was
+  # dropped or two were written against the same number and one got lost.
+  expected=$((expected + 1))
+  actual=$((10#${name%%_*}))
+  if [[ "$actual" -ne "$expected" ]]; then
+    echo "error: expected migration $(printf '%03d' "$expected"), found '${name}'" >&2
+    status=1
+    expected=$actual
   fi
 done <<< "$prisma_names"
 
