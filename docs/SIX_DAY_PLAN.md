@@ -20,9 +20,9 @@ or it does not ship.
 
 ---
 
-## Day 1 — Timetable & the calendar spine
+## Day 1 — Timetable & the calendar spine ✅ done
 
-**Closes 4 rows.**
+**Closed 5 rows** (one more than planned — the mobile calendar screen also closed the parent-facing events calendar).
 
 First because it unblocks the most. Teacher timetables, student timetables and the events
 calendar all sit behind this one module — nothing else in the backlog clears four rows at once.
@@ -38,9 +38,13 @@ calendar all sit behind this one module — nothing else in the backlog clears f
 
 **Closes:** Timetable builder · Teacher personal timetable · Student timetable · Academic calendar & events
 
-**Cut line:** Drag-and-drop, in favour of a click-to-assign grid. The proposal asks for
-drag-and-drop, but the value is in conflict detection, not the gesture — and the gesture is the
-expensive half.
+**Cut line taken:** Drag-and-drop, in favour of a click-to-assign grid — as planned. The value
+is in conflict detection, not the gesture, and the gesture is the expensive half.
+
+**Landed as 5 commits, not 6.** Chunks 4 and 5 merged: the teacher and student timetables differ
+only in which query feeds the list and which side of the lesson gets named, so one mobile screen
+serves both. The calendar API moved forward into chunk 2 so the API client never shipped a method
+with no route behind it.
 
 ---
 

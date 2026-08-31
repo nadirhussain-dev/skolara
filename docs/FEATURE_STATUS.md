@@ -1,13 +1,13 @@
 # Feature Status
 
 Every feature in [`PROPOSAL.md`](../PROPOSAL.md) §6–§10, checked against what is actually on
-`main` at merge commit `54eb576`.
+`main` at `655ee3a`.
 
 | State | Count | Meaning |
 |---|---|---|
-| ✅ Shipped | 58 | Built, tenant-scoped, guarded |
+| ✅ Shipped | 63 | Built, tenant-scoped, guarded |
 | 🟡 Partial | 9 | Mechanism exists, surface incomplete |
-| ⬜ Not built | 21 | No code |
+| ⬜ Not built | 16 | No code |
 
 **Partial** is the cheapest column to finish — the plumbing is done, the content or UI is not.
 
@@ -61,8 +61,8 @@ The daily operations surface. Deepest area, and the most complete.
 | Communication centre — notices, WhatsApp, push | 🟡 | No SMS channel; email is transactional only |
 | Report card generator | 🟡 | Grades, rank lists and AI comments exist; nothing assembles a printable card |
 | Digital fee receipts | 🟡 | Reference ID and status exist; no rendered receipt document |
-| Timetable builder with conflict detection | ⬜ | Largest single missing module — teacher and student timetables depend on it |
-| Academic calendar & event management | ⬜ | |
+| Timetable builder with conflict detection | ✅ | Week grid per class. Clashes are refused by database constraints, not warned about, so concurrent edits can't both win |
+| Academic calendar & event management | ✅ | School-wide or class-scoped; mobile shows what's ahead |
 | Certificate / document generator | ⬜ | |
 | Hostel management | ⬜ | |
 | Inventory / asset management | ⬜ | |
@@ -85,7 +85,7 @@ Where the proposal says competitors underinvest. The mobile half is done; the we
 | AI report-card comment generator | ✅ | Falls back to deterministic comments with no API key, so it never hard-fails |
 | Scoped to own classes | ✅ | Any teacher could previously take any register or overwrite a colleague's marks |
 | Upload class materials | 🟡 | Files attach to assignments; no standalone materials library |
-| Personal timetable | ⬜ | |
+| Personal timetable | ✅ | Web grid and mobile day list |
 | Apply for leave, check balance | ⬜ | |
 | Lesson planning & syllabus tracker | ⬜ | |
 | Online quizzes with MCQ auto-grading | ⬜ | |
@@ -110,11 +110,11 @@ The parent app is the product most families will judge you on.
 | In-app complaint submission with status tracking | ✅ | |
 | Digital report card | 🟡 | Results viewable; no assembled card to download or print |
 | Study materials access | 🟡 | Reachable through assignment attachments only |
-| Timetable | ⬜ | |
+| Timetable | ✅ | Mobile, scoped through the multi-child switcher |
 | Performance graphs over time | ⬜ | |
 | Leave application | ⬜ | |
 | Book parent–teacher meeting slots | ⬜ | |
-| School events calendar | ⬜ | |
+| School events calendar | ✅ | Mobile, grouped by month, filtered from today |
 | Join live / online classes | ⬜ | |
 
 > The parent/student **web** portal is deferred by design — those accounts redirect to
@@ -147,9 +147,9 @@ Not proposal features, but they gate everything above.
 
 | Metric | Value | Notes |
 |---|---|---|
-| Tests passing | 133 | Up from 66. Targets what actually breaks — audit redaction, entitlement boundaries, class scoping, MRR arithmetic |
-| Services untested | 23 of 30 | Payments, invoices, grades and attendance are worth covering first |
-| Migrations | 13 (`001`–`013`) | CI applies all to a real Postgres and seeds through the generated client |
+| Tests passing | 147 | Up from 66. Targets what actually breaks — audit redaction, entitlement boundaries, class scoping, MRR arithmetic |
+| Services untested | 24 of 31 | Payments, invoices, grades and attendance are worth covering first |
+| Migrations | 14 (`001`–`014`) | CI applies all to a real Postgres and seeds through the generated client |
 | Deploy workflows | 0 | CI validates on every push; nothing ships automatically |
 
 ---
