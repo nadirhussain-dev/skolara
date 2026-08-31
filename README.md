@@ -111,3 +111,10 @@ is the authoritative description of payload shapes.
 In production, set `CORS_ORIGINS` to your web app's URL — CORS is closed by
 default there — and use real `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` values.
 The API refuses to boot with placeholder secrets.
+
+## Project status & roadmap
+
+- [docs/FEATURE_STATUS.md](docs/FEATURE_STATUS.md) — every feature in `PROPOSAL.md`
+  checked against what's on `main`: 58 shipped, 9 partial, 21 not built.
+- [docs/SIX_DAY_PLAN.md](docs/SIX_DAY_PLAN.md) — how the remaining work is sequenced,
+  in dependency order, with an explicit cut line per day.
