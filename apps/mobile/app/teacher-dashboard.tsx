@@ -15,6 +15,7 @@ import { Button } from "@/lib/ui";
 const links = [
   { href: "/attendance", label: "Mark attendance", icon: "✅" },
   { href: "/timetable", label: "My timetable", icon: "🗓️" },
+  { href: "/calendar", label: "School calendar", icon: "📅" },
   { href: "/assignments", label: "Homework & assignments", icon: "📝" },
   { href: "/payroll", label: "My payslips", icon: "💰" },
   { href: "/messages", label: "Messages", icon: "💬" },
