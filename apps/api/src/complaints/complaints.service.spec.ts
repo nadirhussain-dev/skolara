@@ -1,5 +1,6 @@
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
+import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { ComplaintsService } from "./complaints.service";
 
@@ -13,6 +14,7 @@ describe("ComplaintsService", () => {
     complaint: { findFirst: jest.Mock; update: jest.Mock };
     complaintComment: { findMany: jest.Mock; create: jest.Mock };
   };
+  let notifications: { sendPush: jest.Mock };
 
   const SCHOOL_A = "school-a";
   const SCHOOL_B = "school-b";
@@ -26,8 +28,14 @@ describe("ComplaintsService", () => {
       complaintComment: { findMany: jest.fn(), create: jest.fn() },
     };
 
+    notifications = { sendPush: jest.fn() };
+
     const module = await Test.createTestingModule({
-      providers: [ComplaintsService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        ComplaintsService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: NotificationsService, useValue: notifications },
+      ],
     }).compile();
 
     service = module.get(ComplaintsService);

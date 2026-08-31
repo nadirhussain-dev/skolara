@@ -3,9 +3,22 @@
 import {
   useCreateInvoice,
   useInvoicesForStudent,
+  useLinkParent,
   useStudent,
+  useStudentParents,
+  useUnlinkParent,
+  useUsers,
 } from "@skolara/api-client";
-import { Badge, Button, Card, CardHeader, CardTitle, EmptyState, Input } from "@skolara/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Input,
+  Select,
+} from "@skolara/ui";
 import { formatCurrency } from "@skolara/utils";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -24,7 +37,12 @@ export default function StudentDetailPage() {
   const { data: student } = useStudent(id);
   const { data: invoices, isLoading } = useInvoicesForStudent(id);
   const createInvoice = useCreateInvoice();
+  const { data: parents } = useStudentParents(id);
+  const { data: parentAccounts } = useUsers("PARENT");
+  const linkParent = useLinkParent(id);
+  const unlinkParent = useUnlinkParent(id);
 
+  const [parentToLink, setParentToLink] = useState("");
   const [term, setTerm] = useState("");
   const [amountDue, setAmountDue] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -44,6 +62,16 @@ export default function StudentDetailPage() {
     setDueDate("");
   }
 
+  const linkedIds = new Set(parents?.map((parent) => parent.id));
+  const linkableParents = parentAccounts?.filter((parent) => !linkedIds.has(parent.id)) ?? [];
+
+  async function handleLinkParent(e: React.FormEvent) {
+    e.preventDefault();
+    if (!parentToLink) return;
+    await linkParent.mutateAsync(parentToLink);
+    setParentToLink("");
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {student && (
@@ -56,6 +84,59 @@ export default function StudentDetailPage() {
           </p>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Parents &amp; guardians</CardTitle>
+        </CardHeader>
+        <p className="mb-4 text-sm text-slate-500">
+          Linked parents can see this student in the app and submit fee payments for
+          them. A parent linked to more than one student gets a child switcher.
+        </p>
+
+        {parents?.length === 0 && <EmptyState title="No parent linked yet" />}
+
+        <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
+          {parents?.map((parent) => (
+            <div key={parent.id} className="flex items-center justify-between py-3">
+              <div>
+                <p className="font-medium">
+                  {parent.firstName} {parent.lastName}
+                </p>
+                <p className="text-sm text-slate-500">
+                  {parent.email}
+                  {parent.phone ? ` · ${parent.phone}` : ""}
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                disabled={unlinkParent.isPending}
+                onClick={() => unlinkParent.mutate(parent.id)}
+              >
+                Unlink
+              </Button>
+            </div>
+          ))}
+        </div>
+
+        <form onSubmit={handleLinkParent} className="mt-4 flex flex-wrap gap-3">
+          <Select
+            value={parentToLink}
+            onChange={(e) => setParentToLink(e.target.value)}
+            className="max-w-xs"
+          >
+            <option value="">Select a parent account...</option>
+            {linkableParents.map((parent) => (
+              <option key={parent.id} value={parent.id}>
+                {parent.firstName} {parent.lastName} ({parent.email})
+              </option>
+            ))}
+          </Select>
+          <Button type="submit" disabled={!parentToLink || linkParent.isPending}>
+            {linkParent.isPending ? "Linking..." : "Link parent"}
+          </Button>
+        </form>
+      </Card>
 
       <Card>
         <CardHeader>

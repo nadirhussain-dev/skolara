@@ -5,14 +5,17 @@ import {
   type AssignSchoolToGroupInput,
   type CreateSchoolGroupInput,
 } from "@skolara/types";
+import { RequiresFeature } from "../common/decorators/requires-feature.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { FeatureGuard } from "../common/guards/feature.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import { SchoolGroupsService } from "./school-groups.service";
 
 @Controller("school-groups")
-@UseGuards(JwtAuthGuard, RolesGuard)
+@RequiresFeature("SCHOOL_GROUPS")
+@UseGuards(JwtAuthGuard, RolesGuard, FeatureGuard)
 @Roles("SUPER_ADMIN")
 export class SchoolGroupsController {
   constructor(private schoolGroupsService: SchoolGroupsService) {}

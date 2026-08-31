@@ -105,13 +105,23 @@ export class PaymentsService {
   ) {
     const submission = await this.prisma.paymentSubmission.findFirst({
       where: { id, schoolId },
-      include: { submittedByUser: { select: { phone: true } } },
+      include: { submittedByUser: { select: { id: true, phone: true } } },
     });
     if (!submission) throw new NotFoundException("Payment submission not found");
     if (submission.status === "VERIFIED") {
       throw new BadRequestException("Submission already verified");
     }
     const parentPhone = submission.submittedByUser.phone;
+    const notify = async (body: string) => {
+      await Promise.all([
+        this.notifications.sendWhatsApp(parentPhone, body),
+        this.notifications.sendPush([submission.submittedByUser.id], {
+          title: `Payment ${submission.referenceId}`,
+          body,
+          data: { type: "PAYMENT", submissionId: submission.id },
+        }),
+      ]);
+    };
 
     if (input.status === "VERIFIED") {
       const updated = await this.prisma.$transaction(async (tx) => {
@@ -138,10 +148,7 @@ export class PaymentsService {
         });
       });
 
-      await this.notifications.sendWhatsApp(
-        parentPhone,
-        `Payment ${submission.referenceId} has been verified. Thank you!`,
-      );
+      await notify(`Payment ${submission.referenceId} has been verified. Thank you!`);
       return updated;
     }
 
@@ -157,8 +164,7 @@ export class PaymentsService {
         },
       });
 
-      await this.notifications.sendWhatsApp(
-        parentPhone,
+      await notify(
         `Payment ${submission.referenceId} was rejected (${input.rejectionReason}). Please resubmit.`,
       );
       return updated;
@@ -174,10 +180,7 @@ export class PaymentsService {
       },
     });
 
-    await this.notifications.sendWhatsApp(
-      parentPhone,
-      `Payment ${submission.referenceId} needs more info: ${input.reviewNote}`,
-    );
+    await notify(`Payment ${submission.referenceId} needs more info: ${input.reviewNote}`);
     return updated;
   }
 

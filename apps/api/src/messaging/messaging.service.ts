@@ -1,10 +1,14 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { SendMessageInput, StartThreadInput } from "@skolara/types";
+import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class MessagingService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   // Parents initiate contact by picking their child and a teacher; teachers
   // reply within the thread rather than starting new ones.
@@ -59,9 +63,24 @@ export class MessagingService {
   }
 
   async sendMessage(userId: string, threadId: string, input: SendMessageInput) {
-    await this.assertParticipant(userId, threadId);
-    return this.prisma.message.create({
+    const thread = await this.assertParticipant(userId, threadId);
+    const message = await this.prisma.message.create({
       data: { threadId, senderId: userId, body: input.body },
     });
+
+    const recipientId =
+      thread.teacherUserId === userId ? thread.parentUserId : thread.teacherUserId;
+    const sender = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true },
+    });
+
+    await this.notifications.sendPush([recipientId], {
+      title: sender ? `${sender.firstName} ${sender.lastName}` : "New message",
+      body: input.body,
+      data: { type: "MESSAGE", threadId },
+    });
+
+    return message;
   }
 }

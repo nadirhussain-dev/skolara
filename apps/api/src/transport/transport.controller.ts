@@ -16,8 +16,10 @@ import {
   type ReportBusLocationInput,
 } from "@skolara/types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { RequiresFeature } from "../common/decorators/requires-feature.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { FeatureGuard } from "../common/guards/feature.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import { StudentAccessService } from "../common/student-access.service";
@@ -25,7 +27,8 @@ import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
 import { TransportService } from "./transport.service";
 
 @Controller("transport")
-@UseGuards(JwtAuthGuard, RolesGuard)
+@RequiresFeature("TRANSPORT")
+@UseGuards(JwtAuthGuard, RolesGuard, FeatureGuard)
 export class TransportController {
   constructor(
     private transportService: TransportService,

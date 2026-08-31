@@ -4,11 +4,15 @@ import type {
   ComplaintStatus,
   CreateComplaintInput,
 } from "@skolara/types";
+import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class ComplaintsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   create(schoolId: string, raisedByUserId: string, input: CreateComplaintInput) {
     return this.prisma.complaint.create({
@@ -68,10 +72,22 @@ export class ComplaintsService {
     complaintId: string,
     input: AddComplaintCommentInput,
   ) {
-    await this.assertCanView(schoolId, userId, role, complaintId);
-    return this.prisma.complaintComment.create({
+    const complaint = await this.assertCanView(schoolId, userId, role, complaintId);
+    const comment = await this.prisma.complaintComment.create({
       data: { complaintId, authorUserId: userId, body: input.body },
     });
+
+    // Only tell the other side. A parent chasing their own complaint
+    // shouldn't get a push for their own comment.
+    if (complaint.raisedByUserId !== userId) {
+      await this.notifications.sendPush([complaint.raisedByUserId], {
+        title: "Update on your complaint",
+        body: input.body,
+        data: { type: "COMPLAINT", complaintId },
+      });
+    }
+
+    return comment;
   }
 
   async updateStatus(schoolId: string, complaintId: string, status: ComplaintStatus) {
@@ -80,12 +96,20 @@ export class ComplaintsService {
     });
     if (!complaint) throw new NotFoundException("Complaint not found");
 
-    return this.prisma.complaint.update({
+    const updated = await this.prisma.complaint.update({
       where: { id: complaintId },
       data: {
         status,
         resolvedAt: status === "RESOLVED" ? new Date() : null,
       },
     });
+
+    await this.notifications.sendPush([complaint.raisedByUserId], {
+      title: "Complaint status updated",
+      body: `"${complaint.subject}" is now ${status.replace("_", " ").toLowerCase()}.`,
+      data: { type: "COMPLAINT", complaintId },
+    });
+
+    return updated;
   }
 }

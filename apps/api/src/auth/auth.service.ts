@@ -32,10 +32,34 @@ export class AuthService {
     private notifications: NotificationsService,
   ) {}
 
+  /**
+   * Finds the account an email + optional subdomain refers to.
+   *
+   * Email is only unique within a school, so an address used at two schools
+   * is genuinely ambiguous without a subdomain. Rather than guessing, that
+   * case is rejected with the same generic error as a wrong password —
+   * telling the caller "this email exists at several schools" would leak
+   * where someone holds accounts.
+   */
+  private async resolveLoginUser(email: string, subdomain?: string) {
+    if (subdomain) {
+      const school = await this.prisma.school.findUnique({
+        where: { subdomain },
+        select: { id: true },
+      });
+      if (!school) return null;
+      return this.prisma.user.findUnique({
+        where: { schoolId_email: { schoolId: school.id, email } },
+      });
+    }
+
+    // Two is enough to know it's ambiguous; no need to load every match.
+    const candidates = await this.prisma.user.findMany({ where: { email }, take: 2 });
+    return candidates.length === 1 ? candidates[0] : null;
+  }
+
   async login(input: LoginInput): Promise<AuthResponse> {
-    const user = await this.prisma.user.findUnique({
-      where: { email: input.email },
-    });
+    const user = await this.resolveLoginUser(input.email, input.subdomain);
     if (!user || !user.isActive) {
       throw new UnauthorizedException("Invalid credentials");
     }
@@ -44,7 +68,7 @@ export class AuthService {
       const school = await this.prisma.school.findUnique({
         where: { id: user.schoolId },
       });
-      if (!school || (input.subdomain && school.subdomain !== input.subdomain)) {
+      if (!school) {
         throw new UnauthorizedException("Invalid credentials");
       }
       if (!LOGIN_ALLOWED_STATUSES.has(school.subscriptionStatus)) {
@@ -147,12 +171,15 @@ export class AuthService {
   // real account — the response must not leak account existence. The actual
   // outcome (an email landing, or nothing happening) is invisible to the caller.
   async forgotPassword(input: ForgotPasswordInput): Promise<void> {
-    const user = await this.prisma.user.findUnique({ where: { email: input.email } });
+    // Same resolution rule as login: an email used at two schools without a
+    // subdomain is ambiguous, and guessing which account to reset would let
+    // someone trigger a reset at a school they don't belong to.
+    const user = await this.resolveLoginUser(input.email, input.subdomain);
     if (!user || !user.isActive) return;
 
     if (user.schoolId) {
       const school = await this.prisma.school.findUnique({ where: { id: user.schoolId } });
-      if (!school || (input.subdomain && school.subdomain !== input.subdomain)) return;
+      if (!school) return;
     }
 
     const rawToken = randomBytes(32).toString("hex");

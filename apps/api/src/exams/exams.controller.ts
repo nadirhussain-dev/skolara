@@ -9,15 +9,18 @@ import {
 } from "@nestjs/common";
 import { createExamSchema, type CreateExamInput } from "@skolara/types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { RequiresFeature } from "../common/decorators/requires-feature.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { FeatureGuard } from "../common/guards/feature.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
 import { ExamsService } from "./exams.service";
 
 @Controller("exams")
-@UseGuards(JwtAuthGuard, RolesGuard)
+@RequiresFeature("EXAMS")
+@UseGuards(JwtAuthGuard, RolesGuard, FeatureGuard)
 export class ExamsController {
   constructor(private examsService: ExamsService) {}
 

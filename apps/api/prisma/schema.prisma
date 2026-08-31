@@ -111,6 +111,7 @@ model School {
   buses               Bus[]
   payslips            Payslip[]
   apiKeys             ApiKey[]
+  auditLogs           AuditLog[]
 
   @@index([schoolGroupId])
 }
@@ -120,7 +121,11 @@ model User {
   schoolId      String?
   school        School?   @relation(fields: [schoolId], references: [id])
   role          Role
-  email         String    @unique
+  // Unique per school, not globally — the same person can legitimately hold a
+  // parent account at one school and a teacher account at another. Platform
+  // admins (schoolId null) are kept unique by a partial index; see the
+  // per_school_email_uniqueness migration.
+  email         String
   passwordHash  String
   firstName     String
   lastName      String
@@ -145,8 +150,18 @@ model User {
   payslips                Payslip[]           @relation("StaffPayslips")
   refreshTokens           RefreshToken[]
   passwordResetTokens     PasswordResetToken[]
+  deviceTokens            DeviceToken[]
+  auditLogs               AuditLog[]          @relation("AuditActor")
+  classAssignments        ClassTeacher[]      @relation("ClassTeachers")
 
+  @@unique([schoolId, email])
   @@index([schoolId])
+  @@index([email])
+  // Platform admins have a null schoolId, and Postgres treats nulls as
+  // distinct in a unique constraint, so the composite above doesn't stop two
+  // of them sharing an address. That's covered by a partial unique index
+  // created in the per_school_email_uniqueness migration — Prisma can't
+  // express partial indexes for PostgreSQL, so it lives in SQL only.
 }
 
 // Server-side tracking for issued refresh tokens, so logout and rotation can
@@ -208,7 +223,9 @@ model SchoolClass {
   notices            Notice[]
   assignments        Assignment[]
   exams              Exam[]
+  classTeachers      ClassTeacher[]
 
+  @@unique([schoolId, name, section, academicYear])
   @@index([schoolId])
 }
 
@@ -593,10 +610,80 @@ model ApiKey {
   school     School    @relation(fields: [schoolId], references: [id])
   name       String
   keyPrefix  String
-  hashedKey  String
+  hashedKey  String    @unique
   createdAt  DateTime  @default(now())
   lastUsedAt DateTime?
   revokedAt  DateTime?
 
   @@index([schoolId])
+}
+
+enum DevicePlatform {
+  IOS
+  ANDROID
+  WEB
+}
+
+// One row per install of the mobile app that a user has signed into. Tokens
+// are rotated by the OS and can be revoked at any time, so `lastSeenAt` lets
+// stale rows be pruned and the push provider's "not registered" errors are
+// treated as a signal to delete rather than an error to retry.
+model DeviceToken {
+  id         String         @id @default(uuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String         @unique
+  platform   DevicePlatform
+  createdAt  DateTime       @default(now())
+  lastSeenAt DateTime       @default(now())
+
+  @@index([userId])
+}
+
+enum AuditOutcome {
+  SUCCESS
+  FAILURE
+}
+
+// Append-only record of every state-changing request. Written by
+// AuditInterceptor rather than by each service, so a new endpoint is covered
+// the moment it exists instead of whenever someone remembers to instrument it.
+model AuditLog {
+  id           String       @id @default(uuid())
+  // Null for platform-level actions by a SUPER_ADMIN, who sits outside any school.
+  schoolId     String?
+  school       School?      @relation(fields: [schoolId], references: [id])
+  // Null when the actor was an API key or an unauthenticated request.
+  actorUserId  String?
+  actorUser    User?        @relation("AuditActor", fields: [actorUserId], references: [id])
+  // Survives the actor being deleted, and names non-user actors (e.g. "api-key:<id>").
+  actorLabel   String
+  actorRole    String?
+  action       String
+  method       String
+  path         String
+  entityId     String?
+  outcome      AuditOutcome
+  statusCode   Int
+  ipAddress    String?
+  metadata     Json?
+  createdAt    DateTime     @default(now())
+
+  @@index([schoolId, createdAt])
+  @@index([actorUserId])
+}
+
+// Which classes a teacher is responsible for. A teacher usually takes several
+// classes and a class is usually taught by several teachers, so this is a
+// join table rather than the single `SchoolClass.classTeacherId` column —
+// that one names the form teacher, this one governs who may act on the class.
+model ClassTeacher {
+  classId       String
+  class         SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacherUserId String
+  teacherUser   User        @relation("ClassTeachers", fields: [teacherUserId], references: [id], onDelete: Cascade)
+  assignedAt    DateTime    @default(now())
+
+  @@id([classId, teacherUserId])
+  @@index([teacherUserId])
 }

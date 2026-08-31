@@ -1,0 +1,47 @@
+{
+  "name": "@skolara/i18n",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "jest"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@skolara/config": "workspace:*",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.20.1",
+    "@types/react": "^19.0.2",
+    "jest": "^30.4.2",
+    "jest-environment-node": "30.4.1",
+    "react": "^19.0.0",
+    "ts-jest": "^29.4.12",
+    "typescript": "^5.7.2"
+  },
+  "jest": {
+    "rootDir": "src",
+    "testEnvironment": "node",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "json"
+    ],
+    "testRegex": ".*\\.spec\\.tsx?$",
+    "transform": {
+      "^.+\\.(t|j)sx?$": [
+        "ts-jest",
+        {
+          "tsconfig": {
+            "jsx": "react-jsx"
+          }
+        }
+      ]
+    }
+  }
+}

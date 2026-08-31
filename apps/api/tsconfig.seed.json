@@ -1,0 +1,12 @@
+{
+  // `prisma/seed.ts` sits outside the app's rootDir, so the main tsconfig
+  // can't include it without breaking the build output layout. Without this,
+  // the seed was never typechecked and a missing required field only showed
+  // up when CI actually ran it.
+  "extends": "@skolara/config/nestjs.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["prisma/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,6 +1,14 @@
 import { Link, router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { apiClient, clearSession, getStoredRefreshToken } from "@/lib/api-client";
+import {
+  apiClient,
+  clearSession,
+  getStoredPushToken,
+  getStoredRefreshToken,
+} from "@/lib/api-client";
+import { useTranslation } from "@skolara/i18n";
+import { LanguageToggle } from "@/lib/language-toggle";
+import { unregisterPushToken } from "@/lib/push";
 import { colors, radius, shadow, spacing, typography } from "@/lib/theme";
 import { Button } from "@/lib/ui";
 
@@ -12,8 +20,15 @@ const links = [
 ] as const;
 
 export default function TeacherDashboardScreen() {
+  const { t } = useTranslation();
+
   async function signOut() {
     const refreshToken = await getStoredRefreshToken();
+    const pushToken = await getStoredPushToken();
+    // Detach the device before clearing the session — the unregister call
+    // needs the access token, and the next person to sign in on this handset
+    // shouldn't inherit these notifications.
+    await unregisterPushToken(pushToken);
     await clearSession();
     router.replace("/(auth)/login");
     // Best-effort — local session is already cleared either way.
@@ -31,7 +46,8 @@ export default function TeacherDashboardScreen() {
         </Link>
       ))}
       <View style={styles.footer}>
-        <Button title="Sign out" variant="ghost" onPress={signOut} />
+        <LanguageToggle />
+        <Button title={t("auth.signOut")} variant="ghost" onPress={signOut} />
       </View>
     </ScrollView>
   );

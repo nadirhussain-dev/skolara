@@ -1,16 +1,18 @@
 "use client";
 
-import { useMySchool, useUpdateBranding } from "@skolara/api-client";
+import { useMySchool, useUpdateBranding, useUploadFile } from "@skolara/api-client";
 import { Button, Card, CardHeader, CardTitle, Input, PageHeader } from "@skolara/ui";
 import { useEffect, useState } from "react";
 
 export default function BrandingPage() {
   const { data: school, isLoading } = useMySchool();
   const updateBranding = useUpdateBranding();
+  const uploadFile = useUploadFile();
 
   const [logoUrl, setLogoUrl] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#6D28D9");
   const [savedMessage, setSavedMessage] = useState("");
+  const [uploadError, setUploadError] = useState("");
 
   useEffect(() => {
     // Syncs local editable form fields from the fetched school record once
@@ -22,6 +24,21 @@ export default function BrandingPage() {
       setPrimaryColor(school.primaryColor ?? "#6D28D9");
     }
   }, [school]);
+
+  async function handleLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError("");
+    try {
+      const uploaded = await uploadFile.mutateAsync({ file, purpose: "SCHOOL_LOGO" });
+      setLogoUrl(uploaded.url);
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      // Lets the same file be re-picked if the upload failed.
+      e.target.value = "";
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -60,7 +77,7 @@ export default function BrandingPage() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              Logo URL
+              Logo
               <Input
                 type="url"
                 placeholder="https://example.com/logo.png"
@@ -68,6 +85,17 @@ export default function BrandingPage() {
                 onChange={(e) => setLogoUrl(e.target.value)}
                 className="min-w-[280px]"
               />
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={handleLogoFile}
+                disabled={uploadFile.isPending}
+                className="mt-1 text-xs text-slate-500 file:mr-2 file:rounded-md file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs dark:file:bg-slate-800 dark:file:text-slate-200"
+              />
+              {uploadFile.isPending && (
+                <span className="text-xs text-slate-500">Uploading...</span>
+              )}
+              {uploadError && <span className="text-xs text-rose-600">{uploadError}</span>}
             </label>
             <label className="flex flex-col gap-1 text-sm">
               Primary color

@@ -1,13 +1,17 @@
 import { useLogin } from "@skolara/api-client";
+import { useTranslation } from "@skolara/i18n";
 import { Link, router } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { setStoredAccessToken, setStoredRefreshToken } from "@/lib/api-client";
+import { registerPushToken } from "@/lib/push";
 import { colors, spacing, typography } from "@/lib/theme";
+import { LanguageToggle } from "@/lib/language-toggle";
 import { Button, Input } from "@/lib/ui";
 
 export default function LoginScreen() {
   const login = useLogin();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [subdomain, setSubdomain] = useState("");
@@ -20,6 +24,8 @@ export default function LoginScreen() {
     });
     await setStoredAccessToken(result.accessToken);
     await setStoredRefreshToken(result.refreshToken);
+    // Needs the access token in place first — the register call is authenticated.
+    await registerPushToken();
     if (result.user.role === "TEACHER") {
       router.replace("/teacher-dashboard");
     } else {
@@ -29,34 +35,35 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome back</Text>
-      <Text style={styles.subtitle}>Sign in to your school account</Text>
+      <Text style={styles.title}>{t("auth.welcomeBack")}</Text>
+      <Text style={styles.subtitle}>{t("auth.signInSubtitle")}</Text>
       <Input
-        placeholder="School subdomain (optional)"
+        placeholder={`${t("auth.schoolSubdomain")} (${t("common.optional")})`}
         autoCapitalize="none"
         value={subdomain}
         onChangeText={setSubdomain}
       />
       <Input
-        placeholder="Email"
+        placeholder={t("auth.email")}
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
       />
-      <Input placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
-      {login.isError && <Text style={styles.error}>Invalid credentials.</Text>}
+      <Input placeholder={t("auth.password")} secureTextEntry value={password} onChangeText={setPassword} />
+      {login.isError && <Text style={styles.error}>{t("auth.invalidCredentials")}</Text>}
       <Button
-        title="Sign in"
+        title={t("auth.signIn")}
         onPress={handleSubmit}
         loading={login.isPending}
         style={styles.button}
       />
       <Link href="/(auth)/forgot-password" asChild>
         <Pressable>
-          <Text style={styles.link}>Forgot your password?</Text>
+          <Text style={styles.link}>{t("auth.forgotPassword")}</Text>
         </Pressable>
       </Link>
+      <LanguageToggle />
     </View>
   );
 }

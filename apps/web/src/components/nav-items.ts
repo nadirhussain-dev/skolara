@@ -1,74 +1,158 @@
+import type { MessageKey } from "@skolara/i18n";
 import type { RoleType } from "@skolara/types";
 
 export interface NavItem {
   href: string;
-  label: string;
+  /** Message key rather than a literal — the sidebar renders in the user's language. */
+  labelKey: MessageKey;
   roles: RoleType[];
-  group: string;
+  groupKey: MessageKey;
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/super-admin/schools", label: "Schools", roles: ["SUPER_ADMIN"], group: "Platform" },
+  {
+    href: "/super-admin/schools",
+    labelKey: "nav.schools",
+    roles: ["SUPER_ADMIN"],
+    groupKey: "nav.platform",
+  },
   {
     href: "/super-admin/school-groups",
-    label: "School Groups",
+    labelKey: "nav.schoolGroups",
     roles: ["SUPER_ADMIN"],
-    group: "Platform",
+    groupKey: "nav.platform",
   },
   {
     href: "/super-admin/analytics",
-    label: "Analytics",
+    labelKey: "nav.analytics",
     roles: ["SUPER_ADMIN"],
-    group: "Platform",
+    groupKey: "nav.platform",
   },
 
-  { href: "/school/analytics", label: "Overview", roles: ["SCHOOL_ADMIN"], group: "Overview" },
-
-  { href: "/school/students", label: "Students", roles: ["SCHOOL_ADMIN"], group: "People" },
-  { href: "/school/teachers", label: "Teachers", roles: ["SCHOOL_ADMIN"], group: "People" },
-  { href: "/school/classes", label: "Classes", roles: ["SCHOOL_ADMIN"], group: "People" },
-  { href: "/school/users", label: "Accounts", roles: ["SCHOOL_ADMIN"], group: "People" },
+  {
+    href: "/school/analytics",
+    labelKey: "nav.overview",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.overview",
+  },
 
   {
+    href: "/school/students",
+    labelKey: "nav.students",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.people",
+  },
+  {
+    href: "/school/teachers",
+    labelKey: "nav.teachers",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.people",
+  },
+  {
+    href: "/school/classes",
+    labelKey: "nav.classes",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.people",
+  },
+  {
+    href: "/school/users",
+    labelKey: "nav.accounts",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.people",
+  },
+
+  {
+    href: "/school/attendance",
+    labelKey: "nav.attendance",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.academics",
+  },
+  {
     href: "/teacher/gradebook",
-    label: "Gradebook",
+    labelKey: "nav.gradebook",
     roles: ["TEACHER"],
-    group: "Academics",
+    groupKey: "nav.academics",
   },
   {
     href: "/school/exams",
-    label: "Exams",
+    labelKey: "nav.exams",
     roles: ["SCHOOL_ADMIN", "TEACHER"],
-    group: "Academics",
+    groupKey: "nav.academics",
   },
   {
     href: "/school/assignments",
-    label: "Assignments",
+    labelKey: "nav.assignments",
     roles: ["SCHOOL_ADMIN", "TEACHER"],
-    group: "Academics",
+    groupKey: "nav.academics",
   },
 
-  { href: "/school/invoices", label: "Invoices", roles: ["SCHOOL_ADMIN"], group: "Finance" },
-  { href: "/school/payments", label: "Payment queue", roles: ["SCHOOL_ADMIN"], group: "Finance" },
+  {
+    href: "/school/invoices",
+    labelKey: "nav.invoices",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.finance",
+  },
+  {
+    href: "/school/payments",
+    labelKey: "nav.paymentQueue",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.finance",
+  },
   {
     href: "/school/bank-statement",
-    label: "Bank statement",
+    labelKey: "nav.bankStatement",
     roles: ["SCHOOL_ADMIN"],
-    group: "Finance",
+    groupKey: "nav.finance",
   },
 
-  { href: "/school/notices", label: "Notices", roles: ["SCHOOL_ADMIN"], group: "Communication" },
+  {
+    href: "/school/notices",
+    labelKey: "nav.notices",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.communication",
+  },
   {
     href: "/school/complaints",
-    label: "Complaints",
+    labelKey: "nav.complaints",
     roles: ["SCHOOL_ADMIN"],
-    group: "Communication",
+    groupKey: "nav.communication",
   },
 
-  { href: "/school/library", label: "Library", roles: ["SCHOOL_ADMIN"], group: "Operations" },
-  { href: "/school/transport", label: "Transport", roles: ["SCHOOL_ADMIN"], group: "Operations" },
-  { href: "/school/payroll", label: "Payroll", roles: ["SCHOOL_ADMIN"], group: "Operations" },
+  {
+    href: "/school/library",
+    labelKey: "nav.library",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.operations",
+  },
+  {
+    href: "/school/transport",
+    labelKey: "nav.transport",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.operations",
+  },
+  {
+    href: "/school/payroll",
+    labelKey: "nav.payroll",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.operations",
+  },
 
-  { href: "/school/branding", label: "Branding", roles: ["SCHOOL_ADMIN"], group: "Settings" },
-  { href: "/school/api-keys", label: "API keys", roles: ["SCHOOL_ADMIN"], group: "Settings" },
+  {
+    href: "/school/branding",
+    labelKey: "nav.branding",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.settings",
+  },
+  {
+    href: "/school/api-keys",
+    labelKey: "nav.apiKeys",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.settings",
+  },
+  {
+    href: "/school/audit-logs",
+    labelKey: "nav.auditLog",
+    roles: ["SUPER_ADMIN", "SCHOOL_ADMIN"],
+    groupKey: "nav.settings",
+  },
 ];

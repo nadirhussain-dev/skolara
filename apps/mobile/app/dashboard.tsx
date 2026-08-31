@@ -1,23 +1,38 @@
 import { Link, router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { apiClient, clearSession, getStoredRefreshToken } from "@/lib/api-client";
+import {
+  apiClient,
+  clearSession,
+  getStoredPushToken,
+  getStoredRefreshToken,
+} from "@/lib/api-client";
+import { useTranslation } from "@skolara/i18n";
+import { LanguageToggle } from "@/lib/language-toggle";
+import { unregisterPushToken } from "@/lib/push";
 import { colors, radius, shadow, spacing, typography } from "@/lib/theme";
 import { Button } from "@/lib/ui";
 
 const links = [
-  { href: "/payments/submit", label: "Submit a fee payment", icon: "💳" },
-  { href: "/results", label: "View results", icon: "📊" },
-  { href: "/notices", label: "Notices", icon: "📣" },
-  { href: "/assignments/mine", label: "Homework & assignments", icon: "📝" },
-  { href: "/transport", label: "Bus tracking", icon: "🚌" },
-  { href: "/library", label: "Library", icon: "📚" },
-  { href: "/complaints", label: "Complaints", icon: "🗣️" },
-  { href: "/messages", label: "Messages", icon: "💬" },
+  { href: "/payments/submit", labelKey: "payments.submitPayment", icon: "💳" },
+  { href: "/results", labelKey: "dashboard.viewResults", icon: "📊" },
+  { href: "/notices", labelKey: "dashboard.notices", icon: "📣" },
+  { href: "/assignments/mine", labelKey: "dashboard.homework", icon: "📝" },
+  { href: "/transport", labelKey: "dashboard.busTracking", icon: "🚌" },
+  { href: "/library", labelKey: "dashboard.library", icon: "📚" },
+  { href: "/complaints", labelKey: "dashboard.complaints", icon: "🗣️" },
+  { href: "/messages", labelKey: "dashboard.messages", icon: "💬" },
 ] as const;
 
 export default function DashboardScreen() {
+  const { t } = useTranslation();
+
   async function signOut() {
     const refreshToken = await getStoredRefreshToken();
+    const pushToken = await getStoredPushToken();
+    // Detach the device before clearing the session — the unregister call
+    // needs the access token, and the next person to sign in on this handset
+    // shouldn't inherit these notifications.
+    await unregisterPushToken(pushToken);
     await clearSession();
     router.replace("/(auth)/login");
     // Best-effort — local session is already cleared either way.
@@ -30,12 +45,13 @@ export default function DashboardScreen() {
         <Link key={link.href} href={link.href} asChild>
           <Pressable style={styles.card}>
             <Text style={styles.icon}>{link.icon}</Text>
-            <Text style={styles.label}>{link.label}</Text>
+            <Text style={styles.label}>{t(link.labelKey)}</Text>
           </Pressable>
         </Link>
       ))}
       <View style={styles.footer}>
-        <Button title="Sign out" variant="ghost" onPress={signOut} />
+        <LanguageToggle />
+        <Button title={t("auth.signOut")} variant="ghost" onPress={signOut} />
       </View>
     </ScrollView>
   );

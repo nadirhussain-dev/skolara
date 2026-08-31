@@ -7,6 +7,7 @@ import type {
   Assignment,
   AssignmentSubmission,
   AttendanceRecord,
+  AuditLogPage,
   AuthResponse,
   AuthTokens,
   BankStatementLine,
@@ -33,6 +34,7 @@ import type {
   CreateTeacherInput,
   CreateUserInput,
   DefaulterRisk,
+  DeviceToken,
   ForgotPasswordInput,
   Exam,
   GradeAssignmentInput,
@@ -49,6 +51,9 @@ import type {
   PaymentSubmissionStatus,
   PlatformAnalytics,
   RankListEntry,
+  RegisterDeviceInput,
+  RegisterSchoolInput,
+  RegisterSchoolResponse,
   ReportBusLocationInput,
   ResetPasswordInput,
   ReviewPaymentInput,
@@ -63,6 +68,8 @@ import type {
   SuggestedMatch,
   UpdateBrandingInput,
   UpdateComplaintStatusInput,
+  UploadPurpose,
+  UploadedFile,
   UpsertGradeEntryInput,
   User,
   RoleType,
@@ -120,6 +127,25 @@ export interface TeacherWithUser {
   employeeNumber: string;
   subjects: string[];
   user: { id: string; firstName: string; lastName: string; email: string; phone: string | null };
+}
+
+export interface ClassAttendanceSummary {
+  classId: string;
+  name: string;
+  section: string | null;
+  marked: boolean;
+  presentCount: number;
+  totalCount: number;
+  attendanceRate: number | null;
+}
+
+export interface SchoolDayAttendance {
+  date: string;
+  classes: ClassAttendanceSummary[];
+  unmarkedClassCount: number;
+  presentCount: number;
+  totalCount: number;
+  attendanceRate: number | null;
 }
 
 export interface BusWithLatestLocation {
@@ -214,6 +240,32 @@ export function createApiClient({
     return res.json() as Promise<T>;
   }
 
+  /**
+   * Multipart sibling of `request`. Deliberately does NOT set Content-Type —
+   * the runtime has to add its own `multipart/form-data` boundary, and setting
+   * the header by hand strips it and breaks the parse server-side.
+   */
+  async function upload(body: FormData, isRetry = false): Promise<UploadedFile> {
+    const token = await getAccessToken();
+    const res = await fetch(`${baseUrl}/uploads`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body,
+    });
+
+    if (!res.ok) {
+      if (res.status === 401 && !isRetry && getRefreshToken) {
+        const newToken = await refreshAccessToken();
+        if (newToken) return upload(body, true);
+        await onAuthFailure?.();
+      }
+      const detail = await res.json().catch(() => undefined);
+      throw new ApiError(res.status, detail?.message ?? res.statusText, detail);
+    }
+
+    return res.json() as Promise<UploadedFile>;
+  }
+
   return {
     request,
     auth: {
@@ -240,6 +292,15 @@ export function createApiClient({
     },
     schools: {
       list: () => request<School[]>("/schools"),
+      register: (input: RegisterSchoolInput) =>
+        request<RegisterSchoolResponse>("/schools/register", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      subdomainAvailable: (subdomain: string) =>
+        request<{ available: boolean }>(
+          `/schools/subdomain-available/${encodeURIComponent(subdomain)}`,
+        ),
       create: (input: CreateSchoolInput) =>
         request<School>("/schools", {
           method: "POST",
@@ -293,6 +354,14 @@ export function createApiClient({
           method: "PATCH",
           body: JSON.stringify({ classId }),
         }),
+      parents: (id: string) => request<User[]>(`/students/${id}/parents`),
+      linkParent: (id: string, parentUserId: string) =>
+        request<User[]>(`/students/${id}/parents`, {
+          method: "POST",
+          body: JSON.stringify({ parentUserId }),
+        }),
+      unlinkParent: (id: string, parentUserId: string) =>
+        request<User[]>(`/students/${id}/parents/${parentUserId}`, { method: "DELETE" }),
     },
     teachers: {
       create: (input: CreateTeacherInput) =>
@@ -322,6 +391,8 @@ export function createApiClient({
         request<AttendanceRecord[]>(
           `/attendance/class/${classId}?date=${date}`,
         ),
+      schoolDay: (date: string) =>
+        request<SchoolDayAttendance>(`/attendance/school-day?date=${date}`),
     },
     payments: {
       submit: (studentId: string, input: SubmitPaymentInput) =>
@@ -494,6 +565,41 @@ export function createApiClient({
         }),
       list: () => request<ApiKey[]>("/api-keys"),
       revoke: (id: string) => request<ApiKey>(`/api-keys/${id}`, { method: "DELETE" }),
+    },
+    audit: {
+      list: (params: { outcome?: "SUCCESS" | "FAILURE"; cursor?: string; limit?: number } = {}) => {
+        const query = new URLSearchParams();
+        if (params.outcome) query.set("outcome", params.outcome);
+        if (params.cursor) query.set("cursor", params.cursor);
+        if (params.limit) query.set("limit", String(params.limit));
+        const suffix = query.toString();
+        return request<AuditLogPage>(`/audit-logs${suffix ? `?${suffix}` : ""}`);
+      },
+    },
+    devices: {
+      register: (input: RegisterDeviceInput) =>
+        request<DeviceToken>("/devices", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      unregister: (token: string) =>
+        request<void>(`/devices/${encodeURIComponent(token)}`, { method: "DELETE" }),
+    },
+    uploads: {
+      /**
+       * `file` is a browser File/Blob on web, or a `{ uri, name, type }`
+       * descriptor on React Native — both are accepted by the FormData
+       * implementation in their respective runtimes.
+       */
+      upload: (
+        file: Blob | { uri: string; name: string; type: string },
+        purpose: UploadPurpose,
+      ) => {
+        const form = new FormData();
+        form.append("file", file as Blob);
+        form.append("purpose", purpose);
+        return upload(form);
+      },
     },
     users: {
       create: (input: CreateUserInput) =>

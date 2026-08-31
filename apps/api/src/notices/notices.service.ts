@@ -94,60 +94,69 @@ export class NoticesService {
   private async alertRecipients(notice: {
     id: string;
     schoolId: string;
+    title: string;
     audience: string;
     classId: string | null;
   }) {
-    const recipients = await this.resolveRecipientPhones(notice);
-    await Promise.all(
-      recipients.map((phone) =>
-        this.notifications.sendWhatsApp(phone, `📢 New notice: ${notice.id}`),
+    const recipients = await this.resolveRecipients(notice);
+
+    await Promise.all([
+      ...recipients.map((recipient) =>
+        this.notifications.sendWhatsApp(
+          recipient.phone,
+          `📢 New notice from your school: ${notice.title}`,
+        ),
       ),
-    );
+      this.notifications.sendPush(
+        recipients.map((recipient) => recipient.id),
+        {
+          title: "New notice",
+          body: notice.title,
+          data: { type: "NOTICE", noticeId: notice.id },
+        },
+      ),
+    ]);
   }
 
-  private async resolveRecipientPhones(notice: {
+  /**
+   * Everyone the notice is addressed to. Push goes to all of them; WhatsApp
+   * only reaches the subset with a phone number on file.
+   */
+  private async resolveRecipients(notice: {
     schoolId: string;
     audience: string;
     classId: string | null;
-  }): Promise<string[]> {
-    const baseWhere = { schoolId: notice.schoolId, isActive: true, phone: { not: null } };
+  }): Promise<{ id: string; phone: string | null }[]> {
+    const baseWhere = { schoolId: notice.schoolId, isActive: true };
+    const select = { id: true, phone: true } as const;
+
+    const roleByAudience: Record<string, "TEACHER" | "STUDENT" | "PARENT"> = {
+      TEACHERS: "TEACHER",
+      STUDENTS: "STUDENT",
+      PARENTS: "PARENT",
+    };
 
     if (notice.audience === "ALL") {
-      const users = await this.prisma.user.findMany({ where: baseWhere });
-      return users.map((u) => u.phone!).filter(Boolean);
+      return this.prisma.user.findMany({ where: baseWhere, select });
     }
 
-    if (notice.audience === "TEACHERS") {
-      const users = await this.prisma.user.findMany({
-        where: { ...baseWhere, role: "TEACHER" },
-      });
-      return users.map((u) => u.phone!).filter(Boolean);
-    }
-
-    if (notice.audience === "STUDENTS") {
-      const users = await this.prisma.user.findMany({
-        where: { ...baseWhere, role: "STUDENT" },
-      });
-      return users.map((u) => u.phone!).filter(Boolean);
-    }
-
-    if (notice.audience === "PARENTS") {
-      const users = await this.prisma.user.findMany({
-        where: { ...baseWhere, role: "PARENT" },
-      });
-      return users.map((u) => u.phone!).filter(Boolean);
+    const role = roleByAudience[notice.audience];
+    if (role) {
+      return this.prisma.user.findMany({ where: { ...baseWhere, role }, select });
     }
 
     if (notice.audience === "CLASS" && notice.classId) {
       const students = await this.prisma.studentProfile.findMany({
         where: { schoolId: notice.schoolId, classId: notice.classId },
-        include: { user: true, parentLinks: { include: { parentUser: true } } },
+        include: {
+          user: { select },
+          parentLinks: { include: { parentUser: { select } } },
+        },
       });
-      const phones = students.flatMap((s) => [
-        s.user.phone,
-        ...s.parentLinks.map((link) => link.parentUser.phone),
+      return students.flatMap((student) => [
+        student.user,
+        ...student.parentLinks.map((link) => link.parentUser),
       ]);
-      return phones.filter((phone): phone is string => Boolean(phone));
     }
 
     return [];

@@ -3,9 +3,12 @@ import { ConfigService } from "@nestjs/config";
 import { EMAIL_PROVIDER } from "./email-provider.interface";
 import { NotificationsService } from "./notifications.service";
 import { ConsoleEmailProvider } from "./providers/console-email.provider";
+import { ConsolePushProvider } from "./providers/console-push.provider";
 import { ConsoleWhatsAppProvider } from "./providers/console-whatsapp.provider";
+import { ExpoPushProvider } from "./providers/expo-push.provider";
 import { MetaCloudWhatsAppProvider } from "./providers/meta-cloud-whatsapp.provider";
 import { ResendEmailProvider } from "./providers/resend-email.provider";
+import { PUSH_PROVIDER } from "./push-provider.interface";
 import { WHATSAPP_PROVIDER } from "./whatsapp-provider.interface";
 
 @Global()
@@ -32,6 +35,21 @@ import { WHATSAPP_PROVIDER } from "./whatsapp-provider.interface";
           return new ResendEmailProvider({ apiKey, from });
         }
         return new ConsoleEmailProvider();
+      },
+      inject: [ConfigService],
+    },
+    {
+      provide: PUSH_PROVIDER,
+      useFactory: (config: ConfigService) => {
+        // Expo's push service needs no credentials for a standard project, so
+        // this is opt-out rather than opt-in: set EXPO_PUSH_ENABLED=false to
+        // fall back to console logging (e.g. in tests or local dev).
+        if (config.get<string>("EXPO_PUSH_ENABLED") === "false") {
+          return new ConsolePushProvider();
+        }
+        return new ExpoPushProvider({
+          accessToken: config.get<string>("EXPO_ACCESS_TOKEN"),
+        });
       },
       inject: [ConfigService],
     },

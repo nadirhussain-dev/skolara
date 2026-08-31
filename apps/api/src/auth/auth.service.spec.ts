@@ -10,7 +10,7 @@ import { AuthService } from "./auth.service";
 describe("AuthService", () => {
   let service: AuthService;
   let prisma: {
-    user: { findUnique: jest.Mock; update: jest.Mock };
+    user: { findUnique: jest.Mock; findMany: jest.Mock; update: jest.Mock };
     school: { findUnique: jest.Mock };
     refreshToken: {
       findUnique: jest.Mock;
@@ -64,7 +64,7 @@ describe("AuthService", () => {
 
   beforeEach(async () => {
     prisma = {
-      user: { findUnique: jest.fn(), update: jest.fn() },
+      user: { findUnique: jest.fn(), findMany: jest.fn(), update: jest.fn() },
       school: { findUnique: jest.fn() },
       refreshToken: {
         findUnique: jest.fn(),
@@ -100,8 +100,14 @@ describe("AuthService", () => {
   });
 
   describe("login", () => {
+    // Email is only unique within a school, so login without a subdomain
+    // resolves through findMany and requires exactly one match.
+    function emailMatches(...users: unknown[]) {
+      prisma.user.findMany.mockResolvedValue(users);
+    }
+
     it("rejects an unknown email", async () => {
-      prisma.user.findUnique.mockResolvedValue(null);
+      emailMatches();
 
       await expect(
         service.login({ email: "nobody@x.test", password: PASSWORD }),
@@ -109,20 +115,50 @@ describe("AuthService", () => {
     });
 
     it("rejects a deactivated account", async () => {
-      prisma.user.findUnique.mockResolvedValue({
-        ...baseUser,
-        passwordHash,
-        isActive: false,
-      });
+      emailMatches({ ...baseUser, passwordHash, isActive: false });
 
       await expect(
         service.login({ email: baseUser.email, password: PASSWORD }),
       ).rejects.toThrow(UnauthorizedException);
     });
 
-    it("rejects a subdomain that doesn't match the user's school", async () => {
+    it("rejects an email shared by two schools when no subdomain narrows it", async () => {
+      // Guessing which account to sign into would be wrong, and saying "this
+      // email exists at several schools" would leak where someone has accounts.
+      emailMatches(
+        { ...baseUser, passwordHash },
+        { ...baseUser, id: "user-2", schoolId: "school-2", passwordHash },
+      );
+
+      await expect(
+        service.login({ email: baseUser.email, password: PASSWORD }),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it("resolves the right account when a subdomain disambiguates", async () => {
+      prisma.school.findUnique
+        .mockResolvedValueOnce({ id: activeSchool.id })
+        .mockResolvedValueOnce(activeSchool);
       prisma.user.findUnique.mockResolvedValue({ ...baseUser, passwordHash });
-      prisma.school.findUnique.mockResolvedValue(activeSchool);
+
+      await expect(
+        service.login({
+          email: baseUser.email,
+          password: PASSWORD,
+          subdomain: activeSchool.subdomain,
+        }),
+      ).resolves.toBeDefined();
+
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { schoolId_email: { schoolId: activeSchool.id, email: baseUser.email } },
+      });
+      // Ambiguity resolution shouldn't fall back to the email-only lookup.
+      expect(prisma.user.findMany).not.toHaveBeenCalled();
+    });
+
+    it("rejects a subdomain that doesn't match any school", async () => {
+      prisma.school.findUnique.mockResolvedValue(null);
 
       await expect(
         service.login({
@@ -133,10 +169,23 @@ describe("AuthService", () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
+    it("rejects a subdomain whose school has no account for that email", async () => {
+      prisma.school.findUnique.mockResolvedValue({ id: "school-2" });
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.login({
+          email: baseUser.email,
+          password: PASSWORD,
+          subdomain: "other-school",
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
     it.each(["PENDING", "SUSPENDED", "REJECTED", "EXPIRED"] as const)(
       "rejects login when the school's subscription is %s",
       async (subscriptionStatus) => {
-        prisma.user.findUnique.mockResolvedValue({ ...baseUser, passwordHash });
+        emailMatches({ ...baseUser, passwordHash });
         prisma.school.findUnique.mockResolvedValue({ ...activeSchool, subscriptionStatus });
 
         await expect(
@@ -146,7 +195,7 @@ describe("AuthService", () => {
     );
 
     it("rejects an incorrect password", async () => {
-      prisma.user.findUnique.mockResolvedValue({ ...baseUser, passwordHash });
+      emailMatches({ ...baseUser, passwordHash });
       prisma.school.findUnique.mockResolvedValue(activeSchool);
 
       await expect(
@@ -155,7 +204,7 @@ describe("AuthService", () => {
     });
 
     it("issues both tokens, persists the refresh token, and returns the public user shape", async () => {
-      prisma.user.findUnique.mockResolvedValue({ ...baseUser, passwordHash });
+      emailMatches({ ...baseUser, passwordHash });
       prisma.school.findUnique.mockResolvedValue(activeSchool);
 
       const result = await service.login({ email: baseUser.email, password: PASSWORD });
@@ -171,12 +220,7 @@ describe("AuthService", () => {
     });
 
     it("allows SUPER_ADMIN (no schoolId) to skip the school checks entirely", async () => {
-      prisma.user.findUnique.mockResolvedValue({
-        ...baseUser,
-        role: "SUPER_ADMIN",
-        schoolId: null,
-        passwordHash,
-      });
+      emailMatches({ ...baseUser, role: "SUPER_ADMIN", schoolId: null, passwordHash });
 
       await expect(
         service.login({ email: baseUser.email, password: PASSWORD }),
@@ -290,8 +334,12 @@ describe("AuthService", () => {
   });
 
   describe("forgotPassword", () => {
+    function emailMatches(...users: unknown[]) {
+      prisma.user.findMany.mockResolvedValue(users);
+    }
+
     it("silently no-ops for an unknown email (doesn't leak account existence)", async () => {
-      prisma.user.findUnique.mockResolvedValue(null);
+      emailMatches();
 
       await service.forgotPassword({ email: "nobody@x.test" });
 
@@ -300,24 +348,36 @@ describe("AuthService", () => {
     });
 
     it("silently no-ops for a deactivated account", async () => {
-      prisma.user.findUnique.mockResolvedValue({ ...baseUser, passwordHash, isActive: false });
+      emailMatches({ ...baseUser, passwordHash, isActive: false });
 
       await service.forgotPassword({ email: baseUser.email });
 
       expect(notifications.sendEmail).not.toHaveBeenCalled();
     });
 
-    it("silently no-ops when the subdomain doesn't match the user's school", async () => {
-      prisma.user.findUnique.mockResolvedValue({ ...baseUser, passwordHash });
-      prisma.school.findUnique.mockResolvedValue(activeSchool);
+    it("silently no-ops when the subdomain names no school", async () => {
+      prisma.school.findUnique.mockResolvedValue(null);
 
       await service.forgotPassword({ email: baseUser.email, subdomain: "wrong-school" });
 
       expect(notifications.sendEmail).not.toHaveBeenCalled();
     });
 
+    it("silently no-ops for an email shared by two schools with no subdomain", async () => {
+      // Resetting a guess would let someone trigger a reset at a school they
+      // don't belong to.
+      emailMatches(
+        { ...baseUser, passwordHash },
+        { ...baseUser, id: "user-2", schoolId: "school-2", passwordHash },
+      );
+
+      await service.forgotPassword({ email: baseUser.email });
+
+      expect(notifications.sendEmail).not.toHaveBeenCalled();
+    });
+
     it("creates a reset token and emails a reset link for a valid account", async () => {
-      prisma.user.findUnique.mockResolvedValue({ ...baseUser, passwordHash });
+      emailMatches({ ...baseUser, passwordHash });
       prisma.school.findUnique.mockResolvedValue(activeSchool);
 
       await service.forgotPassword({ email: baseUser.email });

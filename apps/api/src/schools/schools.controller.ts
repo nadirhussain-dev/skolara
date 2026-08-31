@@ -8,18 +8,24 @@ import {
   Post,
   UseGuards,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import {
   createSchoolSchema,
+  registerSchoolSchema,
   subscriptionStatusSchema,
   updateBrandingSchema,
   type CreateSchoolInput,
+  type RegisterSchoolInput,
   type SubscriptionStatus,
   type UpdateBrandingInput,
 } from "@skolara/types";
 import { z } from "zod";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { Public } from "../common/decorators/public.decorator";
+import { RequiresFeature } from "../common/decorators/requires-feature.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { FeatureGuard } from "../common/guards/feature.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
@@ -28,9 +34,25 @@ import { SchoolsService } from "./schools.service";
 const updateStatusSchema = z.object({ status: subscriptionStatusSchema });
 
 @Controller("schools")
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, FeatureGuard)
 export class SchoolsController {
   constructor(private schoolsService: SchoolsService) {}
+
+  // Public: this is the self-serve signup form. Rate-limited hard because it
+  // creates rows and sits outside authentication.
+  @Post("register")
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60 * 60 * 1000 } })
+  register(@Body(new ZodValidationPipe(registerSchoolSchema)) body: RegisterSchoolInput) {
+    return this.schoolsService.register(body);
+  }
+
+  @Get("subdomain-available/:subdomain")
+  @Public()
+  @Throttle({ default: { limit: 60, ttl: 60 * 1000 } })
+  subdomainAvailable(@Param("subdomain") subdomain: string) {
+    return this.schoolsService.isSubdomainAvailable(subdomain.toLowerCase());
+  }
 
   @Post()
   @Roles("SUPER_ADMIN")
@@ -74,6 +96,7 @@ export class SchoolsController {
 
   @Patch(":id/branding")
   @Roles("SUPER_ADMIN", "SCHOOL_ADMIN")
+  @RequiresFeature("WHITE_LABEL")
   updateBranding(
     @Param("id") id: string,
     @Body(new ZodValidationPipe(updateBrandingSchema)) body: UpdateBrandingInput,

@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { PLANS } from "@skolara/types";
 import * as bcrypt from "bcrypt";
 import type { AdmitStudentInput } from "@skolara/types";
 import { PrismaService } from "../prisma/prisma.service";
@@ -15,7 +16,33 @@ const PUBLIC_USER_SELECT = {
 export class StudentsService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Refuses an admission that would take the school past its plan's cap.
+   * Checked here rather than in a guard because the limit is about the row
+   * being created, not about who is calling.
+   */
+  private async assertUnderStudentCap(schoolId: string) {
+    const school = await this.prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { plan: true },
+    });
+    if (!school) throw new NotFoundException("School not found");
+
+    const cap = PLANS[school.plan].maxStudents;
+    if (cap === null) return;
+
+    const enrolled = await this.prisma.studentProfile.count({ where: { schoolId } });
+    if (enrolled >= cap) {
+      throw new ForbiddenException(
+        `Your ${PLANS[school.plan].name} plan covers up to ${cap} students. ` +
+          "Upgrade your plan to admit more.",
+      );
+    }
+  }
+
   async admit(input: AdmitStudentInput) {
+    await this.assertUnderStudentCap(input.schoolId);
+
     const passwordHash = await bcrypt.hash(input.password, 10);
 
     return this.prisma.$transaction(async (tx) => {
@@ -83,5 +110,52 @@ export class StudentsService {
       where: { id },
       data: { classId },
     });
+  }
+
+  /**
+   * Links an existing parent account to a student after admission. Without
+   * this, parents could only ever be attached at the moment a student was
+   * created, so a second child — or a parent account created later — could
+   * never be connected, and the app's multi-child switcher stayed empty.
+   */
+  async linkParent(schoolId: string, studentId: string, parentUserId: string) {
+    const [student, parent] = await Promise.all([
+      this.prisma.studentProfile.findFirst({ where: { id: studentId, schoolId } }),
+      this.prisma.user.findFirst({
+        where: { id: parentUserId, schoolId, role: "PARENT" },
+      }),
+    ]);
+    if (!student) throw new NotFoundException("Student not found");
+    // Checked against the same school, so this can't link a parent across tenants.
+    if (!parent) throw new NotFoundException("Parent not found in this school");
+
+    // Idempotent: re-linking an existing pair shouldn't be an error the UI
+    // has to special-case.
+    await this.prisma.parentStudentLink.upsert({
+      where: { parentUserId_studentId: { parentUserId, studentId } },
+      create: { parentUserId, studentId },
+      update: {},
+    });
+
+    return this.findParents(schoolId, studentId);
+  }
+
+  async unlinkParent(schoolId: string, studentId: string, parentUserId: string) {
+    const student = await this.prisma.studentProfile.findFirst({
+      where: { id: studentId, schoolId },
+    });
+    if (!student) throw new NotFoundException("Student not found");
+
+    await this.prisma.parentStudentLink.deleteMany({ where: { parentUserId, studentId } });
+    return this.findParents(schoolId, studentId);
+  }
+
+  async findParents(schoolId: string, studentId: string) {
+    const student = await this.prisma.studentProfile.findFirst({
+      where: { id: studentId, schoolId },
+      include: { parentLinks: { include: { parentUser: { select: PUBLIC_USER_SELECT } } } },
+    });
+    if (!student) throw new NotFoundException("Student not found");
+    return student.parentLinks.map((link) => link.parentUser);
   }
 }
