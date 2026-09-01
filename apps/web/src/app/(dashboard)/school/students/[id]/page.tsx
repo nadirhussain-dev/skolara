@@ -8,6 +8,7 @@ import {
   useStudentParents,
   useUnlinkParent,
   useUsers,
+  useIssueCertificate,
 } from "@skolara/api-client";
 import {
   Badge,
@@ -20,6 +21,11 @@ import {
   Select,
 } from "@skolara/ui";
 import { formatCurrency } from "@skolara/utils";
+import {
+  CERTIFICATE_LABELS,
+  certificateKindSchema,
+  type CertificateKind,
+} from "@skolara/types";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
@@ -192,6 +198,93 @@ export default function StudentDetailPage() {
           ))}
         </div>
       </Card>
+
+      <CertificateIssuer studentId={id} />
     </div>
+  );
+}
+
+function CertificateIssuer({ studentId }: { studentId: string }) {
+  const issue = useIssueCertificate();
+  const [kind, setKind] = useState<CertificateKind>("ENROLMENT");
+  const [remarks, setRemarks] = useState("");
+  const [leavingDate, setLeavingDate] = useState("");
+  const [issued, setIssued] = useState<{ url: string; serial: string } | null>(null);
+  const [error, setError] = useState("");
+
+  async function handleIssue(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setIssued(null);
+    try {
+      const result = await issue.mutateAsync({
+        studentId,
+        kind,
+        remarks: remarks || undefined,
+        leavingDate: leavingDate ? new Date(leavingDate) : undefined,
+      });
+      setIssued({ url: result.url, serial: result.serial });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't issue that certificate");
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Issue a certificate</CardTitle>
+      </CardHeader>
+      <form onSubmit={handleIssue} className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-sm">
+            Type
+            <select
+              value={kind}
+              onChange={(e) => setKind(e.target.value as CertificateKind)}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+            >
+              {certificateKindSchema.options.map((option) => (
+                <option key={option} value={option}>
+                  {CERTIFICATE_LABELS[option]}
+                </option>
+              ))}
+            </select>
+          </label>
+          {kind === "LEAVING" && (
+            <label className="flex flex-col gap-1 text-sm">
+              Leaving date
+              <Input
+                type="date"
+                value={leavingDate}
+                onChange={(e) => setLeavingDate(e.target.value)}
+                required
+              />
+            </label>
+          )}
+          <Button type="submit" disabled={issue.isPending}>
+            {issue.isPending ? "Issuing..." : "Issue"}
+          </Button>
+        </div>
+        <Input
+          placeholder="Remarks (optional)"
+          value={remarks}
+          onChange={(e) => setRemarks(e.target.value)}
+        />
+        {error && <p className="text-sm text-rose-600">{error}</p>}
+        {issued && (
+          <p className="text-sm">
+            <span className="text-slate-500">Serial {issued.serial} — </span>
+            <a
+              href={issued.url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-brand-700 underline"
+            >
+              Open certificate PDF
+            </a>
+          </p>
+        )}
+      </form>
+    </Card>
   );
 }

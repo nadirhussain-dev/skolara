@@ -30,3 +30,4 @@ export * from "./hooks/use-report-cards";
 export * from "./hooks/use-audit";
 export * from "./hooks/use-school-attendance";
 export * from "./hooks/use-signup";
+export * from "./hooks/use-certificates";

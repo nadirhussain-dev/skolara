@@ -12,6 +12,7 @@ import { AttendanceModule } from "./attendance/attendance.module";
 import { AuthModule } from "./auth/auth.module";
 import { BankStatementModule } from "./bank-statement/bank-statement.module";
 import { CalendarModule } from "./calendar/calendar.module";
+import { CertificatesModule } from "./certificates/certificates.module";
 import { ClassesModule } from "./classes/classes.module";
 import { ComplaintsModule } from "./complaints/complaints.module";
 import { DevicesModule } from "./devices/devices.module";
@@ -64,6 +65,7 @@ import { validateEnv } from "./env.validation";
     TimetableModule,
     ClassesModule,
     CalendarModule,
+    CertificatesModule,
     AttendanceModule,
     InvoicesModule,
     PaymentsModule,

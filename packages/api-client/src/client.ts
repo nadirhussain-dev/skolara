@@ -44,6 +44,7 @@ import type {
   GradeEntry,
   ImportBankStatementInput,
   Invoice,
+  IssueCertificateInput,
   LoginInput,
   MarkAttendanceInput,
   Message,
@@ -593,6 +594,13 @@ export function createApiClient({
         const suffix = query.toString();
         return request<AuditLogPage>(`/audit-logs${suffix ? `?${suffix}` : ""}`);
       },
+    },
+    certificates: {
+      issue: (input: IssueCertificateInput) =>
+        request<UploadedFile & { serial: string }>("/certificates", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
     },
     reportCards: {
       forStudent: (studentId: string, term: string) =>
