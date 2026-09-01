@@ -1,13 +1,13 @@
 # Feature Status
 
 Every feature in [`PROPOSAL.md`](../PROPOSAL.md) §6–§10, checked against what is actually on
-`main` at `655ee3a`.
+`main` at `655ee3a`, plus the day-2 documents branch.
 
 | State | Count | Meaning |
 |---|---|---|
-| ✅ Shipped | 63 | Built, tenant-scoped, guarded |
-| 🟡 Partial | 9 | Mechanism exists, surface incomplete |
-| ⬜ Not built | 16 | No code |
+| ✅ Shipped | 67 | Built, tenant-scoped, guarded |
+| 🟡 Partial | 6 | Mechanism exists, surface incomplete |
+| ⬜ Not built | 15 | No code |
 
 **Partial** is the cheapest column to finish — the plumbing is done, the content or UI is not.
 
@@ -29,7 +29,7 @@ The commercial layer: who gets in, what they pay, what they can reach.
 | Multi-campus / school groups | ✅ | |
 | Audit logs across all schools | ✅ | Every state-changing request, credential fields redacted before write |
 | API key management | ✅ | Keys previously did nothing — no guard read them. Now authenticate, read-only by construction |
-| Revenue dashboard with downloadable reports | 🟡 | MRR and ARR computed and displayed; no CSV or PDF export |
+| Revenue dashboard with downloadable reports | ✅ | MRR/ARR on screen, revenue-by-school CSV export |
 | Server / infra health monitor | 🟡 | `/health` and `/health/ready` answer for a load balancer; no dashboard |
 | Support / helpdesk ticket system | ⬜ | |
 | Global broadcast announcements | ⬜ | Notices exist but are school-scoped |
@@ -59,11 +59,11 @@ The daily operations surface. Deepest area, and the most complete.
 | Multi-branch support for chains | ✅ | |
 | Reports & analytics | ✅ | |
 | Communication centre — notices, WhatsApp, push | 🟡 | No SMS channel; email is transactional only |
-| Report card generator | 🟡 | Grades, rank lists and AI comments exist; nothing assembles a printable card |
-| Digital fee receipts | 🟡 | Reference ID and status exist; no rendered receipt document |
+| Report card generator | ✅ | Marks, attendance and remarks as a PDF, per student or per class |
+| Digital fee receipts | ✅ | Rendered on verification, linked from the payment queue |
 | Timetable builder with conflict detection | ✅ | Week grid per class. Clashes are refused by database constraints, not warned about, so concurrent edits can't both win |
 | Academic calendar & event management | ✅ | School-wide or class-scoped; mobile shows what's ahead |
-| Certificate / document generator | ⬜ | |
+| Certificate / document generator | ✅ | Enrolment, character, leaving and bonafide, issued from the student page |
 | Hostel management | ⬜ | |
 | Inventory / asset management | ⬜ | |
 | Staff leave approval | ⬜ | |
@@ -108,7 +108,7 @@ The parent app is the product most families will judge you on.
 | Push notifications | ✅ | |
 | Multi-child switcher | ✅ | |
 | In-app complaint submission with status tracking | ✅ | |
-| Digital report card | 🟡 | Results viewable; no assembled card to download or print |
+| Digital report card | ✅ | Generated as a PDF a parent can download |
 | Study materials access | 🟡 | Reachable through assignment attachments only |
 | Timetable | ✅ | Mobile, scoped through the multi-child switcher |
 | Performance graphs over time | ⬜ | |
@@ -147,9 +147,9 @@ Not proposal features, but they gate everything above.
 
 | Metric | Value | Notes |
 |---|---|---|
-| Tests passing | 147 | Up from 66. Targets what actually breaks — audit redaction, entitlement boundaries, class scoping, MRR arithmetic |
-| Services untested | 24 of 31 | Payments, invoices, grades and attendance are worth covering first |
-| Migrations | 14 (`001`–`014`) | CI applies all to a real Postgres and seeds through the generated client |
+| Tests passing | 182 | Up from 66. Targets what actually breaks — audit redaction, entitlement boundaries, class scoping, MRR arithmetic |
+| Services untested | 26 of 36 | Payments, invoices, grades and attendance are worth covering first |
+| Migrations | 15 (`001`–`015`) | CI applies all to a real Postgres and seeds through the generated client |
 | Deploy workflows | 0 | CI validates on every push; nothing ships automatically |
 
 ---
