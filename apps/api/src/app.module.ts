@@ -15,6 +15,7 @@ import { CalendarModule } from "./calendar/calendar.module";
 import { ClassesModule } from "./classes/classes.module";
 import { ComplaintsModule } from "./complaints/complaints.module";
 import { DevicesModule } from "./devices/devices.module";
+import { DocumentsModule } from "./documents/documents.module";
 import { ExamsModule } from "./exams/exams.module";
 import { GradesModule } from "./grades/grades.module";
 import { HealthModule } from "./health/health.module";
@@ -49,6 +50,7 @@ import { validateEnv } from "./env.validation";
     HealthModule,
     NotificationsModule,
     StorageModule,
+    DocumentsModule,
     AiModule,
     AuthModule,
     DevicesModule,
