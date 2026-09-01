@@ -1,12 +1,25 @@
 "use client";
 
-import { useDefaulterRisk, useSchoolAnalytics } from "@skolara/api-client";
+import { useApiClient, useDefaulterRisk, useSchoolAnalytics } from "@skolara/api-client";
 import { Badge, Button, Card, CardHeader, CardTitle, Input, PageHeader, StatCard } from "@skolara/ui";
 import { useState } from "react";
+import { datedFilename, saveCsv } from "@/lib/download";
 
 const RISK_TONE = { LOW: "success", MEDIUM: "warning", HIGH: "danger" } as const;
 
 export default function SchoolAnalyticsPage() {
+  const api = useApiClient();
+  const [downloadingCsv, setDownloadingCsv] = useState(false);
+
+  async function downloadFeeCollection() {
+    setDownloadingCsv(true);
+    try {
+      saveCsv(await api.reports.feeCollectionCsv(), datedFilename("fee-collection"));
+    } finally {
+      setDownloadingCsv(false);
+    }
+  }
+
   const { data, isLoading } = useSchoolAnalytics();
   const [studentId, setStudentId] = useState("");
   const [lookupId, setLookupId] = useState<string>();
@@ -18,10 +31,15 @@ export default function SchoolAnalyticsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Overview"
-        description="Enrollment, attendance, and fee-collection health at a glance."
-      />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageHeader
+          title="Overview"
+          description="Enrollment, attendance, and fee-collection health at a glance."
+        />
+        <Button variant="secondary" onClick={downloadFeeCollection} disabled={downloadingCsv}>
+          {downloadingCsv ? "Preparing..." : "Download fee collection CSV"}
+        </Button>
+      </div>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <StatCard label="Students" value={data.studentCount} icon="🎓" />
         <StatCard label="Teachers" value={data.teacherCount} icon="🧑‍🏫" />

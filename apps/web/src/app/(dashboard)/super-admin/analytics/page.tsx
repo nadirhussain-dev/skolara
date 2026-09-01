@@ -1,7 +1,9 @@
 "use client";
 
-import { usePlatformAnalytics } from "@skolara/api-client";
-import { Card, CardHeader, CardTitle, PageHeader, StatCard } from "@skolara/ui";
+import { useApiClient, usePlatformAnalytics } from "@skolara/api-client";
+import { Button, Card, CardHeader, CardTitle, PageHeader, StatCard } from "@skolara/ui";
+import { useState } from "react";
+import { datedFilename, saveCsv } from "@/lib/download";
 
 function formatPkr(amount: number): string {
   return `Rs. ${amount.toLocaleString("en-PK")}`;
@@ -9,6 +11,17 @@ function formatPkr(amount: number): string {
 
 export default function PlatformAnalyticsPage() {
   const { data, isLoading } = usePlatformAnalytics();
+  const api = useApiClient();
+  const [downloading, setDownloading] = useState(false);
+
+  async function downloadRevenue() {
+    setDownloading(true);
+    try {
+      saveCsv(await api.reports.platformRevenueCsv(), datedFilename("platform-revenue"));
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   if (isLoading || !data) {
     return <p className="text-sm text-slate-500">Loading...</p>;
@@ -16,10 +29,15 @@ export default function PlatformAnalyticsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Platform analytics"
-        description="Revenue, schools, and active users across the whole Skolara platform."
-      />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageHeader
+          title="Platform analytics"
+          description="Revenue, schools, and active users across the whole Skolara platform."
+        />
+        <Button variant="secondary" onClick={downloadRevenue} disabled={downloading}>
+          {downloading ? "Preparing..." : "Download revenue CSV"}
+        </Button>
+      </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard
