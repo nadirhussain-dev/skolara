@@ -160,6 +160,12 @@ export interface TimetableEntryDetail extends TimetableEntry {
   class: { id: string; name: string; section: string };
 }
 
+export interface GeneratedReportCard {
+  studentId: string;
+  studentName: string;
+  file: UploadedFile;
+}
+
 export interface BusWithLatestLocation {
   bus: Bus;
   latestLocation: BusLocationPing | null;
@@ -587,6 +593,18 @@ export function createApiClient({
         const suffix = query.toString();
         return request<AuditLogPage>(`/audit-logs${suffix ? `?${suffix}` : ""}`);
       },
+    },
+    reportCards: {
+      forStudent: (studentId: string, term: string) =>
+        request<GeneratedReportCard>(
+          `/report-cards/student/${studentId}?term=${encodeURIComponent(term)}`,
+          { method: "POST" },
+        ),
+      forClass: (classId: string, term: string) =>
+        request<GeneratedReportCard[]>(
+          `/report-cards/class/${classId}?term=${encodeURIComponent(term)}`,
+          { method: "POST" },
+        ),
     },
     timetable: {
       periods: () => request<Period[]>("/timetable/periods"),

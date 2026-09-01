@@ -87,6 +87,7 @@ export const en = {
     assignments: "Assignments",
     timetable: "Timetable",
     calendar: "Calendar",
+    reportCards: "Report cards",
     invoices: "Invoices",
     paymentQueue: "Payment queue",
     bankStatement: "Bank statement",
