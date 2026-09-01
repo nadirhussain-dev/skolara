@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { formatPaymentReference } from "@skolara/utils";
@@ -11,14 +12,19 @@ import type {
   SubmitPaymentInput,
 } from "@skolara/types";
 import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
+import { DocumentsService } from "../documents/documents.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { receiptDefinition } from "./receipt.template";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private documents: DocumentsService,
   ) {}
 
   async assertCanSubmitFor(user: AuthenticatedUser, studentId: string) {
@@ -148,8 +154,13 @@ export class PaymentsService {
         });
       });
 
+      // After the transaction, not inside it: a PDF render and an upload have
+      // no business holding a database transaction open, and a storage outage
+      // must not roll back a payment the school has already confirmed.
+      const receiptUrl = await this.renderReceipt(schoolId, submission.id, reviewedByUserId);
+
       await notify(`Payment ${submission.referenceId} has been verified. Thank you!`);
-      return updated;
+      return receiptUrl ? { ...updated, receiptUrl } : updated;
     }
 
     if (input.status === "REJECTED") {
@@ -182,6 +193,65 @@ export class PaymentsService {
 
     await notify(`Payment ${submission.referenceId} needs more info: ${input.reviewNote}`);
     return updated;
+  }
+
+  /**
+   * Renders the fee receipt for a verified submission and stores the URL.
+   *
+   * Best-effort by design: the payment is already verified and the invoice
+   * already updated by the time this runs, so a failure here must not undo
+   * that. The receipt can be regenerated; the payment can't be un-taken.
+   */
+  private async renderReceipt(
+    schoolId: string,
+    submissionId: string,
+    reviewedByUserId: string,
+  ): Promise<string | null> {
+    try {
+      const submission = await this.prisma.paymentSubmission.findUniqueOrThrow({
+        where: { id: submissionId },
+        include: {
+          school: { select: { name: true, primaryColor: true } },
+          invoice: true,
+          student: {
+            include: { user: { select: { firstName: true, lastName: true } } },
+          },
+        },
+      });
+      const reviewer = await this.prisma.user.findUnique({
+        where: { id: reviewedByUserId },
+        select: { firstName: true, lastName: true },
+      });
+
+      const file = await this.documents.renderAndStore(
+        schoolId,
+        receiptDefinition({
+          school: submission.school,
+          referenceId: submission.referenceId,
+          studentName: `${submission.student.user.firstName} ${submission.student.user.lastName}`,
+          admissionNumber: submission.student.admissionNumber,
+          term: submission.invoice.term,
+          amountPaid: Number(submission.amountClaimed),
+          invoiceTotal: Number(submission.invoice.amountDue),
+          paidToDate: Number(submission.invoice.amountPaid),
+          verifiedOn: submission.reviewedAt ?? new Date(),
+          verifiedBy: reviewer
+            ? `${reviewer.firstName} ${reviewer.lastName}`
+            : "the school office",
+        }),
+      );
+
+      await this.prisma.paymentSubmission.update({
+        where: { id: submissionId },
+        data: { receiptUrl: file.url },
+      });
+      return file.url;
+    } catch (error) {
+      this.logger.warn(
+        `Receipt generation failed for submission ${submissionId}: ${error}`,
+      );
+      return null;
+    }
   }
 
   private async nextReferenceId(schoolId: string): Promise<string> {
