@@ -831,6 +831,8 @@ export function createApiClient({
         request<User>("/users", { method: "POST", body: JSON.stringify(input) }),
       list: (role?: RoleType) =>
         request<User[]>(`/users${role ? `?role=${role}` : ""}`),
+      /** Staff only — safe for teachers, unlike the full user list. */
+      staffDirectory: () => request<User[]>("/users/staff-directory"),
       setActive: (id: string, isActive: boolean) =>
         request<User>(`/users/${id}/active`, {
           method: "PATCH",

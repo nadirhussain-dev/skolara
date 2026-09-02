@@ -92,6 +92,7 @@ export const en = {
     meetings: "Parent meetings",
     support: "Support",
     broadcasts: "Broadcasts",
+    directory: "Staff directory",
     invoices: "Invoices",
     paymentQueue: "Payment queue",
     bankStatement: "Bank statement",

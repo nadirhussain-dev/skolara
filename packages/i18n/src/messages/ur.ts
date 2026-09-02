@@ -95,6 +95,7 @@ export const ur: Messages = {
     meetings: "والدین سے ملاقاتیں",
     support: "معاونت",
     broadcasts: "اعلانات",
+    directory: "عملے کی ڈائریکٹری",
     invoices: "فیس بل",
     paymentQueue: "ادائیگی کی قطار",
     bankStatement: "بینک اسٹیٹمنٹ",
