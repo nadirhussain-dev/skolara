@@ -25,5 +25,6 @@ export * from "./devices";
 export * from "./timetable";
 export * from "./calendar";
 export * from "./certificates";
+export * from "./leave";
 export * from "./audit";
 export * from "./pricing";

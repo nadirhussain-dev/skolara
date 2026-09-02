@@ -41,6 +41,7 @@ export default function RootLayout() {
         <Stack.Screen name="payroll/index" options={{ title: "My payslips" }} />
         <Stack.Screen name="timetable/index" options={{ title: "Timetable" }} />
         <Stack.Screen name="calendar/index" options={{ title: "Calendar" }} />
+        <Stack.Screen name="leave/index" options={{ title: "Leave" }} />
       </Stack>
     </Providers>
   );

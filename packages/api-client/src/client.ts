@@ -45,6 +45,9 @@ import type {
   ImportBankStatementInput,
   Invoice,
   IssueCertificateInput,
+  LeaveBalance,
+  LeaveRequest,
+  LeaveStatus,
   LoginInput,
   MarkAttendanceInput,
   Message,
@@ -57,6 +60,8 @@ import type {
   PlatformAnalytics,
   RankListEntry,
   RegisterDeviceInput,
+  RequestLeaveInput,
+  ReviewLeaveInput,
   RegisterSchoolInput,
   RegisterSchoolResponse,
   ReportBusLocationInput,
@@ -159,6 +164,10 @@ export interface TimetableEntryDetail extends TimetableEntry {
   period: Period;
   teacherUser: { id: string; firstName: string; lastName: string };
   class: { id: string; name: string; section: string };
+}
+
+export interface LeaveRequestWithRequester extends LeaveRequest {
+  requesterUser: { id: string; firstName: string; lastName: string; role: string };
 }
 
 export interface GeneratedReportCard {
@@ -621,6 +630,21 @@ export function createApiClient({
         const suffix = query.toString();
         return request<AuditLogPage>(`/audit-logs${suffix ? `?${suffix}` : ""}`);
       },
+    },
+    leave: {
+      request: (input: RequestLeaveInput) =>
+        request<LeaveRequest>("/leave", { method: "POST", body: JSON.stringify(input) }),
+      mine: () => request<LeaveRequest[]>("/leave/mine"),
+      balances: () => request<LeaveBalance[]>("/leave/balances"),
+      list: (status?: LeaveStatus) =>
+        request<LeaveRequestWithRequester[]>(`/leave${status ? `?status=${status}` : ""}`),
+      review: (id: string, input: ReviewLeaveInput) =>
+        request<LeaveRequest>(`/leave/${id}/review`, {
+          method: "PATCH",
+          body: JSON.stringify(input),
+        }),
+      cancel: (id: string) =>
+        request<LeaveRequest>(`/leave/${id}/cancel`, { method: "PATCH" }),
     },
     reports: {
       platformRevenueCsv: () => requestText("/reports/platform-revenue.csv"),

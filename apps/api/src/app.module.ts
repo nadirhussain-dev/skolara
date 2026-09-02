@@ -21,6 +21,7 @@ import { ExamsModule } from "./exams/exams.module";
 import { GradesModule } from "./grades/grades.module";
 import { HealthModule } from "./health/health.module";
 import { InvoicesModule } from "./invoices/invoices.module";
+import { LeaveModule } from "./leave/leave.module";
 import { LibraryModule } from "./library/library.module";
 import { MessagingModule } from "./messaging/messaging.module";
 import { NoticesModule } from "./notices/notices.module";
@@ -79,6 +80,7 @@ import { validateEnv } from "./env.validation";
     MessagingModule,
     ComplaintsModule,
     ExamsModule,
+    LeaveModule,
     LibraryModule,
     TransportModule,
     PayrollModule,

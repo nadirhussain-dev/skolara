@@ -114,6 +114,7 @@ model School {
   periods             Period[]
   timetableEntries    TimetableEntry[]
   calendarEvents      CalendarEvent[]
+  leaveRequests       LeaveRequest[]
   auditLogs           AuditLog[]
 
   @@index([schoolGroupId])
@@ -156,6 +157,8 @@ model User {
   deviceTokens            DeviceToken[]
   timetableLessons        TimetableEntry[]    @relation("TimetableTeacher")
   authoredCalendarEvents  CalendarEvent[]     @relation("CalendarEventAuthor")
+  leaveRequests           LeaveRequest[]      @relation("LeaveRequester")
+  reviewedLeaveRequests   LeaveRequest[]      @relation("LeaveReviewer")
   auditLogs               AuditLog[]          @relation("AuditActor")
   classAssignments        ClassTeacher[]      @relation("ClassTeachers")
 
@@ -798,4 +801,43 @@ model CalendarEvent {
 
   @@index([schoolId, startsAt])
   @@index([classId])
+}
+
+enum LeaveKind {
+  CASUAL
+  SICK
+  UNPAID
+  MATERNITY
+  OTHER
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  // Withdrawn by the requester before anyone acted on it.
+  CANCELLED
+}
+
+// A staff member asking for time off. Requester is a User rather than a
+// TeacherProfile because school admins take leave too.
+model LeaveRequest {
+  id               String      @id @default(uuid())
+  schoolId         String
+  school           School      @relation(fields: [schoolId], references: [id])
+  requesterUserId  String
+  requesterUser    User        @relation("LeaveRequester", fields: [requesterUserId], references: [id])
+  kind             LeaveKind
+  startDate        DateTime
+  endDate          DateTime
+  reason           String?
+  status           LeaveStatus @default(PENDING)
+  reviewedByUserId String?
+  reviewedByUser   User?       @relation("LeaveReviewer", fields: [reviewedByUserId], references: [id])
+  reviewedAt       DateTime?
+  reviewNote       String?
+  createdAt        DateTime    @default(now())
+
+  @@index([schoolId, status])
+  @@index([requesterUserId])
 }

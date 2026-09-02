@@ -91,6 +91,7 @@ export const ur: Messages = {
     timetable: "ٹائم ٹیبل",
     calendar: "کیلنڈر",
     reportCards: "رپورٹ کارڈ",
+    leave: "عملے کی رخصت",
     invoices: "فیس بل",
     paymentQueue: "ادائیگی کی قطار",
     bankStatement: "بینک اسٹیٹمنٹ",
