@@ -79,6 +79,12 @@ import type {
   SubmitAssignmentInput,
   SubmitPaymentInput,
   SuggestedMatch,
+  SupportTicket,
+  SupportTicketComment,
+  SupportTicketStatus,
+  CreateSupportTicketInput,
+  AddSupportCommentInput,
+  UpdateSupportTicketInput,
   UpdateBrandingInput,
   TimetableEntry,
   UpdateComplaintStatusInput,
@@ -167,6 +173,17 @@ export interface TimetableEntryDetail extends TimetableEntry {
   period: Period;
   teacherUser: { id: string; firstName: string; lastName: string };
   class: { id: string; name: string; section: string };
+}
+
+export interface SupportTicketDetail extends SupportTicket {
+  school: { id: string; name: string; subdomain: string; plan: string };
+  raisedByUser: { id: string; firstName: string; lastName: string; email: string };
+}
+
+export interface SupportTicketWithComments extends SupportTicketDetail {
+  comments: (SupportTicketComment & {
+    authorUser: { id: string; firstName: string; lastName: string; role: string };
+  })[];
 }
 
 export interface MeetingSlotDetail extends MeetingSlot {
@@ -648,6 +665,28 @@ export function createApiClient({
         const suffix = query.toString();
         return request<AuditLogPage>(`/audit-logs${suffix ? `?${suffix}` : ""}`);
       },
+    },
+    support: {
+      create: (input: CreateSupportTicketInput) =>
+        request<SupportTicketDetail>("/support/tickets", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      list: (status?: SupportTicketStatus) =>
+        request<SupportTicketDetail[]>(
+          `/support/tickets${status ? `?status=${status}` : ""}`,
+        ),
+      findOne: (id: string) => request<SupportTicketWithComments>(`/support/tickets/${id}`),
+      addComment: (id: string, input: AddSupportCommentInput) =>
+        request<SupportTicketComment>(`/support/tickets/${id}/comments`, {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      update: (id: string, input: UpdateSupportTicketInput) =>
+        request<SupportTicket>(`/support/tickets/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify(input),
+        }),
     },
     meetings: {
       publish: (input: PublishMeetingSlotsInput) =>

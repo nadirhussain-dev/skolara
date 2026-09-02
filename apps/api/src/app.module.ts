@@ -37,6 +37,7 @@ import { SchoolGroupsModule } from "./school-groups/school-groups.module";
 import { SchoolsModule } from "./schools/schools.module";
 import { StorageModule } from "./storage/storage.module";
 import { StudentsModule } from "./students/students.module";
+import { SupportModule } from "./support/support.module";
 import { TeachersModule } from "./teachers/teachers.module";
 import { TimetableModule } from "./timetable/timetable.module";
 import { TransportModule } from "./transport/transport.module";
@@ -65,6 +66,7 @@ import { validateEnv } from "./env.validation";
     SchoolGroupsModule,
     UsersModule,
     StudentsModule,
+    SupportModule,
     TeachersModule,
     TimetableModule,
     ClassesModule,

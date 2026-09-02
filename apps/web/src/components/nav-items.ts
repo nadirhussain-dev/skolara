@@ -175,6 +175,13 @@ export const NAV_ITEMS: NavItem[] = [
   },
 
   {
+    href: "/support",
+    labelKey: "nav.support",
+    roles: ["SCHOOL_ADMIN", "SUPER_ADMIN"],
+    groupKey: "nav.settings",
+  },
+
+  {
     href: "/school/branding",
     labelKey: "nav.branding",
     roles: ["SCHOOL_ADMIN"],

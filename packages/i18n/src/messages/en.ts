@@ -90,6 +90,7 @@ export const en = {
     reportCards: "Report cards",
     leave: "Staff leave",
     meetings: "Parent meetings",
+    support: "Support",
     invoices: "Invoices",
     paymentQueue: "Payment queue",
     bankStatement: "Bank statement",

@@ -116,6 +116,7 @@ model School {
   calendarEvents      CalendarEvent[]
   leaveRequests       LeaveRequest[]
   meetingSlots        MeetingSlot[]
+  supportTickets      SupportTicket[]
   auditLogs           AuditLog[]
 
   @@index([schoolGroupId])
@@ -162,6 +163,8 @@ model User {
   reviewedLeaveRequests   LeaveRequest[]      @relation("LeaveReviewer")
   offeredMeetingSlots     MeetingSlot[]       @relation("MeetingTeacher")
   bookedMeetingSlots      MeetingSlot[]       @relation("MeetingParent")
+  raisedSupportTickets    SupportTicket[]        @relation("SupportRaiser")
+  supportTicketComments   SupportTicketComment[] @relation("SupportCommenter")
   auditLogs               AuditLog[]          @relation("AuditActor")
   classAssignments        ClassTeacher[]      @relation("ClassTeachers")
 
@@ -872,4 +875,58 @@ model MeetingSlot {
   @@unique([teacherUserId, startsAt])
   @@index([schoolId, startsAt])
   @@index([bookedByParentUserId])
+}
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  // Waiting on the school to answer a question — distinct from OPEN so the
+  // platform queue doesn't show work that isn't actionable.
+  WAITING_ON_SCHOOL
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// A school asking the platform owner for help. One tier above Complaint,
+// which is a parent asking a school.
+model SupportTicket {
+  id             String                 @id @default(uuid())
+  schoolId       String
+  school         School                 @relation(fields: [schoolId], references: [id])
+  raisedByUserId String
+  raisedByUser   User                   @relation("SupportRaiser", fields: [raisedByUserId], references: [id])
+  subject        String
+  body           String
+  status         SupportTicketStatus    @default(OPEN)
+  priority       SupportTicketPriority  @default(NORMAL)
+  resolvedAt     DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  comments SupportTicketComment[]
+
+  @@index([status, priority])
+  @@index([schoolId])
+}
+
+model SupportTicketComment {
+  id           String        @id @default(uuid())
+  ticketId     String
+  ticket       SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorUserId String
+  authorUser   User          @relation("SupportCommenter", fields: [authorUserId], references: [id])
+  body         String
+  // Platform-side working notes. Never returned to the school — see the
+  // service, which filters on this rather than relying on the caller.
+  internal     Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+
+  @@index([ticketId])
 }

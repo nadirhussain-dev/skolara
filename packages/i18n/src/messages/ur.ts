@@ -93,6 +93,7 @@ export const ur: Messages = {
     reportCards: "رپورٹ کارڈ",
     leave: "عملے کی رخصت",
     meetings: "والدین سے ملاقاتیں",
+    support: "معاونت",
     invoices: "فیس بل",
     paymentQueue: "ادائیگی کی قطار",
     bankStatement: "بینک اسٹیٹمنٹ",
