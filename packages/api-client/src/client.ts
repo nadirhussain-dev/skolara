@@ -15,6 +15,8 @@ import type {
   BookLoan,
   BorrowBookInput,
   Bus,
+  CreateBroadcastInput,
+  PlatformBroadcast,
   BusLocationPing,
   CalendarEvent,
   Complaint,
@@ -665,6 +667,16 @@ export function createApiClient({
         const suffix = query.toString();
         return request<AuditLogPage>(`/audit-logs${suffix ? `?${suffix}` : ""}`);
       },
+    },
+    broadcasts: {
+      create: (input: CreateBroadcastInput) =>
+        request<PlatformBroadcast>("/broadcasts", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      active: () => request<PlatformBroadcast[]>("/broadcasts/active"),
+      list: () => request<PlatformBroadcast[]>("/broadcasts"),
+      withdraw: (id: string) => request<void>(`/broadcasts/${id}`, { method: "DELETE" }),
     },
     support: {
       create: (input: CreateSupportTicketInput) =>

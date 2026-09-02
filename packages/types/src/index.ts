@@ -28,5 +28,6 @@ export * from "./certificates";
 export * from "./leave";
 export * from "./meetings";
 export * from "./support";
+export * from "./broadcasts";
 export * from "./audit";
 export * from "./pricing";

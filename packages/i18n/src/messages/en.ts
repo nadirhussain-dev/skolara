@@ -91,6 +91,7 @@ export const en = {
     leave: "Staff leave",
     meetings: "Parent meetings",
     support: "Support",
+    broadcasts: "Broadcasts",
     invoices: "Invoices",
     paymentQueue: "Payment queue",
     bankStatement: "Bank statement",

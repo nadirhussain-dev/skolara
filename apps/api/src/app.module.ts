@@ -11,6 +11,7 @@ import { AuditInterceptor } from "./audit/audit.interceptor";
 import { AttendanceModule } from "./attendance/attendance.module";
 import { AuthModule } from "./auth/auth.module";
 import { BankStatementModule } from "./bank-statement/bank-statement.module";
+import { BroadcastsModule } from "./broadcasts/broadcasts.module";
 import { CalendarModule } from "./calendar/calendar.module";
 import { CertificatesModule } from "./certificates/certificates.module";
 import { ClassesModule } from "./classes/classes.module";
@@ -70,6 +71,7 @@ import { validateEnv } from "./env.validation";
     TeachersModule,
     TimetableModule,
     ClassesModule,
+    BroadcastsModule,
     CalendarModule,
     CertificatesModule,
     AttendanceModule,

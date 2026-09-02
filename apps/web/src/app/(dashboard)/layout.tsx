@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Sidebar } from "@/components/sidebar";
 import { useAuth } from "@/lib/auth-context";
+import { BroadcastBanner } from "@/components/broadcast-banner";
 
 export default function DashboardLayout({
   children,
@@ -31,7 +32,10 @@ export default function DashboardLayout({
     <div className="flex min-h-screen">
       <Sidebar />
       <main className="flex-1 overflow-y-auto bg-slate-50 px-8 py-8 dark:bg-slate-950">
-        <div className="mx-auto max-w-5xl">{children}</div>
+        <div className="mx-auto flex max-w-5xl flex-col gap-4">
+          <BroadcastBanner />
+          {children}
+        </div>
       </main>
     </div>
   );

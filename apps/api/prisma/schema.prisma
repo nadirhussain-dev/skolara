@@ -165,6 +165,7 @@ model User {
   bookedMeetingSlots      MeetingSlot[]       @relation("MeetingParent")
   raisedSupportTickets    SupportTicket[]        @relation("SupportRaiser")
   supportTicketComments   SupportTicketComment[] @relation("SupportCommenter")
+  platformBroadcasts      PlatformBroadcast[]    @relation("BroadcastAuthor")
   auditLogs               AuditLog[]          @relation("AuditActor")
   classAssignments        ClassTeacher[]      @relation("ClassTeachers")
 
@@ -929,4 +930,24 @@ model SupportTicketComment {
   createdAt    DateTime      @default(now())
 
   @@index([ticketId])
+}
+
+// A message from the platform owner to every tenant — maintenance windows,
+// new features, billing changes. Distinct from Notice, which is one school
+// talking to its own community.
+model PlatformBroadcast {
+  id                String   @id @default(uuid())
+  title             String
+  body              String
+  // Empty means everyone. Otherwise only these roles see it, so a billing
+  // notice can go to school admins without reaching parents.
+  audienceRoles     Role[]
+  publishedByUserId String
+  publishedByUser   User     @relation("BroadcastAuthor", fields: [publishedByUserId], references: [id])
+  // Null means it stays up until withdrawn. A dated maintenance notice should
+  // disappear on its own rather than needing someone to remember.
+  expiresAt         DateTime?
+  createdAt         DateTime @default(now())
+
+  @@index([expiresAt])
 }
