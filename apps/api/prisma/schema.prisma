@@ -115,6 +115,7 @@ model School {
   timetableEntries    TimetableEntry[]
   calendarEvents      CalendarEvent[]
   leaveRequests       LeaveRequest[]
+  meetingSlots        MeetingSlot[]
   auditLogs           AuditLog[]
 
   @@index([schoolGroupId])
@@ -159,6 +160,8 @@ model User {
   authoredCalendarEvents  CalendarEvent[]     @relation("CalendarEventAuthor")
   leaveRequests           LeaveRequest[]      @relation("LeaveRequester")
   reviewedLeaveRequests   LeaveRequest[]      @relation("LeaveReviewer")
+  offeredMeetingSlots     MeetingSlot[]       @relation("MeetingTeacher")
+  bookedMeetingSlots      MeetingSlot[]       @relation("MeetingParent")
   auditLogs               AuditLog[]          @relation("AuditActor")
   classAssignments        ClassTeacher[]      @relation("ClassTeachers")
 
@@ -260,6 +263,7 @@ model StudentProfile {
   complaints         Complaint[]
   bookLoans          BookLoan[]
   busAssignment      BusAssignment?
+  meetingSlots       MeetingSlot[]
 
   @@unique([schoolId, admissionNumber])
   @@index([schoolId])
@@ -840,4 +844,32 @@ model LeaveRequest {
 
   @@index([schoolId, status])
   @@index([requesterUserId])
+}
+
+// A slot a teacher offers for parent meetings. Booking is represented by the
+// nullable parent/student columns rather than a separate Booking table: a slot
+// holds at most one meeting, so a second table would only add a join and the
+// chance of two bookings existing for one slot.
+model MeetingSlot {
+  id                   String    @id @default(uuid())
+  schoolId             String
+  school               School    @relation(fields: [schoolId], references: [id])
+  teacherUserId        String
+  teacherUser          User      @relation("MeetingTeacher", fields: [teacherUserId], references: [id], onDelete: Cascade)
+  startsAt             DateTime
+  endsAt               DateTime
+  bookedByParentUserId String?
+  bookedByParentUser   User?     @relation("MeetingParent", fields: [bookedByParentUserId], references: [id], onDelete: SetNull)
+  // Which child the meeting is about — a parent with two children at the
+  // school needs the teacher to know which one.
+  studentId            String?
+  student              StudentProfile? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  bookedAt             DateTime?
+  note                 String?
+  createdAt            DateTime  @default(now())
+
+  // A teacher can't offer two slots starting at the same moment.
+  @@unique([teacherUserId, startsAt])
+  @@index([schoolId, startsAt])
+  @@index([bookedByParentUserId])
 }

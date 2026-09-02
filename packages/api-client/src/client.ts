@@ -50,6 +50,9 @@ import type {
   LeaveStatus,
   LoginInput,
   MarkAttendanceInput,
+  MeetingSlot,
+  BookMeetingSlotInput,
+  PublishMeetingSlotsInput,
   Message,
   MessageThread,
   Notice,
@@ -164,6 +167,21 @@ export interface TimetableEntryDetail extends TimetableEntry {
   period: Period;
   teacherUser: { id: string; firstName: string; lastName: string };
   class: { id: string; name: string; section: string };
+}
+
+export interface MeetingSlotDetail extends MeetingSlot {
+  teacherUser: { id: string; firstName: string; lastName: string };
+  student: {
+    id: string;
+    admissionNumber: string;
+    user: { firstName: string; lastName: string };
+  } | null;
+  bookedByParentUser: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+  } | null;
 }
 
 export interface LeaveRequestWithRequester extends LeaveRequest {
@@ -630,6 +648,28 @@ export function createApiClient({
         const suffix = query.toString();
         return request<AuditLogPage>(`/audit-logs${suffix ? `?${suffix}` : ""}`);
       },
+    },
+    meetings: {
+      publish: (input: PublishMeetingSlotsInput) =>
+        request<{ published: number; requested: number }>("/meetings/slots", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      mine: () => request<MeetingSlotDetail[]>("/meetings/slots/mine"),
+      available: (teacherUserId?: string) =>
+        request<MeetingSlotDetail[]>(
+          `/meetings/slots/available${teacherUserId ? `?teacherUserId=${teacherUserId}` : ""}`,
+        ),
+      booked: () => request<MeetingSlotDetail[]>("/meetings/slots/booked"),
+      book: (slotId: string, input: BookMeetingSlotInput) =>
+        request<MeetingSlotDetail>(`/meetings/slots/${slotId}/book`, {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      cancelBooking: (slotId: string) =>
+        request<void>(`/meetings/slots/${slotId}/cancel-booking`, { method: "PATCH" }),
+      withdraw: (slotId: string) =>
+        request<void>(`/meetings/slots/${slotId}`, { method: "DELETE" }),
     },
     leave: {
       request: (input: RequestLeaveInput) =>

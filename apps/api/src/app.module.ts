@@ -23,6 +23,7 @@ import { HealthModule } from "./health/health.module";
 import { InvoicesModule } from "./invoices/invoices.module";
 import { LeaveModule } from "./leave/leave.module";
 import { LibraryModule } from "./library/library.module";
+import { MeetingsModule } from "./meetings/meetings.module";
 import { MessagingModule } from "./messaging/messaging.module";
 import { NoticesModule } from "./notices/notices.module";
 import { NotificationsModule } from "./notifications/notifications.module";
@@ -77,6 +78,7 @@ import { validateEnv } from "./env.validation";
     GradesModule,
     NoticesModule,
     AssignmentsModule,
+    MeetingsModule,
     MessagingModule,
     ComplaintsModule,
     ExamsModule,
