@@ -117,6 +117,7 @@ model School {
   leaveRequests       LeaveRequest[]
   meetingSlots        MeetingSlot[]
   supportTickets      SupportTicket[]
+  studyMaterials      StudyMaterial[]
   auditLogs           AuditLog[]
 
   @@index([schoolGroupId])
@@ -166,6 +167,7 @@ model User {
   raisedSupportTickets    SupportTicket[]        @relation("SupportRaiser")
   supportTicketComments   SupportTicketComment[] @relation("SupportCommenter")
   platformBroadcasts      PlatformBroadcast[]    @relation("BroadcastAuthor")
+  uploadedStudyMaterials  StudyMaterial[]        @relation("StudyMaterialUploader")
   auditLogs               AuditLog[]          @relation("AuditActor")
   classAssignments        ClassTeacher[]      @relation("ClassTeachers")
 
@@ -241,6 +243,7 @@ model SchoolClass {
   classTeachers      ClassTeacher[]
   timetableEntries   TimetableEntry[]
   calendarEvents     CalendarEvent[]
+  studyMaterials     StudyMaterial[]
 
   @@unique([schoolId, name, section, academicYear])
   @@index([schoolId])
@@ -950,4 +953,33 @@ model PlatformBroadcast {
   createdAt         DateTime @default(now())
 
   @@index([expiresAt])
+}
+
+// A file a teacher publishes to a class — notes, a worksheet, a past paper.
+//
+// Distinct from an assignment attachment: material has no due date and nobody
+// submits anything back. Before this, the only way to get a PDF to a class was
+// to invent an assignment for it.
+model StudyMaterial {
+  id               String      @id @default(uuid())
+  schoolId         String
+  school           School      @relation(fields: [schoolId], references: [id])
+  classId          String
+  class            SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject          String
+  title            String
+  description      String?
+  // The storage layer's own fields, kept together: `fileKey` is what the
+  // provider was given, `fileUrl` what it handed back. Keeping the key means a
+  // Supabase URL can be re-signed later without guessing at the object name.
+  fileKey          String
+  fileUrl          String
+  contentType      String
+  sizeBytes        Int
+  uploadedByUserId String
+  uploadedByUser   User        @relation("StudyMaterialUploader", fields: [uploadedByUserId], references: [id])
+  createdAt        DateTime    @default(now())
+
+  @@index([schoolId])
+  @@index([classId, subject])
 }

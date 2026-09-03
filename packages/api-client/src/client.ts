@@ -78,6 +78,8 @@ import type {
   SchoolGroup,
   SendMessageInput,
   StartThreadInput,
+  StudyMaterial,
+  PublishStudyMaterialInput,
   SubmitAssignmentInput,
   SubmitPaymentInput,
   SuggestedMatch,
@@ -186,6 +188,11 @@ export interface SupportTicketWithComments extends SupportTicketDetail {
   comments: (SupportTicketComment & {
     authorUser: { id: string; firstName: string; lastName: string; role: string };
   })[];
+}
+
+export interface StudyMaterialDetail extends StudyMaterial {
+  uploadedByUser: { id: string; firstName: string; lastName: string };
+  class: { id: string; name: string; section: string };
 }
 
 export interface MeetingSlotDetail extends MeetingSlot {
@@ -699,6 +706,24 @@ export function createApiClient({
           method: "PATCH",
           body: JSON.stringify(input),
         }),
+    },
+    studyMaterials: {
+      publish: (input: PublishStudyMaterialInput) =>
+        request<StudyMaterialDetail>("/study-materials", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      forClass: (classId: string, subject?: string) =>
+        request<StudyMaterialDetail[]>(
+          `/study-materials/class/${classId}${subject ? `?subject=${encodeURIComponent(subject)}` : ""}`,
+        ),
+      subjectsForClass: (classId: string) =>
+        request<string[]>(`/study-materials/class/${classId}/subjects`),
+      forStudent: (studentId: string, subject?: string) =>
+        request<StudyMaterialDetail[]>(
+          `/study-materials/student/${studentId}${subject ? `?subject=${encodeURIComponent(subject)}` : ""}`,
+        ),
+      withdraw: (id: string) => request<void>(`/study-materials/${id}`, { method: "DELETE" }),
     },
     meetings: {
       publish: (input: PublishMeetingSlotsInput) =>

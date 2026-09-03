@@ -43,6 +43,7 @@ export default function RootLayout() {
         <Stack.Screen name="calendar/index" options={{ title: "Calendar" }} />
         <Stack.Screen name="leave/index" options={{ title: "Leave" }} />
         <Stack.Screen name="meetings/index" options={{ title: "Meetings" }} />
+        <Stack.Screen name="materials/index" options={{ title: "Study materials" }} />
       </Stack>
     </Providers>
   );

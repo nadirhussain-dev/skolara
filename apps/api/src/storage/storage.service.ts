@@ -1,7 +1,7 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 import { randomBytes } from "node:crypto";
 import {
-  ALLOWED_UPLOAD_MIME_TYPES,
+  allowedMimeTypesFor,
   MAX_UPLOAD_BYTES,
   type UploadPurpose,
   type UploadedFile,
@@ -14,6 +14,13 @@ const EXTENSION_BY_MIME: Record<string, string> = {
   "image/webp": "webp",
   "image/heic": "heic",
   "application/pdf": "pdf",
+  "application/msword": "doc",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+  "application/vnd.ms-powerpoint": "ppt",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+  "application/vnd.ms-excel": "xls",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+  "text/plain": "txt",
 };
 
 export interface IncomingFile {
@@ -39,9 +46,12 @@ export class StorageService {
         `File is larger than the ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)}MB limit`,
       );
     }
-    if (!(ALLOWED_UPLOAD_MIME_TYPES as readonly string[]).includes(file.mimetype)) {
+    // The allowlist depends on what the file is for: study materials accept
+    // Office documents, everything else stays on images and PDF.
+    const allowed = allowedMimeTypesFor(purpose);
+    if (!allowed.includes(file.mimetype)) {
       throw new BadRequestException(
-        `Unsupported file type ${file.mimetype} — allowed: ${ALLOWED_UPLOAD_MIME_TYPES.join(", ")}`,
+        `Unsupported file type ${file.mimetype} — allowed: ${allowed.join(", ")}`,
       );
     }
 
