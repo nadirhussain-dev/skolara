@@ -88,6 +88,12 @@ import type {
   QuizQuestionForStudent,
   ReplaceQuizQuestionsInput,
   SaveQuizAnswerInput,
+  AddSyllabusTopicsInput,
+  LessonPlan,
+  SyllabusCoverage,
+  SyllabusTopic,
+  UpdateSyllabusTopicInput,
+  UpsertLessonPlanInput,
   SubmitAssignmentInput,
   SubmitPaymentInput,
   SuggestedMatch,
@@ -273,6 +279,16 @@ export interface QuizResults {
     percentage: number | null;
     lastStatus: QuizAttempt["status"] | null;
   }[];
+}
+
+export interface SyllabusTopicWithCounts extends SyllabusTopic {
+  _count: { lessons: number };
+}
+
+export interface LessonPlanDetail extends LessonPlan {
+  topic: { id: string; title: string; status: SyllabusTopic["status"] } | null;
+  period: { id: string; name: string; startTime: string; endTime: string } | null;
+  teacherUser: { id: string; firstName: string; lastName: string };
 }
 
 export interface MeetingSlotDetail extends MeetingSlot {
@@ -787,6 +803,47 @@ export function createApiClient({
           body: JSON.stringify(input),
         }),
     },
+    lessons: {
+      addTopics: (input: AddSyllabusTopicsInput) =>
+        request<{ added: number; requested: number }>("/lessons/topics", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      topicsForClass: (classId: string, filters: { subject?: string; term?: string } = {}) => {
+        const query = new URLSearchParams();
+        if (filters.subject) query.set("subject", filters.subject);
+        if (filters.term) query.set("term", filters.term);
+        const suffix = query.toString();
+        return request<SyllabusTopicWithCounts[]>(
+          `/lessons/topics/class/${classId}${suffix ? `?${suffix}` : ""}`,
+        );
+      },
+      updateTopic: (id: string, input: UpdateSyllabusTopicInput) =>
+        request<SyllabusTopic>(`/lessons/topics/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify(input),
+        }),
+      removeTopic: (id: string) => request<void>(`/lessons/topics/${id}`, { method: "DELETE" }),
+      coverage: (classId: string, term?: string) =>
+        request<SyllabusCoverage[]>(
+          `/lessons/coverage/class/${classId}${term ? `?term=${encodeURIComponent(term)}` : ""}`,
+        ),
+      createPlan: (input: UpsertLessonPlanInput) =>
+        request<LessonPlanDetail>("/lessons/plans", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      updatePlan: (id: string, input: UpsertLessonPlanInput) =>
+        request<LessonPlanDetail>(`/lessons/plans/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      minePlans: (range: { from?: string; to?: string } = {}) =>
+        request<LessonPlanDetail[]>(`/lessons/plans/mine${dateRangeQuery(range)}`),
+      plansForClass: (classId: string, range: { from?: string; to?: string } = {}) =>
+        request<LessonPlanDetail[]>(`/lessons/plans/class/${classId}${dateRangeQuery(range)}`),
+      removePlan: (id: string) => request<void>(`/lessons/plans/${id}`, { method: "DELETE" }),
+    },
     quizzes: {
       create: (input: CreateQuizInput) =>
         request<QuizWithQuestions>("/quizzes", {
@@ -982,3 +1039,12 @@ export function createApiClient({
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;
+
+/** `?from=&to=` for the routes that take a date window, omitted when empty. */
+function dateRangeQuery(range: { from?: string; to?: string }): string {
+  const query = new URLSearchParams();
+  if (range.from) query.set("from", range.from);
+  if (range.to) query.set("to", range.to);
+  const suffix = query.toString();
+  return suffix ? `?${suffix}` : "";
+}

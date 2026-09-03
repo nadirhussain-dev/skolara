@@ -120,6 +120,8 @@ model School {
   studyMaterials      StudyMaterial[]
   quizzes             Quiz[]
   quizAttempts        QuizAttempt[]
+  syllabusTopics      SyllabusTopic[]
+  lessonPlans         LessonPlan[]
   auditLogs           AuditLog[]
 
   @@index([schoolGroupId])
@@ -171,6 +173,8 @@ model User {
   platformBroadcasts      PlatformBroadcast[]    @relation("BroadcastAuthor")
   uploadedStudyMaterials  StudyMaterial[]        @relation("StudyMaterialUploader")
   authoredQuizzes         Quiz[]                 @relation("QuizAuthor")
+  authoredSyllabusTopics  SyllabusTopic[]        @relation("SyllabusAuthor")
+  lessonPlans             LessonPlan[]           @relation("LessonPlanTeacher")
   auditLogs               AuditLog[]          @relation("AuditActor")
   classAssignments        ClassTeacher[]      @relation("ClassTeachers")
 
@@ -248,6 +252,8 @@ model SchoolClass {
   calendarEvents     CalendarEvent[]
   studyMaterials     StudyMaterial[]
   quizzes            Quiz[]
+  syllabusTopics     SyllabusTopic[]
+  lessonPlans        LessonPlan[]
 
   @@unique([schoolId, name, section, academicYear])
   @@index([schoolId])
@@ -759,7 +765,8 @@ model Period {
   // a break or an assembly wherever it belongs in the day.
   sortOrder Int
 
-  entries TimetableEntry[]
+  entries     TimetableEntry[]
+  lessonPlans LessonPlan[]
 
   @@unique([schoolId, name])
   @@index([schoolId, sortOrder])
@@ -1095,4 +1102,77 @@ model QuizAnswer {
 
   @@unique([attemptId, questionId])
   @@index([questionId])
+}
+
+enum SyllabusTopicStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+// One item on the syllabus for a class, subject and term.
+//
+// The tracker is the list of these plus their status: coverage is derived, not
+// stored, so it can never disagree with the topics it is meant to summarise.
+model SyllabusTopic {
+  id              String              @id @default(uuid())
+  schoolId        String
+  school          School              @relation(fields: [schoolId], references: [id])
+  classId         String
+  class           SchoolClass         @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject         String
+  term            String
+  title           String
+  description     String?
+  // Explicit ordering: a syllabus has a taught order that is not alphabetical
+  // and not the order somebody happened to type it in.
+  sortOrder       Int
+  status          SyllabusTopicStatus @default(NOT_STARTED)
+  // When the teacher means to cover it, against when they actually did. Both
+  // nullable — a syllabus with no dates is still a syllabus.
+  plannedForDate  DateTime?
+  completedOn     DateTime?
+  createdByUserId String
+  createdByUser   User                @relation("SyllabusAuthor", fields: [createdByUserId], references: [id])
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  lessons LessonPlan[]
+
+  // The same topic listed twice in one term is a typo, not a plan.
+  @@unique([classId, subject, term, title])
+  @@index([schoolId])
+  @@index([classId, subject, term])
+}
+
+// A single lesson a teacher intends to teach: what it is for, what happens in
+// it, what they need to hand.
+//
+// Optionally pinned to a syllabus topic and to a period, so "did we cover it"
+// and "when" answer from the same record.
+model LessonPlan {
+  id            String         @id @default(uuid())
+  schoolId      String
+  school        School         @relation(fields: [schoolId], references: [id])
+  classId       String
+  class         SchoolClass    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject       String
+  topicId       String?
+  topic         SyllabusTopic? @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  title         String
+  objectives    String?
+  activities    String?
+  resources     String?
+  date          DateTime
+  periodId      String?
+  period        Period?        @relation(fields: [periodId], references: [id], onDelete: SetNull)
+  teacherUserId String
+  teacherUser   User           @relation("LessonPlanTeacher", fields: [teacherUserId], references: [id])
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([schoolId])
+  @@index([classId, date])
+  @@index([teacherUserId, date])
+  @@index([topicId])
 }

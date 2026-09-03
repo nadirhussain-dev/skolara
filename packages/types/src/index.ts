@@ -10,6 +10,7 @@ export * from "./notices";
 export * from "./assignments";
 export * from "./study-materials";
 export * from "./quizzes";
+export * from "./lessons";
 export * from "./messaging";
 export * from "./complaints";
 export * from "./bank-statement";

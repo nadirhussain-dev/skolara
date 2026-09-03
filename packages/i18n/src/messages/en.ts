@@ -87,6 +87,7 @@ export const en = {
     assignments: "Assignments",
     studyMaterials: "Study materials",
     quizzes: "Quizzes",
+    lessonPlans: "Lesson plans",
     timetable: "Timetable",
     calendar: "Calendar",
     reportCards: "Report cards",

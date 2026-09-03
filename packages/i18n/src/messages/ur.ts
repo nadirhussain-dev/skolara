@@ -90,6 +90,7 @@ export const ur: Messages = {
     assignments: "اسائنمنٹس",
     studyMaterials: "مطالعاتی مواد",
     quizzes: "کوئزز",
+    lessonPlans: "سبق کی منصوبہ بندی",
     timetable: "ٹائم ٹیبل",
     calendar: "کیلنڈر",
     reportCards: "رپورٹ کارڈ",
