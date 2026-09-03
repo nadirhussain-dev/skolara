@@ -9,6 +9,7 @@ export * from "./grades";
 export * from "./notices";
 export * from "./assignments";
 export * from "./study-materials";
+export * from "./quizzes";
 export * from "./messaging";
 export * from "./complaints";
 export * from "./bank-statement";

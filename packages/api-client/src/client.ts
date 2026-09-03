@@ -80,6 +80,14 @@ import type {
   StartThreadInput,
   StudyMaterial,
   PublishStudyMaterialInput,
+  CreateQuizInput,
+  Quiz,
+  QuizAnswer,
+  QuizAttempt,
+  QuizQuestion,
+  QuizQuestionForStudent,
+  ReplaceQuizQuestionsInput,
+  SaveQuizAnswerInput,
   SubmitAssignmentInput,
   SubmitPaymentInput,
   SuggestedMatch,
@@ -193,6 +201,78 @@ export interface SupportTicketWithComments extends SupportTicketDetail {
 export interface StudyMaterialDetail extends StudyMaterial {
   uploadedByUser: { id: string; firstName: string; lastName: string };
   class: { id: string; name: string; section: string };
+}
+
+export interface QuizSummary extends Quiz {
+  class: { id: string; name: string; section: string };
+  _count: { questions: number; attempts: number };
+}
+
+export interface QuizWithQuestions extends Quiz {
+  questions: QuizQuestion[];
+  class: { id: string; name: string; section: string };
+  _count: { attempts: number };
+}
+
+/** A student's own view of a quiz: never the questions, never the answer key. */
+export interface QuizForStudent extends Quiz {
+  totalMarks: number;
+  isOpen: boolean;
+  canAttempt: boolean;
+  _count: { questions: number };
+  attempts: Pick<
+    QuizAttempt,
+    | "id"
+    | "attemptNumber"
+    | "status"
+    | "startedAt"
+    | "expiresAt"
+    | "submittedAt"
+    | "score"
+    | "maxScore"
+  >[];
+}
+
+/** The paper as handed to a student mid-attempt. */
+export interface QuizAttemptPaper extends QuizAttempt {
+  quiz: Quiz;
+  questions: QuizQuestionForStudent[];
+  answers: Pick<QuizAnswer, "questionId" | "selectedIndex">[];
+}
+
+/** The marked paper, released only once the attempt is settled. */
+export interface QuizAttemptResult extends QuizAttempt {
+  quiz: Quiz;
+  questions: {
+    id: string;
+    prompt: string;
+    options: string[];
+    marks: number;
+    correctIndex: number;
+    selectedIndex: number | null;
+    isCorrect: boolean;
+    marksAwarded: number;
+  }[];
+}
+
+export interface QuizAttemptWithQuiz extends QuizAttempt {
+  quiz: { id: string; title: string; subject: string };
+}
+
+export interface QuizResults {
+  quizId: string;
+  maxScore: number;
+  rows: {
+    student: {
+      id: string;
+      admissionNumber: string;
+      user: { firstName: string; lastName: string };
+    };
+    attemptCount: number;
+    bestScore: number | null;
+    percentage: number | null;
+    lastStatus: QuizAttempt["status"] | null;
+  }[];
 }
 
 export interface MeetingSlotDetail extends MeetingSlot {
@@ -706,6 +786,40 @@ export function createApiClient({
           method: "PATCH",
           body: JSON.stringify(input),
         }),
+    },
+    quizzes: {
+      create: (input: CreateQuizInput) =>
+        request<QuizWithQuestions>("/quizzes", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      replaceQuestions: (id: string, input: ReplaceQuizQuestionsInput) =>
+        request<QuizWithQuestions>(`/quizzes/${id}/questions`, {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      publish: (id: string) =>
+        request<QuizWithQuestions>(`/quizzes/${id}/publish`, { method: "PATCH" }),
+      remove: (id: string) => request<void>(`/quizzes/${id}`, { method: "DELETE" }),
+      forClass: (classId: string, subject?: string) =>
+        request<QuizSummary[]>(
+          `/quizzes/class/${classId}${subject ? `?subject=${encodeURIComponent(subject)}` : ""}`,
+        ),
+      findOne: (id: string) => request<QuizWithQuestions>(`/quizzes/${id}`),
+      results: (id: string) => request<QuizResults>(`/quizzes/${id}/results`),
+      availableForStudent: (studentId: string) =>
+        request<QuizForStudent[]>(`/quizzes/student/${studentId}/available`),
+      attemptsForStudent: (studentId: string) =>
+        request<QuizAttemptWithQuiz[]>(`/quizzes/student/${studentId}/attempts`),
+      startAttempt: (quizId: string) =>
+        request<QuizAttemptPaper>(`/quizzes/${quizId}/attempts`, { method: "POST" }),
+      saveAnswer: (attemptId: string, input: SaveQuizAnswerInput) =>
+        request<{ saved: true; questionId: string }>(`/quizzes/attempts/${attemptId}/answer`, {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      submitAttempt: (attemptId: string) =>
+        request<QuizAttemptResult>(`/quizzes/attempts/${attemptId}/submit`, { method: "POST" }),
     },
     studyMaterials: {
       publish: (input: PublishStudyMaterialInput) =>

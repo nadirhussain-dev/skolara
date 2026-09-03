@@ -18,6 +18,7 @@ const links = [
   { href: "/notices", labelKey: "dashboard.notices", icon: "📣" },
   { href: "/assignments/mine", labelKey: "dashboard.homework", icon: "📝" },
   { href: "/materials", labelKey: "dashboard.studyMaterials", icon: "📚" },
+  { href: "/quizzes", labelKey: "dashboard.quizzes", icon: "🧠" },
   { href: "/transport", labelKey: "dashboard.busTracking", icon: "🚌" },
   { href: "/library", labelKey: "dashboard.library", icon: "📚" },
   { href: "/complaints", labelKey: "dashboard.complaints", icon: "🗣️" },

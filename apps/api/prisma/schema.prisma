@@ -118,6 +118,8 @@ model School {
   meetingSlots        MeetingSlot[]
   supportTickets      SupportTicket[]
   studyMaterials      StudyMaterial[]
+  quizzes             Quiz[]
+  quizAttempts        QuizAttempt[]
   auditLogs           AuditLog[]
 
   @@index([schoolGroupId])
@@ -168,6 +170,7 @@ model User {
   supportTicketComments   SupportTicketComment[] @relation("SupportCommenter")
   platformBroadcasts      PlatformBroadcast[]    @relation("BroadcastAuthor")
   uploadedStudyMaterials  StudyMaterial[]        @relation("StudyMaterialUploader")
+  authoredQuizzes         Quiz[]                 @relation("QuizAuthor")
   auditLogs               AuditLog[]          @relation("AuditActor")
   classAssignments        ClassTeacher[]      @relation("ClassTeachers")
 
@@ -244,6 +247,7 @@ model SchoolClass {
   timetableEntries   TimetableEntry[]
   calendarEvents     CalendarEvent[]
   studyMaterials     StudyMaterial[]
+  quizzes            Quiz[]
 
   @@unique([schoolId, name, section, academicYear])
   @@index([schoolId])
@@ -271,6 +275,7 @@ model StudentProfile {
   bookLoans          BookLoan[]
   busAssignment      BusAssignment?
   meetingSlots       MeetingSlot[]
+  quizAttempts       QuizAttempt[]
 
   @@unique([schoolId, admissionNumber])
   @@index([schoolId])
@@ -982,4 +987,112 @@ model StudyMaterial {
 
   @@index([schoolId])
   @@index([classId, subject])
+}
+
+enum QuizAttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  // Ran out of time. Graded on whatever the student had saved, which is why
+  // answers are saved as they are chosen rather than all at once at the end.
+  EXPIRED
+}
+
+// A multiple-choice quiz set against one class and subject.
+//
+// Draft until `publishedAt` is set: a half-written paper visible to students
+// is worse than no paper, and questions can only change while it is a draft.
+model Quiz {
+  id               String    @id @default(uuid())
+  schoolId         String
+  school           School    @relation(fields: [schoolId], references: [id])
+  classId          String
+  class            SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject          String
+  title            String
+  instructions     String?
+  // Null means untimed. When set, the deadline for an attempt is computed from
+  // this at the moment the attempt starts and stored on the attempt, so
+  // changing the limit later can't retroactively fail someone mid-paper.
+  timeLimitMinutes Int?
+  opensAt          DateTime?
+  closesAt         DateTime?
+  maxAttempts      Int       @default(1)
+  publishedAt      DateTime?
+  // Where an auto-graded score lands in the gradebook. Both null keeps the
+  // quiz out of it entirely — a practice paper shouldn't touch a report card.
+  gradeTerm        String?
+  gradeExamType    String?
+  createdByUserId  String
+  createdByUser    User      @relation("QuizAuthor", fields: [createdByUserId], references: [id])
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+
+  // Two quizzes claiming the same gradebook cell would have one silently
+  // overwrite the other's marks. Postgres treats nulls as distinct, so quizzes
+  // that stay out of the gradebook never collide here.
+  @@unique([classId, subject, gradeTerm, gradeExamType])
+  @@index([schoolId])
+  @@index([classId, publishedAt])
+}
+
+model QuizQuestion {
+  id           String  @id @default(uuid())
+  quizId       String
+  quiz         Quiz    @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  prompt       String
+  options      String[]
+  correctIndex Int
+  marks        Decimal @default(1) @db.Decimal(6, 2)
+  sortOrder    Int
+
+  answers QuizAnswer[]
+
+  @@unique([quizId, sortOrder])
+}
+
+model QuizAttempt {
+  id            String            @id @default(uuid())
+  schoolId      String
+  school        School            @relation(fields: [schoolId], references: [id])
+  quizId        String
+  quiz          Quiz              @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  studentId     String
+  student       StudentProfile    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  attemptNumber Int
+  status        QuizAttemptStatus @default(IN_PROGRESS)
+  startedAt     DateTime          @default(now())
+  // Fixed by the server when the attempt starts. The client's clock never
+  // decides whether a paper is still open.
+  expiresAt     DateTime?
+  submittedAt   DateTime?
+  score         Decimal?          @db.Decimal(6, 2)
+  maxScore      Decimal?          @db.Decimal(6, 2)
+
+  answers QuizAnswer[]
+
+  // Makes "start a second attempt" a database-level claim rather than a
+  // read-then-write, so a double tap can't open two papers at once.
+  @@unique([quizId, studentId, attemptNumber])
+  @@index([schoolId])
+  @@index([studentId])
+}
+
+model QuizAnswer {
+  id            String       @id @default(uuid())
+  attemptId     String
+  attempt       QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId    String
+  question      QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedIndex Int
+  // Filled at grading, not at save. A student changing their mind must not be
+  // able to learn from the response whether the last choice was right.
+  isCorrect     Boolean?
+  marksAwarded  Decimal?     @db.Decimal(6, 2)
+  answeredAt    DateTime     @default(now())
+
+  @@unique([attemptId, questionId])
+  @@index([questionId])
 }

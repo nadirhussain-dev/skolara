@@ -32,6 +32,7 @@ import { PaymentGatewayModule } from "./payment-gateway/payment-gateway.module";
 import { PaymentsModule } from "./payments/payments.module";
 import { PayrollModule } from "./payroll/payroll.module";
 import { PrismaModule } from "./prisma/prisma.module";
+import { QuizzesModule } from "./quizzes/quizzes.module";
 import { ReportCardsModule } from "./report-cards/report-cards.module";
 import { ReportsModule } from "./reports/reports.module";
 import { SchoolGroupsModule } from "./school-groups/school-groups.module";
@@ -82,6 +83,7 @@ import { validateEnv } from "./env.validation";
     PaymentGatewayModule,
     BankStatementModule,
     GradesModule,
+    QuizzesModule,
     NoticesModule,
     AssignmentsModule,
     MeetingsModule,
