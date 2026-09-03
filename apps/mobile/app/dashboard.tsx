@@ -20,6 +20,7 @@ const links = [
   { href: "/materials", labelKey: "dashboard.studyMaterials", icon: "📚" },
   { href: "/quizzes", labelKey: "dashboard.quizzes", icon: "🧠" },
   { href: "/live-classes", labelKey: "dashboard.liveClasses", icon: "🎥" },
+  { href: "/performance", labelKey: "dashboard.performance", icon: "📈" },
   { href: "/transport", labelKey: "dashboard.busTracking", icon: "🚌" },
   { href: "/library", labelKey: "dashboard.library", icon: "📚" },
   { href: "/complaints", labelKey: "dashboard.complaints", icon: "🗣️" },

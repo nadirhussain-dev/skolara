@@ -20,6 +20,16 @@ export function useStudentGrades(studentId: string | undefined) {
   });
 }
 
+/** The series behind the performance graphs, per subject over time. */
+export function useStudentPerformance(studentId: string | undefined, subject?: string) {
+  const api = useApiClient();
+  return useQuery({
+    queryKey: ["grades", "performance", studentId, subject ?? null],
+    queryFn: () => api.grades.performance(studentId as string, subject),
+    enabled: Boolean(studentId),
+  });
+}
+
 export function useUpsertGrade() {
   const api = useApiClient();
   const queryClient = useQueryClient();

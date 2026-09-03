@@ -96,6 +96,7 @@ import type {
   UpsertLessonPlanInput,
   LiveClass,
   UpsertLiveClassInput,
+  StudentPerformance,
   SubmitAssignmentInput,
   SubmitPaymentInput,
   SuggestedMatch,
@@ -642,6 +643,10 @@ export function createApiClient({
         ),
       forStudent: (studentId: string) =>
         request<GradeEntry[]>(`/grades/student/${studentId}`),
+      performance: (studentId: string, subject?: string) =>
+        request<StudentPerformance>(
+          `/grades/student/${studentId}/performance${subject ? `?subject=${encodeURIComponent(subject)}` : ""}`,
+        ),
     },
     notices: {
       create: (input: CreateNoticeInput) =>

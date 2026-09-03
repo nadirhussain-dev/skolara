@@ -145,6 +145,12 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["SCHOOL_ADMIN", "TEACHER"],
     groupKey: "nav.academics",
   },
+  {
+    href: "/school/performance",
+    labelKey: "nav.performance",
+    roles: ["SCHOOL_ADMIN", "TEACHER"],
+    groupKey: "nav.academics",
+  },
 
   {
     href: "/school/invoices",
