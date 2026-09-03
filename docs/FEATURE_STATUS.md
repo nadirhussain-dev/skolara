@@ -1,13 +1,17 @@
 # Feature Status
 
 Every feature in [`PROPOSAL.md`](../PROPOSAL.md) §6–§10, checked against what is actually on
-`main` at `655ee3a`, plus the day-2 and day-3 branches.
+`main` at `655ee3a`, plus the day-2, day-3 and day-4 branches.
 
 | State | Count | Meaning |
 |---|---|---|
-| ✅ Shipped | 73 | Built, tenant-scoped, guarded |
-| 🟡 Partial | 6 | Mechanism exists, surface incomplete |
-| ⬜ Not built | 9 | No code |
+| ✅ Shipped | 75 | Built, tenant-scoped, guarded |
+| 🟡 Partial | 4 | Mechanism exists, surface incomplete |
+| ⬜ Not built | 7 | No code |
+
+> These counts were recomputed from the rows below on day 4 and previously
+> disagreed with them — the summary said 73/6/9 against a table holding 68/6/12.
+> The row marks were right; the totals had drifted.
 
 **Partial** is the cheapest column to finish — the plumbing is done, the content or UI is not.
 
@@ -84,12 +88,12 @@ Where the proposal says competitors underinvest. The mobile half is done; the we
 | Gradebook & per-class analytics | ✅ | |
 | AI report-card comment generator | ✅ | Falls back to deterministic comments with no API key, so it never hard-fails |
 | Scoped to own classes | ✅ | Any teacher could previously take any register or overwrite a colleague's marks |
-| Upload class materials | 🟡 | Files attach to assignments; no standalone materials library |
+| Upload class materials | ✅ | Class-and-subject library on the storage layer; accepts Office documents as well as PDF |
 | Personal timetable | ✅ | Web grid and mobile day list |
 | Apply for leave, check balance | ✅ | Mobile, with per-kind annual balances |
-| Lesson planning & syllabus tracker | ⬜ | |
-| Online quizzes with MCQ auto-grading | ⬜ | |
-| Schedule live / online class links | ⬜ | |
+| Lesson planning & syllabus tracker | ✅ | Topics per class, subject and term; coverage derived on read, never stored |
+| Online quizzes with MCQ auto-grading | ✅ | Timed attempts graded on answers saved as they're chosen, so running out of time doesn't lose the paper. Best attempt lands in the gradebook |
+| Schedule live / online class links | ✅ | A link and a window, not a video stack |
 
 ## Student & Parent
 
@@ -109,13 +113,13 @@ The parent app is the product most families will judge you on.
 | Multi-child switcher | ✅ | |
 | In-app complaint submission with status tracking | ✅ | |
 | Digital report card | ✅ | Generated as a PDF a parent can download |
-| Study materials access | 🟡 | Reachable through assignment attachments only |
+| Study materials access | ✅ | Read through the student, not the class, so a parent can't enumerate other classes |
 | Timetable | ✅ | Mobile, scoped through the multi-child switcher |
-| Performance graphs over time | ⬜ | |
+| Performance graphs over time | ✅ | Percentages per subject against the class average for the same assessment; small multiples on web, bars on mobile |
 | Leave application | ⬜ | |
 | Book parent–teacher meeting slots | ✅ | Teachers publish an evening of slots; booking is race-safe |
 | School events calendar | ✅ | Mobile, grouped by month, filtered from today |
-| Join live / online classes | ⬜ | |
+| Join live / online classes | ✅ | The link is withheld until ten minutes before and withdrawn when the lesson ends — enforced in the payload, not by hiding a button |
 
 > The parent/student **web** portal is deferred by design — those accounts redirect to
 > `/mobile-only`. The proposal makes the parent experience mobile-first.
@@ -147,9 +151,9 @@ Not proposal features, but they gate everything above.
 
 | Metric | Value | Notes |
 |---|---|---|
-| Tests passing | 228 | Up from 66. Targets what actually breaks — audit redaction, entitlement boundaries, class scoping, MRR arithmetic |
-| Services untested | 25 of 41 | Payments, invoices, grades and attendance are worth covering first |
-| Migrations | 19 (`001`–`019`) | CI applies all to a real Postgres and seeds through the generated client |
+| Tests passing | 310 | Up from 66. Targets what actually breaks — audit redaction, entitlement boundaries, class scoping, quiz grading and expiry, MRR arithmetic |
+| Services untested | 25 of 45 | Payments, invoices and attendance are worth covering first; grades now has coverage on the performance maths |
+| Migrations | 23 (`001`–`023`) | CI applies all to a real Postgres and seeds through the generated client |
 | Deploy workflows | 0 | CI validates on every push; nothing ships automatically |
 
 ---
@@ -166,7 +170,16 @@ Not proposal features, but they gate everything above.
 
 ## Worth questioning before building
 
-**Hostel, inventory, live classes and quizzes** are each substantial modules that no part of the
-gap analysis in `PROPOSAL.md` identifies as a wedge. They are on the list because full-featured
-competitors have them, not because a small Multan private school is choosing a platform on them.
-Worth validating demand with pilot schools before spending build time there.
+**Hostel and inventory** are each substantial modules that no part of the gap analysis in
+`PROPOSAL.md` identifies as a wedge. They are on the list because full-featured competitors
+have them, not because a small Multan private school is choosing a platform on them.
+
+Live classes and quizzes carried the same warning and were built anyway on day 4, because they
+were the day's cheapest half: live classes are one table and a release-window rule, and quizzes
+reuse the gradebook rather than inventing a parallel score store. Hostel and inventory have no
+such lever — they are new domains, not new views of existing ones. Worth validating demand with
+pilot schools before spending build time there.
+
+**One row is in no day's plan.** Student and parent *leave application* is still not built:
+day 3 covered staff leave, and days 5 and 6 don't pick the family side up. It needs adding to a
+day or dropping on purpose, not left to fall between them.
