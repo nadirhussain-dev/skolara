@@ -25,6 +25,7 @@ import { InvoicesModule } from "./invoices/invoices.module";
 import { LeaveModule } from "./leave/leave.module";
 import { LessonsModule } from "./lessons/lessons.module";
 import { LibraryModule } from "./library/library.module";
+import { LiveClassesModule } from "./live-classes/live-classes.module";
 import { MeetingsModule } from "./meetings/meetings.module";
 import { MessagingModule } from "./messaging/messaging.module";
 import { NoticesModule } from "./notices/notices.module";
@@ -94,6 +95,7 @@ import { validateEnv } from "./env.validation";
     LeaveModule,
     LessonsModule,
     LibraryModule,
+    LiveClassesModule,
     TransportModule,
     PayrollModule,
     AnalyticsModule,

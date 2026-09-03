@@ -46,6 +46,7 @@ export default function RootLayout() {
         <Stack.Screen name="materials/index" options={{ title: "Study materials" }} />
         <Stack.Screen name="quizzes/index" options={{ title: "Quizzes" }} />
         <Stack.Screen name="quizzes/[quizId]" options={{ title: "Quiz" }} />
+        <Stack.Screen name="live-classes/index" options={{ title: "Online classes" }} />
       </Stack>
     </Providers>
   );

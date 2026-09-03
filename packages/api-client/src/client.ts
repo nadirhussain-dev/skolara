@@ -94,6 +94,8 @@ import type {
   SyllabusTopic,
   UpdateSyllabusTopicInput,
   UpsertLessonPlanInput,
+  LiveClass,
+  UpsertLiveClassInput,
   SubmitAssignmentInput,
   SubmitPaymentInput,
   SuggestedMatch,
@@ -289,6 +291,29 @@ export interface LessonPlanDetail extends LessonPlan {
   topic: { id: string; title: string; status: SyllabusTopic["status"] } | null;
   period: { id: string; name: string; startTime: string; endTime: string } | null;
   teacherUser: { id: string; firstName: string; lastName: string };
+}
+
+export interface LiveClassDetail extends LiveClass {
+  hostUser: { id: string; firstName: string; lastName: string };
+  class: { id: string; name: string; section: string };
+}
+
+/**
+ * A student's view. `meetingUrl` is null until `joinableFrom` and again once
+ * the lesson ends — the API withholds it, so this is not a UI convention the
+ * client could choose to ignore.
+ */
+export interface JoinableLiveClass {
+  id: string;
+  classId: string;
+  subject: string;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  hostUser: { id: string; firstName: string; lastName: string };
+  meetingUrl: string | null;
+  joinable: boolean;
+  joinableFrom: Date;
 }
 
 export interface MeetingSlotDetail extends MeetingSlot {
@@ -802,6 +827,27 @@ export function createApiClient({
           method: "PATCH",
           body: JSON.stringify(input),
         }),
+    },
+    liveClasses: {
+      create: (input: UpsertLiveClassInput) =>
+        request<LiveClassDetail>("/live-classes", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      update: (id: string, input: UpsertLiveClassInput) =>
+        request<LiveClassDetail>(`/live-classes/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      remove: (id: string) => request<void>(`/live-classes/${id}`, { method: "DELETE" }),
+      forClass: (classId: string, includePast = false) =>
+        request<LiveClassDetail[]>(
+          `/live-classes/class/${classId}${includePast ? "?includePast=true" : ""}`,
+        ),
+      mine: (includePast = false) =>
+        request<LiveClassDetail[]>(`/live-classes/mine${includePast ? "?includePast=true" : ""}`),
+      forStudent: (studentId: string) =>
+        request<JoinableLiveClass[]>(`/live-classes/student/${studentId}`),
     },
     lessons: {
       addTopics: (input: AddSyllabusTopicsInput) =>

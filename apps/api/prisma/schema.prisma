@@ -122,6 +122,7 @@ model School {
   quizAttempts        QuizAttempt[]
   syllabusTopics      SyllabusTopic[]
   lessonPlans         LessonPlan[]
+  liveClasses         LiveClass[]
   auditLogs           AuditLog[]
 
   @@index([schoolGroupId])
@@ -175,6 +176,7 @@ model User {
   authoredQuizzes         Quiz[]                 @relation("QuizAuthor")
   authoredSyllabusTopics  SyllabusTopic[]        @relation("SyllabusAuthor")
   lessonPlans             LessonPlan[]           @relation("LessonPlanTeacher")
+  hostedLiveClasses       LiveClass[]            @relation("LiveClassHost")
   auditLogs               AuditLog[]          @relation("AuditActor")
   classAssignments        ClassTeacher[]      @relation("ClassTeachers")
 
@@ -254,6 +256,7 @@ model SchoolClass {
   quizzes            Quiz[]
   syllabusTopics     SyllabusTopic[]
   lessonPlans        LessonPlan[]
+  liveClasses        LiveClass[]
 
   @@unique([schoolId, name, section, academicYear])
   @@index([schoolId])
@@ -1175,4 +1178,35 @@ model LessonPlan {
   @@index([classId, date])
   @@index([teacherUserId, date])
   @@index([topicId])
+}
+
+// A scheduled online lesson: a link, a time, and the class it is for.
+//
+// Deliberately not a video stack. Schools already have Zoom, Meet or Teams;
+// what they lack is somewhere the right link reaches the right class at the
+// right time, which is all this is.
+model LiveClass {
+  id         String      @id @default(uuid())
+  schoolId   String
+  school     School      @relation(fields: [schoolId], references: [id])
+  classId    String
+  class      SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject    String
+  title      String
+  // Held back from students outside the join window by the service, so a link
+  // can't be shared around before the lesson or reused after it.
+  meetingUrl String
+  startsAt   DateTime
+  endsAt     DateTime
+  hostUserId String
+  hostUser   User        @relation("LiveClassHost", fields: [hostUserId], references: [id])
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  // A class can't be in two live lessons starting at the same instant. This
+  // catches the double-submit that creates a duplicate; genuine overlaps at
+  // different start times are the timetable's problem, not this table's.
+  @@unique([classId, startsAt])
+  @@index([schoolId, startsAt])
+  @@index([hostUserId, startsAt])
 }
