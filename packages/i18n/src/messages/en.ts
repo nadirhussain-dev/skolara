@@ -111,6 +111,7 @@ export const en = {
     branding: "Branding",
     apiKeys: "API keys",
     auditLog: "Audit log",
+    dataExport: "Export data",
   },
 
   attendance: {

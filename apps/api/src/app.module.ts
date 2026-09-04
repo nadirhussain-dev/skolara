@@ -19,6 +19,7 @@ import { ComplaintsModule } from "./complaints/complaints.module";
 import { DevicesModule } from "./devices/devices.module";
 import { DocumentsModule } from "./documents/documents.module";
 import { ExamsModule } from "./exams/exams.module";
+import { ExportModule } from "./export/export.module";
 import { GradesModule } from "./grades/grades.module";
 import { HealthModule } from "./health/health.module";
 import { HostelModule } from "./hostel/hostel.module";
@@ -94,6 +95,7 @@ import { validateEnv } from "./env.validation";
     MessagingModule,
     ComplaintsModule,
     ExamsModule,
+    ExportModule,
     LeaveModule,
     HostelModule,
     InventoryModule,

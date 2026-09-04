@@ -114,6 +114,7 @@ export const ur: Messages = {
     branding: "برانڈنگ",
     apiKeys: "اے پی آئی کیز",
     auditLog: "آڈٹ لاگ",
+    dataExport: "ڈیٹا برآمد کریں",
   },
 
   attendance: {

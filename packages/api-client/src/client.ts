@@ -520,11 +520,14 @@ export function createApiClient({
    * These are behind the bearer token, so a plain `<a href>` would arrive
    * unauthenticated — the body has to come through the client.
    */
-  async function requestText(path: string, isRetry = false): Promise<string> {
+  async function requestText(
+    path: string,
+    { accept = "text/csv", isRetry = false }: { accept?: string; isRetry?: boolean } = {},
+  ): Promise<string> {
     const token = await getAccessToken();
     const res = await fetch(`${baseUrl}${path}`, {
       headers: {
-        Accept: "text/csv",
+        Accept: accept,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
     });
@@ -532,7 +535,7 @@ export function createApiClient({
     if (!res.ok) {
       if (res.status === 401 && !isRetry && getRefreshToken) {
         const newToken = await refreshAccessToken();
-        if (newToken) return requestText(path, true);
+        if (newToken) return requestText(path, { accept, isRetry: true });
         await onAuthFailure?.();
       }
       throw new ApiError(res.status, res.statusText);
@@ -1117,6 +1120,20 @@ export function createApiClient({
     reports: {
       platformRevenueCsv: () => requestText("/reports/platform-revenue.csv"),
       feeCollectionCsv: () => requestText("/reports/fee-collection.csv"),
+    },
+    exports: {
+      tables: () => request<{ tables: string[] }>("/export/tables"),
+      /**
+       * The whole bundle as text. Fetched through the client rather than a
+       * plain link because the route is behind the bearer token, and returned
+       * as a string so the caller can hand it straight to a download without
+       * a parse-then-restringify round trip.
+       */
+      schoolJson: () => requestText("/export/school.json", { accept: "application/json" }),
+      tableCsv: (table: string) =>
+        requestText(`/export/school.csv?table=${encodeURIComponent(table)}`),
+      schoolJsonFor: (schoolId: string) =>
+        requestText(`/export/school/${schoolId}.json`, { accept: "application/json" }),
     },
     certificates: {
       issue: (input: IssueCertificateInput) =>

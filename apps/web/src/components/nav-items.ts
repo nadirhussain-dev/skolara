@@ -254,4 +254,10 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["SUPER_ADMIN", "SCHOOL_ADMIN"],
     groupKey: "nav.settings",
   },
+  {
+    href: "/school/data-export",
+    labelKey: "nav.dataExport",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.settings",
+  },
 ];
