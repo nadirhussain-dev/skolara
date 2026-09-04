@@ -123,6 +123,8 @@ model School {
   syllabusTopics      SyllabusTopic[]
   lessonPlans         LessonPlan[]
   liveClasses         LiveClass[]
+  hostelRooms         HostelRoom[]
+  hostelAllocations   HostelAllocation[]
   auditLogs           AuditLog[]
 
   @@index([schoolGroupId])
@@ -285,6 +287,7 @@ model StudentProfile {
   busAssignment      BusAssignment?
   meetingSlots       MeetingSlot[]
   quizAttempts       QuizAttempt[]
+  hostelAllocations  HostelAllocation[]
 
   @@unique([schoolId, admissionNumber])
   @@index([schoolId])
@@ -1209,4 +1212,53 @@ model LiveClass {
   @@unique([classId, startsAt])
   @@index([schoolId, startsAt])
   @@index([hostUserId, startsAt])
+}
+
+// A hostel room, addressed the way a warden addresses it: block plus number.
+//
+// Beds are not rows. A room of capacity 4 has beds 1-4 implicitly, and an
+// allocation claims one of them — which is what lets the database refuse a
+// double-booking instead of the service counting occupants and hoping no other
+// request is counting at the same time.
+model HostelRoom {
+  id         String   @id @default(uuid())
+  schoolId   String
+  school     School   @relation(fields: [schoolId], references: [id])
+  blockName  String
+  roomNumber String
+  floor      Int?
+  capacity   Int
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  allocations HostelAllocation[]
+
+  @@unique([schoolId, blockName, roomNumber])
+  @@index([schoolId])
+}
+
+model HostelAllocation {
+  id          String         @id @default(uuid())
+  schoolId    String
+  school      School         @relation(fields: [schoolId], references: [id])
+  roomId      String
+  room        HostelRoom     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  // 1-based, and validated against the room's capacity on write.
+  bedNumber   Int
+  allocatedAt DateTime       @default(now())
+  // Null means currently resident. Kept rather than deleted so a term's
+  // occupancy history survives the student moving out.
+  vacatedAt   DateTime?
+  notes       String?
+
+  // Two partial unique indexes carry the real rules — one bed holds one
+  // student, and one student holds one bed — but only among current
+  // residents. Prisma can't express a partial index, so both live in the
+  // migration; see 024_hostel.
+  @@index([schoolId])
+  @@index([roomId])
+  @@index([studentId])
 }

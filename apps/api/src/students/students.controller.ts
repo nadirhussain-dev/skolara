@@ -42,11 +42,13 @@ export class StudentsController {
 
   @Get()
   findAllForClass(
-    @Query("classId") classId: string,
+    @Query("classId") classId: string | undefined,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!user.schoolId) throw new ForbiddenException("No school context");
-    return this.studentsService.findAllForClass(user.schoolId, classId);
+    // No classId means the whole school — what the hostel and inventory
+    // screens need, since neither allocates per class.
+    return this.studentsService.findAllForClass(user.schoolId, classId || undefined);
   }
 
   @Get("mine")

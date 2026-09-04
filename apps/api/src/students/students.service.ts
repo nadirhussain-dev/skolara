@@ -88,10 +88,19 @@ export class StudentsService {
     });
   }
 
-  findAllForClass(schoolId: string, classId: string) {
+  /**
+   * Every student in the school, or just one class's.
+   *
+   * `classId` is optional because the hostel and inventory surfaces allocate
+   * to students school-wide, not per class. It widens nothing: the route is
+   * already school-admin only, and an admin could always enumerate students a
+   * class at a time.
+   */
+  findAllForClass(schoolId: string, classId?: string) {
     return this.prisma.studentProfile.findMany({
-      where: { schoolId, classId },
+      where: { schoolId, ...(classId ? { classId } : {}) },
       include: { user: { select: PUBLIC_USER_SELECT } },
+      orderBy: { admissionNumber: "asc" },
     });
   }
 

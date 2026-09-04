@@ -97,6 +97,12 @@ import type {
   LiveClass,
   UpsertLiveClassInput,
   StudentPerformance,
+  AllocateHostelBedInput,
+  HostelAllocation,
+  HostelOccupancy,
+  HostelRoom,
+  HostelSummary,
+  UpsertHostelRoomInput,
   SubmitAssignmentInput,
   SubmitPaymentInput,
   SuggestedMatch,
@@ -315,6 +321,29 @@ export interface JoinableLiveClass {
   meetingUrl: string | null;
   joinable: boolean;
   joinableFrom: Date;
+}
+
+export interface HostelRoomWithOccupancy extends HostelOccupancy {
+  notes: string | null;
+}
+
+export interface HostelResident extends HostelAllocation {
+  student: {
+    id: string;
+    admissionNumber: string;
+    user: { firstName: string; lastName: string; phone: string | null };
+    class: { id: string; name: string; section: string } | null;
+  };
+}
+
+export interface HostelRoomDetail extends HostelRoom {
+  residents: HostelResident[];
+  past: HostelResident[];
+  freeBeds: number[];
+}
+
+export interface HostelAllocationWithRoom extends HostelAllocation {
+  room: { id: string; blockName: string; roomNumber: string; floor: number | null };
 }
 
 export interface MeetingSlotDetail extends MeetingSlot {
@@ -568,6 +597,8 @@ export function createApiClient({
         }),
       byClass: (classId: string) =>
         request<StudentWithUser[]>(`/students?classId=${classId}`),
+      /** Every student in the school — hostel and inventory aren't per class. */
+      all: () => request<StudentWithUser[]>("/students"),
       mine: () => request<StudentWithUser[]>("/students/mine"),
       findOne: (id: string) => request<StudentWithUser>(`/students/${id}`),
       assignClass: (id: string, classId: string) =>
@@ -832,6 +863,39 @@ export function createApiClient({
           method: "PATCH",
           body: JSON.stringify(input),
         }),
+    },
+    hostel: {
+      createRoom: (input: UpsertHostelRoomInput) =>
+        request<HostelRoom>("/hostel/rooms", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      updateRoom: (id: string, input: UpsertHostelRoomInput) =>
+        request<HostelRoom>(`/hostel/rooms/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      removeRoom: (id: string) => request<void>(`/hostel/rooms/${id}`, { method: "DELETE" }),
+      rooms: (filters: { blockName?: string; onlyWithFreeBeds?: boolean } = {}) => {
+        const query = new URLSearchParams();
+        if (filters.blockName) query.set("blockName", filters.blockName);
+        if (filters.onlyWithFreeBeds) query.set("onlyWithFreeBeds", "true");
+        const suffix = query.toString();
+        return request<HostelRoomWithOccupancy[]>(`/hostel/rooms${suffix ? `?${suffix}` : ""}`);
+      },
+      roomDetail: (id: string) => request<HostelRoomDetail>(`/hostel/rooms/${id}`),
+      summary: () => request<HostelSummary>("/hostel/summary"),
+      allocate: (roomId: string, input: AllocateHostelBedInput) =>
+        request<HostelResident>(`/hostel/rooms/${roomId}/allocations`, {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      vacate: (allocationId: string) =>
+        request<HostelResident>(`/hostel/allocations/${allocationId}/vacate`, {
+          method: "PATCH",
+        }),
+      forStudent: (studentId: string) =>
+        request<HostelAllocationWithRoom[]>(`/hostel/student/${studentId}`),
     },
     liveClasses: {
       create: (input: UpsertLiveClassInput) =>

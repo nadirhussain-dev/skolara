@@ -14,6 +14,7 @@ export * from "./hooks/use-study-materials";
 export * from "./hooks/use-quizzes";
 export * from "./hooks/use-lessons";
 export * from "./hooks/use-live-classes";
+export * from "./hooks/use-hostel";
 export * from "./hooks/use-complaints";
 export * from "./hooks/use-messaging";
 export * from "./hooks/use-analytics";
