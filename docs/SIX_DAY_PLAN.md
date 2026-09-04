@@ -250,7 +250,7 @@ surfaced four concurrency bugs and two disclosures:
   concurrent returns of one loan both incremented and invented a copy.
 - **`GET /invoices/student/:id` and `GET /attendance/student/:id`** were open to parents and
   scoped only to the school, so any parent could read another family's fee balance or their
-  child's absences by changing the id in the URL. Fourteen other modules route student-scoped
+  child's absences by changing the id in the URL. Twelve other modules route student-scoped
   reads through `StudentAccessService`; these two didn't.
 
 The pattern in all of them is the same one day 5 named: a check and a write that look atomic
