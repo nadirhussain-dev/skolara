@@ -17,14 +17,12 @@ import {
   PageHeader,
   Textarea,
 } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useState } from "react";
-
-function humanise(role: string): string {
-  const lower = role.replace(/_/g, " ").toLowerCase();
-  return lower.charAt(0).toUpperCase() + lower.slice(1);
-}
+import { intlLocale } from "@/lib/intl";
 
 export default function BroadcastsPage() {
+  const { t, locale } = useTranslation();
   const { data: broadcasts, isLoading } = useAllBroadcasts();
   const create = useCreateBroadcast();
   const withdraw = useWithdrawBroadcast();
@@ -56,31 +54,31 @@ export default function BroadcastsPage() {
       setRoles([]);
       setExpiresAt("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't send that broadcast");
+      setError(err instanceof Error ? err.message : t("broadcasts.couldNotSend"));
     }
   }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Broadcasts"
-        description="A message to every tenant. Reaches all schools at once."
+        title={t("broadcasts.title")}
+        description={t("broadcasts.description")}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Compose</CardTitle>
+          <CardTitle>{t("broadcasts.compose")}</CardTitle>
         </CardHeader>
         <form onSubmit={submit} className="flex flex-col gap-3">
           <Input
-            placeholder="Title"
+            placeholder={t("fields.title")}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
             minLength={3}
           />
           <Textarea
-            placeholder="What every school needs to know"
+            placeholder={t("broadcasts.bodyHint")}
             value={body}
             onChange={(e) => setBody(e.target.value)}
             rows={3}
@@ -89,7 +87,7 @@ export default function BroadcastsPage() {
 
           <fieldset className="flex flex-wrap items-center gap-2">
             <legend className="mb-1 w-full text-sm text-slate-500">
-              Who sees it — leave all unchecked for everyone
+              {t("broadcasts.audienceLegend")}
             </legend>
             {roleSchema.options.map((role) => (
               <label
@@ -102,13 +100,13 @@ export default function BroadcastsPage() {
                   onChange={() => toggleRole(role)}
                   className="h-4 w-4 rounded border-slate-300"
                 />
-                {humanise(role)}
+                {t(`roles.${role}`)}
               </label>
             ))}
           </fieldset>
 
           <label className="flex max-w-xs flex-col gap-1 text-sm">
-            Expires (optional) — leave blank to keep it up until withdrawn
+            {t("broadcasts.expiresLabel")}
             <Input
               type="datetime-local"
               value={expiresAt}
@@ -119,7 +117,7 @@ export default function BroadcastsPage() {
           {error && <p className="text-sm text-rose-600">{error}</p>}
           <div>
             <Button type="submit" disabled={create.isPending}>
-              {create.isPending ? "Sending…" : "Send to every school"}
+              {create.isPending ? t("broadcasts.sending") : t("broadcasts.send")}
             </Button>
           </div>
         </form>
@@ -127,10 +125,10 @@ export default function BroadcastsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Sent</CardTitle>
+          <CardTitle>{t("broadcasts.sent")}</CardTitle>
         </CardHeader>
-        {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
-        {!isLoading && broadcasts?.length === 0 && <EmptyState title="Nothing sent yet." />}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
+        {!isLoading && broadcasts?.length === 0 && <EmptyState title={t("broadcasts.nothingSent")} />}
         <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {broadcasts?.map((broadcast) => {
             const expired = broadcast.expiresAt && new Date(broadcast.expiresAt) < new Date();
@@ -141,17 +139,19 @@ export default function BroadcastsPage() {
                   <p className="text-sm text-slate-500">{broadcast.body}</p>
                   <p className="mt-1 text-xs text-slate-400">
                     {broadcast.audienceRoles.length === 0
-                      ? "Everyone"
-                      : broadcast.audienceRoles.map(humanise).join(", ")}
+                      ? t("broadcasts.everyone")
+                      : broadcast.audienceRoles.map((role) => t(`roles.${role}`)).join(", ")}
                     {broadcast.expiresAt
-                      ? ` · ${expired ? "expired" : "expires"} ${new Date(broadcast.expiresAt).toLocaleString("en-GB")}`
-                      : " · no expiry"}
+                      ? t(expired ? "broadcasts.expiredOn" : "broadcasts.expiresOn", {
+                          date: new Date(broadcast.expiresAt).toLocaleString(intlLocale(locale)),
+                        })
+                      : t("broadcasts.noExpiry")}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {expired && <Badge tone="neutral">Expired</Badge>}
+                  {expired && <Badge tone="neutral">{t("broadcasts.expiredBadge")}</Badge>}
                   <Button variant="ghost" onClick={() => withdraw.mutate(broadcast.id)}>
-                    Withdraw
+                    {t("broadcasts.withdraw")}
                   </Button>
                 </div>
               </li>

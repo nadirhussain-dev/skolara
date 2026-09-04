@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import type { MarkAttendanceInput } from "@skolara/types";
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -20,9 +25,23 @@ export class AttendanceService {
     });
     if (!schoolClass) throw new NotFoundException("Class not found");
 
+    await this.assertEntriesAreOnTheRegister(schoolId, input);
+
+    const excused = await this.studentsExcusedOn(schoolId, input);
+
     const records = await this.prisma.$transaction(
-      input.entries.map((entry) =>
-        this.prisma.attendanceRecord.upsert({
+      input.entries.map((entry) => {
+        // An absence the school has already approved is recorded as EXCUSED
+        // rather than ABSENT. This isn't overruling the teacher: the child is
+        // away either way, and EXCUSED is the more accurate of the two words
+        // once the office has agreed to it. PRESENT and LATE pass through
+        // untouched — if the child turned up, a note doesn't change that.
+        const status =
+          entry.status === "ABSENT" && excused.has(entry.studentId)
+            ? "EXCUSED"
+            : entry.status;
+
+        return this.prisma.attendanceRecord.upsert({
           where: {
             classId_studentId_date: {
               classId: input.classId,
@@ -35,21 +54,86 @@ export class AttendanceService {
             classId: input.classId,
             studentId: entry.studentId,
             date: input.date,
-            status: entry.status,
+            status,
             markedByUserId,
             markedOffline: input.markedOffline,
           },
           update: {
-            status: entry.status,
+            status,
             markedByUserId,
             markedOffline: input.markedOffline,
           },
-        }),
-      ),
+        });
+      }),
     );
 
     await this.alertAbsentees(input);
     return records;
+  }
+
+
+  /**
+   * Which of the students on this register have an approved absence covering
+   * the day.
+   *
+   * One query for the whole register rather than one per pupil: a register is
+   * thirty-odd rows and this runs on every submission, including the offline
+   * queue draining several days at once.
+   */
+  private async studentsExcusedOn(
+    schoolId: string,
+    input: MarkAttendanceInput,
+  ): Promise<Set<string>> {
+    const absentIds = input.entries
+      .filter((entry) => entry.status === "ABSENT")
+      .map((entry) => entry.studentId);
+    if (absentIds.length === 0) return new Set();
+
+    const approved = await this.prisma.absenceRequest.findMany({
+      where: {
+        schoolId,
+        studentId: { in: absentIds },
+        status: "APPROVED",
+        startDate: { lte: input.date },
+        endDate: { gte: input.date },
+      },
+      select: { studentId: true },
+    });
+    return new Set(approved.map((request) => request.studentId));
+  }
+
+  /**
+   * Every id in the register has to be a student actually enrolled in this
+   * class.
+   *
+   * The controller has already established that the caller may teach the
+   * class, but the student ids come from the request body, and the upsert key
+   * is `(classId, studentId, date)` — nothing in it requires the two to be
+   * related. Without this, a teacher could file a mark against a child in a
+   * colleague's class, which is the same thing class scoping was introduced to
+   * stop, reached by a different door.
+   */
+  private async assertEntriesAreOnTheRegister(
+    schoolId: string,
+    input: MarkAttendanceInput,
+  ) {
+    const submitted = [...new Set(input.entries.map((entry) => entry.studentId))];
+    if (submitted.length === 0) return;
+
+    const enrolled = await this.prisma.studentProfile.findMany({
+      where: { id: { in: submitted }, schoolId, classId: input.classId },
+      select: { id: true },
+    });
+
+    const known = new Set(enrolled.map((student) => student.id));
+    const strangers = submitted.filter((id) => !known.has(id));
+    if (strangers.length === 0) return;
+
+    throw new BadRequestException(
+      strangers.length === 1
+        ? "One of those students isn't in this class"
+        : `${strangers.length} of those students aren't in this class`,
+    );
   }
 
   /**

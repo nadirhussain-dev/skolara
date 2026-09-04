@@ -8,11 +8,13 @@ import type { PaymentSubmission } from "@skolara/types";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import { Alert, Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "@skolara/i18n";
 import { colors, radius, spacing, typography } from "@/lib/theme";
 import { assetToUploadable } from "@/lib/upload";
 import { Button, Card, Chip, Input, SectionLabel } from "@/lib/ui";
 
 export default function SubmitPaymentScreen() {
+  const { t } = useTranslation();
   const { data: children } = useMyChildren();
   const [studentId, setStudentId] = useState<string>();
   const { data: invoices } = useInvoicesForStudent(studentId);
@@ -32,7 +34,7 @@ export default function SubmitPaymentScreen() {
 
   async function submit() {
     if (!studentId || !invoiceId || !screenshot) {
-      Alert.alert("Missing info", "Select a child, an invoice, and a screenshot.");
+      Alert.alert(t("mobilePayments.missingInfoTitle"), t("payments.missingInfo"));
       return;
     }
 
@@ -55,8 +57,8 @@ export default function SubmitPaymentScreen() {
       setResult(response);
     } catch (error) {
       Alert.alert(
-        "Couldn't submit",
-        error instanceof Error ? error.message : "Please try again.",
+        t("mobilePayments.couldNotSubmit"),
+        error instanceof Error ? error.message : t("mobilePayments.tryAgain"),
       );
     }
   }
@@ -64,7 +66,7 @@ export default function SubmitPaymentScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Card>
-        <SectionLabel>Child</SectionLabel>
+        <SectionLabel>{t("payments.child")}</SectionLabel>
         <View style={styles.chipRow}>
           {children?.map((child) => (
             <Chip
@@ -76,7 +78,7 @@ export default function SubmitPaymentScreen() {
           ))}
         </View>
 
-        <SectionLabel>Invoice</SectionLabel>
+        <SectionLabel>{t("payments.invoice")}</SectionLabel>
         <View style={styles.chipRow}>
           {invoices?.map((invoice) => (
             <Chip
@@ -88,18 +90,22 @@ export default function SubmitPaymentScreen() {
           ))}
         </View>
 
-        <SectionLabel>Amount paid</SectionLabel>
-        <Input keyboardType="numeric" value={amount} onChangeText={setAmount} placeholder="0" />
+        <SectionLabel>{t("payments.amountPaid")}</SectionLabel>
+        <Input keyboardType="numeric" value={amount} onChangeText={setAmount} placeholder={t("mobilePayments.amountPlaceholder")} />
 
         <Button
-          title={screenshot ? "Change screenshot" : "Upload transfer screenshot"}
+          title={
+            screenshot
+              ? t("payments.changeScreenshot")
+              : t("mobilePayments.uploadScreenshot")
+          }
           variant="secondary"
           onPress={pickScreenshot}
         />
         {screenshot && <Image source={{ uri: screenshot.uri }} style={styles.preview} />}
 
         <Button
-          title="Submit payment"
+          title={t("payments.submitPayment")}
           variant="accent"
           onPress={submit}
           loading={uploadFile.isPending || submitPayment.isPending}
@@ -109,8 +115,10 @@ export default function SubmitPaymentScreen() {
 
       {result && (
         <View style={styles.resultBox}>
-          <Text style={styles.resultText}>Reference: {result.referenceId}</Text>
-          <Text style={styles.resultText}>Status: Pending verification</Text>
+          <Text style={styles.resultText}>
+            {t("mobilePayments.reference", { reference: result.referenceId })}
+          </Text>
+          <Text style={styles.resultText}>{t("mobilePayments.statusPending")}</Text>
         </View>
       )}
     </ScrollView>

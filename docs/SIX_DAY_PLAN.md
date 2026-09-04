@@ -10,6 +10,11 @@ Planned against `main` at `54eb576`.
 
 ## Read this before day 1
 
+> **All six days are done.** Every row in `PROPOSAL.md` is built; what remains is verification
+> and the server-side half of i18n, both listed in
+> [FEATURE_STATUS.md](./FEATURE_STATUS.md#what-to-do-next-in-order). Each day's entry below
+> records what actually happened, including what it got wrong.
+
 Thirty items in six days is aggressive. This estimate is not padded to look comfortable, and
 scope will not be quietly dropped to hit a day — if something slips it gets called out at the
 end of that day and carried forward explicitly.
@@ -215,27 +220,76 @@ comment.
 
 ---
 
-## Day 6 — Ship-readiness
+## Day 6 — Ship-readiness ✅ done
 
-**Closes the remaining partials.**
-
-Everything that makes the previous five days deployable rather than merely merged. This day is
-not optional padding — without it nothing reaches a school.
+**Closed 5 rows** — the three partials plus the Super Admin companion and the family leave
+application that belonged to no day. Every row in `PROPOSAL.md` is now built.
 
 | # | Chunk | Detail |
 |---|---|---|
-| 1 | Wire 26 admin pages to i18n | The translator, both locales and RTL are built and tested; no admin page calls `t()` yet. This is wiring plus Urdu copy, and it is bigger than "translation content". |
-| 2 | Deploy workflow | API container and web app. CI validates today and ships nothing. |
-| 3 | Tests for the money paths | Payments, invoices, attendance. Money-handling code with no coverage is the riskiest thing left in the repo. Grades picked up coverage on day 4. **Add the library over-borrow race** found on day 5: `availableCopies` is checked and then decremented inside a transaction, which at READ COMMITTED lets two concurrent borrows both pass. The hostel and inventory modules show the fix. |
-| 4 | SMS channel | Alongside WhatsApp, email and push. |
-| 5 | Super Admin mobile companion | Approve signups and read revenue on the move. The proposal marks it optional; it is last for that reason. |
+| 1 | Wire the admin pages to i18n | 46 dashboard pages and, after measuring, all 33 mobile screens. |
+| 2 | Deploy workflow | Image → migrations → API → web, gated on a `production` environment. |
+| 3 | Tests for the money paths | Payments, invoices, attendance. Found four concurrency bugs and two disclosures. |
+| 4 | SMS channel | A fourth channel, routed by a per-school preference. |
+| 5 | Super Admin mobile companion | Approval queue and revenue headline. |
+| 6 | Family absence requests | The orphan row, added on purpose. |
 
-**Closes:** Bilingual UI · Scalable infrastructure · Communication centre · Super Admin mobile
+**Chunks were reordered, deliberately.** The plan numbered i18n first, but chunks 2 and 3 were
+the two named uncuttable and chunk 1 was by far the largest. Doing the uncuttable work first
+meant it could not be squeezed by the wiring job. Nothing was cut.
 
-**Cut line:** Super Admin mobile, then SMS. The deploy workflow and the money-path tests do not
-get cut — if those slip, the honest answer is that day 6 needs a day 7.
+**Chunk 3 was the day's real work, and not because of the tests.** Covering the money paths
+surfaced four concurrency bugs and two disclosures:
 
----
+- **Payment verification lost money.** `amountPaid` was read, added to in JavaScript and
+  written back, so two submissions against one invoice verified at the same moment both read
+  the same balance and the second overwrote the first. The invoice showed one transfer, both
+  submissions read VERIFIED, and a parent who had paid had no record of it. The addition is one
+  statement now.
+- **The library over-borrow race** flagged on day 5, plus the mirror of it on return, where two
+  concurrent returns of one loan both incremented and invented a copy.
+- **`GET /invoices/student/:id` and `GET /attendance/student/:id`** were open to parents and
+  scoped only to the school, so any parent could read another family's fee balance or their
+  child's absences by changing the id in the URL. Twelve other modules route student-scoped
+  reads through `StudentAccessService`; these two didn't.
+
+The pattern in all of them is the same one day 5 named: a check and a write that look atomic
+inside a transaction and aren't. Finding it twice more in the *money* code is the argument for
+covering the three services still untested.
+
+**The i18n chunk was a wiring job that kept finding assumptions.** English grammar assembled at
+runtime — "Mark " plus a lower-cased enum, `role.replace("_", " ")`, `DAY_LABEL[day].slice(0, 3)`,
+`LEAVE_KIND_LABELS[kind].replace(" leave", "")`. Each reads correctly in English by accident of
+word order or Latin script. Enum labels come from the catalogue now, day names carry explicit
+short forms, and screen-reader text on the performance charts translates along with the chart it
+describes. 152 keys became 1,208.
+
+**Day 6 nearly under-delivered on its own promise.** Chunk 1 was scoped as "26 admin pages", and
+that shipped. But the row it was meant to close is "Bilingual UI", and measuring afterwards found
+28 of 33 mobile screens with no `t()` call at all. Closing the row meant doing mobile too. Worth
+noticing that the chunk description and the row it closed had drifted apart — the chunk was
+satisfiable without the row being true.
+
+**What is still English, and named rather than hidden:** everything the server generates.
+WhatsApp and SMS bodies, push text, and the report card, receipt and certificate PDFs. There is
+no reader locale to consult server-side, because nothing stores a language preference against a
+user. That is a schema change, and it is first on the list in `FEATURE_STATUS.md`.
+
+**The absence request was the orphan row, and it is not staff leave.** The leave module already
+said why in a comment: staff leave draws down an annual allowance, a pupil's absence has no
+allowance and exists to change what the register says. So it is its own table, reusing only the
+status enum. Approval converts ABSENT to EXCUSED for days already marked, and the register
+consults approved requests when it is taken — the forward half a purely retroactive fix would
+have missed for every absence reported in advance.
+
+**Cut line not taken.** Super Admin mobile and SMS were named as first to drop; both shipped.
+Building the companion also fixed a platform owner signing in on mobile and landing on the
+parent dashboard, where every link 403'd.
+
+**Not verified locally:** no Docker daemon on this machine, so migrations 027 and 028 have never
+been applied to a real Postgres, and the API image has never been built. CI does both on push —
+and the Dockerfile is now built on every pull request, unpushed, because nothing had ever built
+it and the first deploy would otherwise have been its first test.
 
 ## Two things needed from you
 
@@ -253,32 +307,35 @@ Neither is code, and both block a pilot.
 
 ## Where to push back
 
-**Four of these thirty were on the list for the wrong reason.**
+**Four of these thirty were on the list for the wrong reason**, and all four were built anyway.
 
-Hostel, inventory, live classes and quizzes are each substantial builds, and none of them
-appears anywhere in the gap analysis in `PROPOSAL.md` as a wedge. They are on the roadmap
-because full-featured competitors list them — not because a small Multan private school is
-choosing a platform on them.
+Hostel, inventory, live classes and quizzes are each substantial builds, and none appears
+anywhere in the gap analysis in `PROPOSAL.md` as a wedge. They are on the roadmap because
+full-featured competitors list them — not because a small Multan private school is choosing a
+platform on them.
 
-Two of the four are now built. Live classes and quizzes turned out cheap in this codebase:
-live classes are one table plus a release-window rule, and quizzes reuse `GradeEntry` instead
-of inventing a parallel score store, which is also why they showed up in the performance
-graphs for free. The warning stands for the other two — hostel and inventory are new domains,
-not new views of existing ones, and there is no equivalent lever to pull.
+Live classes and quizzes turned out cheap in this codebase: live classes are one table plus a
+release-window rule, and quizzes reuse `GradeEntry` instead of inventing a parallel score store,
+which is also why they showed up in the performance graphs for free. Hostel and inventory had no
+such lever — they are new domains, not new views of existing ones. They landed on day 5 despite
+the recommendation, because the instruction was to work the day's list. Validate demand for them
+with a pilot school before investing further.
 
-**All four were built.** Hostel and inventory landed on day 5 despite the recommendation above,
-because the instruction was to work the day's list. The recommendation is now moot, and what it
-would have bought — slack for day 6 — was not bought. Day 6 has five chunks and two of them
-(the deploy workflow and the money-path tests) were already named as uncuttable.
+**The estimate held, and it shouldn't be read as a comfortable one.** Thirty items in six days
+was called aggressive at the start. Thirty-five rows closed, no cut line taken on any day, and
+every day green. But two of the six days found bugs in code that had shipped days earlier — day
+5 found the library race, day 6 found four more in the money paths — and both were found by
+writing tests, not by reading. The lesson isn't that the pace was fine; it's that untested code
+was carrying defects the whole time and the schedule was quietly borrowing against them.
 
-**One backlog row still belongs to no day.** Student and parent *leave application* is unbuilt:
-day 3 covered staff leave, and day 6's list doesn't pick up the family side. It is small — the
-staff leave module is most of the shape — but it needs adding to day 6 or dropping on purpose
-rather than quietly not happening.
+**What the six days were actually short of was verification, not time.** No Docker on the
+machine, so no migration after 026 has been applied locally and the deployment image has never
+been built here. Nothing has been run against a real host. The tests are honest about logic and
+say nothing about whether this deploys.
 
 ---
 
-## How each day runs
+## How each day ran
 
 - Say **"do day N"**. The whole day's list gets worked.
 - Each numbered chunk becomes its own commit, pushed as it lands — so progress is visible and

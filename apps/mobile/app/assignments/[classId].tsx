@@ -2,11 +2,14 @@ import { useClassAssignments, useCreateAssignment } from "@skolara/api-client";
 import { Link, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "@skolara/i18n";
 import { colors, spacing, typography } from "@/lib/theme";
+import { intlLocale } from "@/lib/intl";
 import { Button, Card, EmptyState, Input, LoadingLine, Screen, SectionLabel } from "@/lib/ui";
 
 export default function ClassAssignmentsScreen() {
   const { classId } = useLocalSearchParams<{ classId: string }>();
+  const { t, locale } = useTranslation();
   const { data: assignments, isLoading } = useClassAssignments(classId);
   const createAssignment = useCreateAssignment();
 
@@ -30,22 +33,22 @@ export default function ClassAssignmentsScreen() {
   return (
     <Screen>
       <Card>
-        <SectionLabel>Assign homework</SectionLabel>
-        <Input placeholder="Subject" value={subject} onChangeText={setSubject} />
-        <Input placeholder="Title" value={title} onChangeText={setTitle} />
+        <SectionLabel>{t("assignments.assignHomework")}</SectionLabel>
+        <Input placeholder={t("fields.subject")} value={subject} onChangeText={setSubject} />
+        <Input placeholder={t("fields.title")} value={title} onChangeText={setTitle} />
         <Input
-          placeholder="Due date (YYYY-MM-DD)"
+          placeholder={t("mobileAssignments.dueDateHint")}
           value={dueDate}
           onChangeText={setDueDate}
         />
         <Button
-          title="Assign homework"
+          title={t("mobileAssignments.assign")}
           onPress={submit}
           loading={createAssignment.isPending}
         />
       </Card>
 
-      {isLoading && <LoadingLine label="Loading assignments..." />}
+      {isLoading && <LoadingLine label={t("common.loading")} />}
       <FlatList
         data={assignments}
         keyExtractor={(item) => item.id}
@@ -58,13 +61,17 @@ export default function ClassAssignmentsScreen() {
                   <Text style={styles.title}>
                     {item.title} ({item.subject})
                   </Text>
-                  <Text style={styles.due}>due {new Date(item.dueDate).toLocaleDateString()}</Text>
+                  <Text style={styles.due}>
+                    {t("mobileAssignments.dueOn", {
+                      date: new Date(item.dueDate).toLocaleDateString(intlLocale(locale)),
+                    })}
+                  </Text>
                 </View>
               </Card>
             </Pressable>
           </Link>
         )}
-        ListEmptyComponent={!isLoading ? <EmptyState title="No assignments yet" /> : null}
+        ListEmptyComponent={!isLoading ? <EmptyState title={t("mobileAssignments.noAssignments")} /> : null}
       />
     </Screen>
   );

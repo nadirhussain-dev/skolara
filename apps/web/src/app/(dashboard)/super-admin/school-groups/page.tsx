@@ -8,9 +8,12 @@ import {
   useSchoolsInGroup,
 } from "@skolara/api-client";
 import { Button, Card, CardHeader, CardTitle, EmptyState, Input, PageHeader, Select } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useState } from "react";
+import { intlLocale } from "@/lib/intl";
 
 export default function SchoolGroupsPage() {
+  const { t, locale } = useTranslation();
   const { data: groups, isLoading } = useSchoolGroups();
   const { data: schools } = useSchools();
   const createGroup = useCreateSchoolGroup();
@@ -41,34 +44,34 @@ export default function SchoolGroupsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="School groups"
-        description="Organize multi-branch schools under a shared group."
+        title={t("schoolGroups.title")}
+        description={t("schoolGroups.description")}
       />
       <Card>
         <CardHeader>
-          <CardTitle>Create a school group</CardTitle>
+          <CardTitle>{t("schoolGroups.createGroup")}</CardTitle>
         </CardHeader>
         <form onSubmit={handleCreate} className="flex flex-wrap gap-3">
           <Input
-            placeholder="Group name (e.g. Beaconhouse Network)"
+            placeholder={t("schoolGroups.nameHint")}
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="max-w-xs"
           />
           <Button type="submit" disabled={createGroup.isPending}>
-            {createGroup.isPending ? "Creating..." : "Create group"}
+            {createGroup.isPending ? t("schoolGroups.creating") : t("schoolGroups.create")}
           </Button>
         </form>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Groups</CardTitle>
+          <CardTitle>{t("schoolGroups.groups")}</CardTitle>
         </CardHeader>
-        {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {groups?.length === 0 && (
-          <EmptyState title="No school groups yet" description="Create your first group above." />
+          <EmptyState title={t("schoolGroups.noGroups")} description={t("schoolGroups.noGroupsBody")} />
         )}
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {groups?.map((g) => (
@@ -81,7 +84,9 @@ export default function SchoolGroupsPage() {
             >
               <span className="font-medium">{g.name}</span>
               <span className="text-sm text-slate-500">
-                Created {new Date(g.createdAt).toLocaleDateString()}
+                {t("schoolGroups.createdOn", {
+                  date: new Date(g.createdAt).toLocaleDateString(intlLocale(locale)),
+                })}
               </span>
             </button>
           ))}
@@ -91,7 +96,7 @@ export default function SchoolGroupsPage() {
       {groupId && (
         <Card>
           <CardHeader>
-            <CardTitle>Schools in this group</CardTitle>
+            <CardTitle>{t("schoolGroups.schoolsInGroup")}</CardTitle>
           </CardHeader>
           <form onSubmit={handleAssign} className="mb-4 flex flex-wrap gap-3">
             <Select
@@ -100,7 +105,7 @@ export default function SchoolGroupsPage() {
               onChange={(e) => setAssignSchoolId(e.target.value)}
               className="max-w-xs"
             >
-              <option value="">Select school to add</option>
+              <option value="">{t("schoolGroups.selectSchool")}</option>
               {availableSchools?.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -108,10 +113,10 @@ export default function SchoolGroupsPage() {
               ))}
             </Select>
             <Button type="submit" disabled={assignSchool.isPending}>
-              {assignSchool.isPending ? "Adding..." : "Add to group"}
+              {assignSchool.isPending ? t("schoolGroups.adding") : t("schoolGroups.addToGroup")}
             </Button>
           </form>
-          {schoolsInGroup?.length === 0 && <EmptyState title="No schools in this group yet" />}
+          {schoolsInGroup?.length === 0 && <EmptyState title={t("schoolGroups.noSchoolsInGroup")} />}
           <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
             {schoolsInGroup?.map((s) => (
               <div key={s.id} className="flex items-center justify-between py-3">

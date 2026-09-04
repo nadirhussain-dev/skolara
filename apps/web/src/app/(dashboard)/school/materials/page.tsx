@@ -20,8 +20,10 @@ import {
   Select,
   Textarea,
 } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { intlLocale } from "@/lib/intl";
 
 const ACCEPT = allowedMimeTypesFor("STUDY_MATERIAL").join(",");
 
@@ -33,6 +35,7 @@ function fileSize(bytes: number): string {
 
 export default function StudyMaterialsPage() {
   const api = useApiClient();
+  const { t, locale } = useTranslation();
   // Already scoped by the API: a teacher's class list is their own classes.
   const { data: classes } = useQuery<SchoolClass[]>({
     queryKey: ["classes"],
@@ -92,20 +95,20 @@ export default function StudyMaterialsPage() {
       // for the same subject in a row.
       (e.target as HTMLFormElement).reset();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't publish that file");
+      setError(err instanceof Error ? err.message : t("materials.couldNotPublish"));
     }
   }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Study materials"
-        description="Notes, worksheets and past papers, published to a class. Students and parents read them in the app."
+        title={t("materials.title")}
+        description={t("materials.description")}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Publish a file</CardTitle>
+          <CardTitle>{t("materials.publishFile")}</CardTitle>
         </CardHeader>
         <div className="mb-3">
           <Select
@@ -116,7 +119,7 @@ export default function StudyMaterialsPage() {
             }}
             className="max-w-xs"
           >
-            <option value="">Select class</option>
+            <option value="">{t("fields.selectClass")}</option>
             {classes?.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} — {c.section}
@@ -128,14 +131,14 @@ export default function StudyMaterialsPage() {
         <form onSubmit={handlePublish} className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-3">
             <Input
-              placeholder="Subject"
+              placeholder={t("fields.subject")}
               required
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               className="max-w-[180px]"
             />
             <Input
-              placeholder="Title"
+              placeholder={t("fields.title")}
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -150,16 +153,20 @@ export default function StudyMaterialsPage() {
             />
           </div>
           <Textarea
-            placeholder="What is this, and what should they do with it? (optional)"
+            placeholder={t("materials.descriptionHint")}
             rows={2}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
           <div className="flex items-center gap-3">
             <Button type="submit" disabled={busy || !classId || !file}>
-              {upload.isPending ? "Uploading…" : publish.isPending ? "Publishing…" : "Publish"}
+              {upload.isPending
+                ? t("materials.uploading")
+                : publish.isPending
+                  ? t("materials.publishing")
+                  : t("materials.publish")}
             </Button>
-            {!classId && <p className="text-sm text-slate-500">Pick a class first.</p>}
+            {!classId && <p className="text-sm text-slate-500">{t("materials.pickClassFirst")}</p>}
           </div>
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </form>
@@ -167,7 +174,7 @@ export default function StudyMaterialsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Class library</CardTitle>
+          <CardTitle>{t("materials.classLibrary")}</CardTitle>
         </CardHeader>
 
         {subjects.length > 1 && (
@@ -176,7 +183,7 @@ export default function StudyMaterialsPage() {
               variant={subjectFilter ? "ghost" : "secondary"}
               onClick={() => setSubjectFilter("")}
             >
-              All
+              {t("common.all")}
             </Button>
             {subjects.map((s) => (
               <Button
@@ -190,13 +197,13 @@ export default function StudyMaterialsPage() {
           </div>
         )}
 
-        {!classId && <p className="text-sm text-slate-500">Select a class to see its library.</p>}
-        {classId && isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+        {!classId && <p className="text-sm text-slate-500">{t("materials.selectClassForLibrary")}</p>}
+        {classId && isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {classId && !isLoading && visible.length === 0 && (
           <EmptyState
             icon="📚"
-            title="Nothing published yet."
-            description="Files you publish here show up in the parent and student app straight away."
+            title={t("materials.nothingPublished")}
+            description={t("materials.nothingPublishedBody")}
           />
         )}
 
@@ -219,12 +226,14 @@ export default function StudyMaterialsPage() {
                   <p className="mt-1 text-sm text-slate-500">{material.description}</p>
                 )}
                 <p className="mt-1 text-xs text-slate-400">
-                  {fileSize(material.sizeBytes)} ·{" "}
-                  {material.uploadedByUser.firstName} {material.uploadedByUser.lastName} ·{" "}
-                  {new Date(material.createdAt).toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
+                  {t("materials.fileMeta", {
+                    size: fileSize(material.sizeBytes),
+                    uploader: `${material.uploadedByUser.firstName} ${material.uploadedByUser.lastName}`,
+                    date: new Date(material.createdAt).toLocaleDateString(intlLocale(locale), {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    }),
                   })}
                 </p>
               </div>
@@ -233,7 +242,7 @@ export default function StudyMaterialsPage() {
                 className="shrink-0"
                 onClick={() => withdraw.mutate(material.id)}
               >
-                Withdraw
+                {t("materials.withdraw")}
               </Button>
             </li>
           ))}

@@ -24,18 +24,25 @@ import {
   Select,
   StatCard,
 } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { intlLocale } from "@/lib/intl";
 
 /** Beds as a row of pills — the fastest way to see what's free at a glance. */
 function BedStrip({ capacity, freeBeds }: { capacity: number; freeBeds: number[] }) {
+  const { t } = useTranslation();
   const free = new Set(freeBeds);
   return (
     <div className="flex flex-wrap gap-1">
       {Array.from({ length: capacity }, (_, index) => index + 1).map((bed) => (
         <span
           key={bed}
-          title={free.has(bed) ? `Bed ${bed} — free` : `Bed ${bed} — occupied`}
+          title={
+            free.has(bed)
+              ? t("hostel.bedFree", { bed })
+              : t("hostel.bedOccupied", { bed })
+          }
           className={
             free.has(bed)
               ? "inline-flex h-6 w-6 items-center justify-center rounded-md border border-dashed border-slate-300 text-xs tabular-nums text-slate-400 dark:border-slate-700 dark:text-slate-500"
@@ -50,6 +57,7 @@ function BedStrip({ capacity, freeBeds }: { capacity: number; freeBeds: number[]
 }
 
 export default function HostelPage() {
+  const { t, locale } = useTranslation();
   const api = useApiClient();
   const { data: summary } = useHostelSummary();
   const [onlyFree, setOnlyFree] = useState(false);
@@ -92,7 +100,7 @@ export default function HostelPage() {
       });
       setRoomNumber("");
     } catch (err) {
-      setRoomError(err instanceof Error ? err.message : "Couldn't add that room");
+      setRoomError(err instanceof Error ? err.message : t("hostel.couldNotAddRoom"));
     }
   }
 
@@ -113,38 +121,42 @@ export default function HostelPage() {
       setStudentId("");
       setBedNumber("");
     } catch (err) {
-      setAllocateError(err instanceof Error ? err.message : "Couldn't allocate that bed");
+      setAllocateError(err instanceof Error ? err.message : t("hostel.couldNotAllocate"));
     }
   }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Hostel"
-        description="Rooms, beds and who is in them. Occupancy follows from the allocations."
+        title={t("hostel.title")}
+        description={t("hostel.description")}
       />
 
       {summary && (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <StatCard label="Rooms" value={summary.rooms} icon="🚪" />
-          <StatCard label="Beds" value={summary.capacity} icon="🛏️" />
-          <StatCard label="Occupied" value={summary.occupied} icon="🧑‍🎓" />
-          <StatCard label="Occupancy" value={`${summary.occupancyRate}%`} icon="📊" />
+          <StatCard label={t("hostel.rooms")} value={summary.rooms} icon="🚪" />
+          <StatCard label={t("hostel.beds")} value={summary.capacity} icon="🛏️" />
+          <StatCard label={t("hostel.occupied")} value={summary.occupied} icon="🧑‍🎓" />
+          <StatCard label={t("hostel.occupancy")} value={`${summary.occupancyRate}%`} icon="📊" />
         </div>
       )}
 
       {(summary?.byBlock.length ?? 0) > 1 && (
         <Card>
           <CardHeader>
-            <CardTitle>By block</CardTitle>
+            <CardTitle>{t("hostel.byBlock")}</CardTitle>
           </CardHeader>
           <ul className="flex flex-col gap-2">
             {summary?.byBlock.map((block) => (
               <li key={block.blockName} className="flex items-center justify-between gap-3">
                 <span className="font-medium">{block.blockName}</span>
                 <span className="text-sm tabular-nums text-slate-500">
-                  {block.occupied}/{block.capacity} beds · {block.rooms} room
-                  {block.rooms === 1 ? "" : "s"} · {block.occupancyRate}%
+                  {t(block.rooms === 1 ? "hostel.blockSummary" : "hostel.blockSummaryPlural", {
+                    occupied: block.occupied,
+                    capacity: block.capacity,
+                    rooms: block.rooms,
+                    rate: block.occupancyRate,
+                  })}
                 </span>
               </li>
             ))}
@@ -154,11 +166,11 @@ export default function HostelPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Add a room</CardTitle>
+          <CardTitle>{t("hostel.addRoom")}</CardTitle>
         </CardHeader>
         <form onSubmit={handleCreateRoom} className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-sm">
-            Block
+            {t("hostel.block")}
             <Input
               required
               value={blockName}
@@ -167,7 +179,7 @@ export default function HostelPage() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Room
+            {t("hostel.room")}
             <Input
               required
               value={roomNumber}
@@ -176,7 +188,7 @@ export default function HostelPage() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Floor
+            {t("hostel.floor")}
             <Input
               type="number"
               placeholder="—"
@@ -186,7 +198,7 @@ export default function HostelPage() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Beds
+            {t("hostel.beds")}
             <Input
               type="number"
               min={1}
@@ -197,7 +209,7 @@ export default function HostelPage() {
             />
           </label>
           <Button type="submit" disabled={createRoom.isPending}>
-            {createRoom.isPending ? "Adding…" : "Add room"}
+            {createRoom.isPending ? t("hostel.adding") : t("hostel.add")}
           </Button>
           {roomError && <p className="text-sm text-rose-600">{roomError}</p>}
         </form>
@@ -205,19 +217,19 @@ export default function HostelPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Rooms</CardTitle>
+          <CardTitle>{t("hostel.rooms")}</CardTitle>
         </CardHeader>
         <div className="mb-3">
           <Button variant="ghost" onClick={() => setOnlyFree((current) => !current)}>
-            {onlyFree ? "Show all rooms" : "Only rooms with free beds"}
+            {onlyFree ? t("hostel.showAllRooms") : t("hostel.onlyFreeBeds")}
           </Button>
         </div>
-        {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {!isLoading && rooms?.length === 0 && (
           <EmptyState
             icon="🏨"
-            title={onlyFree ? "Every room is full." : "No rooms yet."}
-            description={onlyFree ? undefined : "Add a block and room number above."}
+            title={onlyFree ? t("hostel.everyRoomFull") : t("hostel.noRooms")}
+            description={onlyFree ? undefined : t("hostel.noRoomsBody")}
           />
         )}
         <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
@@ -229,13 +241,13 @@ export default function HostelPage() {
                     {entry.blockName} {entry.roomNumber}
                   </p>
                   {entry.floor !== null && (
-                    <Badge tone="neutral">Floor {entry.floor}</Badge>
+                    <Badge tone="neutral">{t("hostel.floorBadge", { floor: entry.floor })}</Badge>
                   )}
                   {entry.freeBeds.length === 0 ? (
-                    <Badge tone="warning">Full</Badge>
+                    <Badge tone="warning">{t("hostel.full")}</Badge>
                   ) : (
                     <Badge tone="success">
-                      {entry.freeBeds.length} free
+                      {t("hostel.freeCount", { count: entry.freeBeds.length })}
                     </Badge>
                   )}
                 </div>
@@ -250,11 +262,11 @@ export default function HostelPage() {
                     setOpenRoomId((current) => (current === entry.roomId ? undefined : entry.roomId))
                   }
                 >
-                  {openRoomId === entry.roomId ? "Close" : "Manage"}
+                  {openRoomId === entry.roomId ? t("common.close") : t("hostel.manage")}
                 </Button>
                 {entry.occupied === 0 && (
                   <Button variant="ghost" onClick={() => removeRoom.mutate(entry.roomId)}>
-                    Delete
+                    {t("common.delete")}
                   </Button>
                 )}
               </div>
@@ -267,20 +279,25 @@ export default function HostelPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {room.blockName} {room.roomNumber} — {room.residents.length}/{room.capacity} beds
+              {t("hostel.roomHeading", {
+                block: room.blockName,
+                room: room.roomNumber,
+                occupied: room.residents.length,
+                capacity: room.capacity,
+              })}
             </CardTitle>
           </CardHeader>
 
           <form onSubmit={handleAllocate} className="mb-4 flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              Student
+              {t("performance.student")}
               <Select
                 required
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}
                 className="max-w-xs"
               >
-                <option value="">Select student</option>
+                <option value="">{t("fields.selectStudent")}</option>
                 {students?.map((student) => (
                   <option key={student.id} value={student.id}>
                     {student.user.firstName} {student.user.lastName} · {student.admissionNumber}
@@ -289,55 +306,55 @@ export default function HostelPage() {
               </Select>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              Bed
+              {t("hostel.bed")}
               <Select
                 value={bedNumber}
                 onChange={(e) => setBedNumber(e.target.value)}
                 className="max-w-[140px]"
               >
-                <option value="">Any free bed</option>
+                <option value="">{t("hostel.anyFreeBed")}</option>
                 {room.freeBeds.map((bed) => (
                   <option key={bed} value={bed}>
-                    Bed {bed}
+                    {t("hostel.bedNumbered", { bed })}
                   </option>
                 ))}
               </Select>
             </label>
             <Button type="submit" disabled={allocate.isPending || room.freeBeds.length === 0}>
-              {allocate.isPending ? "Allocating…" : "Allocate"}
+              {allocate.isPending ? t("hostel.allocating") : t("hostel.allocate")}
             </Button>
             {room.freeBeds.length === 0 && (
-              <p className="text-sm text-slate-500">This room is full.</p>
+              <p className="text-sm text-slate-500">{t("hostel.roomIsFull")}</p>
             )}
             {allocateError && <p className="text-sm text-rose-600">{allocateError}</p>}
           </form>
 
-          {room.residents.length === 0 && <EmptyState title="Nobody in this room yet." />}
+          {room.residents.length === 0 && <EmptyState title={t("hostel.nobodyInRoom")} />}
           <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
             {room.residents.map((resident) => (
               <li key={resident.id} className="flex items-center justify-between gap-4 py-3">
                 <div>
                   <p className="font-medium">
                     <span className="mr-2 text-sm tabular-nums text-slate-400">
-                      Bed {resident.bedNumber}
+                      {t("hostel.bedNumbered", { bed: resident.bedNumber })}
                     </span>
                     {resident.student.user.firstName} {resident.student.user.lastName}
                   </p>
                   <p className="mt-1 text-sm text-slate-500">
-                    {resident.student.admissionNumber}
-                    {resident.student.class
-                      ? ` · ${resident.student.class.name} ${resident.student.class.section}`
-                      : ""}
-                    {" · in since "}
-                    {new Date(resident.allocatedAt).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
+                    {t("hostel.residentMeta", {
+                      admissionNumber: resident.student.admissionNumber,
+                      className: resident.student.class
+                        ? ` · ${resident.student.class.name} ${resident.student.class.section}`
+                        : "",
+                      date: new Date(resident.allocatedAt).toLocaleDateString(
+                        intlLocale(locale),
+                        { day: "numeric", month: "short", year: "numeric" },
+                      ),
                     })}
                   </p>
                 </div>
                 <Button variant="ghost" onClick={() => vacate.mutate(resident.id)}>
-                  Move out
+                  {t("hostel.moveOut")}
                 </Button>
               </li>
             ))}
@@ -346,19 +363,22 @@ export default function HostelPage() {
           {room.past.length > 0 && (
             <details className="mt-4">
               <summary className="cursor-pointer text-sm text-slate-500">
-                Past residents ({room.past.length})
+                {t("hostel.pastResidents", { count: room.past.length })}
               </summary>
               <ul className="mt-2 flex flex-col gap-1 text-sm text-slate-500">
                 {room.past.map((resident) => (
                   <li key={resident.id}>
-                    Bed {resident.bedNumber} · {resident.student.user.firstName}{" "}
-                    {resident.student.user.lastName} · until{" "}
-                    {resident.vacatedAt &&
-                      new Date(resident.vacatedAt).toLocaleDateString("en-GB", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
+                    {t("hostel.pastResident", {
+                      bed: resident.bedNumber,
+                      name: `${resident.student.user.firstName} ${resident.student.user.lastName}`,
+                      date: resident.vacatedAt
+                        ? new Date(resident.vacatedAt).toLocaleDateString(intlLocale(locale), {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : "",
+                    })}
                   </li>
                 ))}
               </ul>

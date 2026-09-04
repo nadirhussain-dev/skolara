@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuditLogs } from "@skolara/api-client";
-import type { AuditOutcome } from "@skolara/types";
+import type { AuditOutcome, RoleType } from "@skolara/types";
 import {
   Badge,
   Button,
@@ -12,12 +12,14 @@ import {
   PageHeader,
   Select,
 } from "@skolara/ui";
+import { useTranslation, type MessageKey } from "@skolara/i18n";
 import { useState } from "react";
+import { intlLocale } from "@/lib/intl";
 
-const OUTCOME_FILTERS: { value: string; label: string }[] = [
-  { value: "", label: "All activity" },
-  { value: "FAILURE", label: "Failures only" },
-  { value: "SUCCESS", label: "Successes only" },
+const OUTCOME_FILTERS: { value: string; labelKey: MessageKey }[] = [
+  { value: "", labelKey: "auditLog.allActivity" },
+  { value: "FAILURE", labelKey: "auditLog.failuresOnly" },
+  { value: "SUCCESS", labelKey: "auditLog.successesOnly" },
 ];
 
 /** `SchoolsController.approve` reads better as "Schools · approve". */
@@ -27,6 +29,7 @@ function humanizeAction(action: string): string {
 }
 
 export default function AuditLogsPage() {
+  const { t, locale } = useTranslation();
   const [outcome, setOutcome] = useState<"" | AuditOutcome>("");
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useAuditLogs(outcome || undefined);
@@ -36,13 +39,13 @@ export default function AuditLogsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Audit log"
-        description="Every change made in your school, and who made it."
+        title={t("auditLog.title")}
+        description={t("auditLog.description")}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Activity</CardTitle>
+          <CardTitle>{t("auditLog.activity")}</CardTitle>
         </CardHeader>
 
         <Select
@@ -52,14 +55,14 @@ export default function AuditLogsPage() {
         >
           {OUTCOME_FILTERS.map((filter) => (
             <option key={filter.value} value={filter.value}>
-              {filter.label}
+              {t(filter.labelKey)}
             </option>
           ))}
         </Select>
 
-        {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {!isLoading && entries.length === 0 && (
-          <EmptyState title="No activity recorded yet" />
+          <EmptyState title={t("auditLog.noActivity")} />
         )}
 
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
@@ -71,12 +74,12 @@ export default function AuditLogsPage() {
                   {entry.actorUser
                     ? `${entry.actorUser.firstName} ${entry.actorUser.lastName}`
                     : entry.actorLabel}
-                  {entry.actorRole ? ` · ${entry.actorRole.replace("_", " ")}` : ""}
+                  {entry.actorRole ? ` · ${t(`roles.${entry.actorRole as RoleType}`)}` : ""}
                   {" · "}
                   {entry.method} {entry.path}
                 </p>
                 <p className="text-xs text-slate-400">
-                  {new Date(entry.createdAt).toLocaleString()}
+                  {new Date(entry.createdAt).toLocaleString(intlLocale(locale))}
                   {entry.ipAddress ? ` · ${entry.ipAddress}` : ""}
                 </p>
               </div>
@@ -94,7 +97,7 @@ export default function AuditLogsPage() {
             disabled={isFetchingNextPage}
             onClick={() => fetchNextPage()}
           >
-            {isFetchingNextPage ? "Loading..." : "Load more"}
+            {isFetchingNextPage ? t("common.loading") : t("auditLog.loadMore")}
           </Button>
         )}
       </Card>

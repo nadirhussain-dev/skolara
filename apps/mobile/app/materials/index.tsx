@@ -1,7 +1,9 @@
 import { useMyChildren, useStudentStudyMaterials } from "@skolara/api-client";
 import { useMemo, useState } from "react";
 import { Alert, FlatList, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "@skolara/i18n";
 import { spacing, typography } from "@/lib/theme";
+import { intlLocale } from "@/lib/intl";
 import { Card, Chip, EmptyState, LoadingLine, Pill, Screen } from "@/lib/ui";
 
 function fileSize(bytes: number): string {
@@ -11,6 +13,7 @@ function fileSize(bytes: number): string {
 }
 
 export default function StudyMaterialsScreen() {
+  const { t, locale } = useTranslation();
   const { data: children } = useMyChildren();
   const [studentId, setStudentId] = useState<string>();
   const [subject, setSubject] = useState<string>();
@@ -32,7 +35,7 @@ export default function StudyMaterialsScreen() {
     // the library accepts.
     const supported = await Linking.canOpenURL(url);
     if (!supported) {
-      Alert.alert("Can't open that", "No app on this phone can open this file.");
+      Alert.alert(t("mobileFamilyWork.cantOpen"), t("mobileFamilyWork.cantOpenBody"));
       return;
     }
     await Linking.openURL(url);
@@ -58,14 +61,14 @@ export default function StudyMaterialsScreen() {
 
       {subjects.length > 1 && (
         <View style={styles.chipRow}>
-          <Chip label="All" active={!subject} onPress={() => setSubject(undefined)} />
+          <Chip label={t("common.all")} active={!subject} onPress={() => setSubject(undefined)} />
           {subjects.map((s) => (
             <Chip key={s} label={s} active={subject === s} onPress={() => setSubject(s)} />
           ))}
         </View>
       )}
 
-      {isLoading && <LoadingLine label="Loading materials..." />}
+      {isLoading && <LoadingLine label={t("common.loading")} />}
 
       <FlatList
         data={visible}
@@ -80,11 +83,13 @@ export default function StudyMaterialsScreen() {
               </View>
               {item.description ? <Text style={styles.meta}>{item.description}</Text> : null}
               <Text style={styles.meta}>
-                {fileSize(item.sizeBytes)} · {item.uploadedByUser.firstName}{" "}
-                {item.uploadedByUser.lastName} ·{" "}
-                {new Date(item.createdAt).toLocaleDateString("en-GB", {
-                  day: "numeric",
-                  month: "short",
+                {t("mobileFamilyWork.fileMeta", {
+                  size: fileSize(item.sizeBytes),
+                  uploader: `${item.uploadedByUser.firstName} ${item.uploadedByUser.lastName}`,
+                  date: new Date(item.createdAt).toLocaleDateString(intlLocale(locale), {
+                    day: "numeric",
+                    month: "short",
+                  }),
                 })}
               </Text>
             </Card>
@@ -93,8 +98,8 @@ export default function StudyMaterialsScreen() {
         ListEmptyComponent={
           !isLoading ? (
             <EmptyState
-              title="Nothing published yet"
-              description="Notes and worksheets your teachers share will appear here."
+              title={t("materials.nothingPublished")}
+              description={t("mobileFamilyWork.noMaterialsBody")}
             />
           ) : null
         }

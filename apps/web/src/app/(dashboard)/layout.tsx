@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslation } from "@skolara/i18n";
 import { Spinner } from "@skolara/ui";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -12,6 +13,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
@@ -23,7 +25,7 @@ export default function DashboardLayout({
     return (
       <div className="flex min-h-screen items-center justify-center gap-2 text-slate-500">
         <Spinner className="h-5 w-5" />
-        <p className="text-sm">Loading...</p>
+        <p className="text-sm">{t("common.loading")}</p>
       </div>
     );
   }

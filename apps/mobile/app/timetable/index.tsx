@@ -8,19 +8,10 @@ import {
 import { TEACHING_DAYS, type DayOfWeek } from "@skolara/types";
 import { useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "@skolara/i18n";
 import { useSession } from "@/lib/session";
 import { colors, spacing, typography } from "@/lib/theme";
 import { Card, Chip, EmptyState, LoadingLine, Screen, SectionLabel } from "@/lib/ui";
-
-const DAY_LABEL: Record<DayOfWeek, string> = {
-  MONDAY: "Monday",
-  TUESDAY: "Tuesday",
-  WEDNESDAY: "Wednesday",
-  THURSDAY: "Thursday",
-  FRIDAY: "Friday",
-  SATURDAY: "Saturday",
-  SUNDAY: "Sunday",
-};
 
 /**
  * One screen for both audiences. A teacher sees the lessons they teach; a
@@ -30,6 +21,7 @@ const DAY_LABEL: Record<DayOfWeek, string> = {
  */
 export default function TimetableScreen() {
   const { role } = useSession();
+  const { t } = useTranslation();
   const isTeacher = role === "TEACHER";
 
   const { data: children } = useMyChildren();
@@ -71,21 +63,21 @@ export default function TimetableScreen() {
           </View>
         )}
 
-        {query.isLoading && <LoadingLine label="Loading timetable..." />}
+        {query.isLoading && <LoadingLine label={t("common.loading")} />}
 
         {!query.isLoading && byDay.size === 0 && (
           <EmptyState
             title={
               isTeacher
-                ? "No lessons scheduled yet."
-                : "No timetable published for this class yet."
+                ? t("timetable.noLessonsScheduled")
+                : t("mobileFamilyWork.noTimetableForClass")
             }
           />
         )}
 
         {TEACHING_DAYS.filter((day) => byDay.has(day)).map((day) => (
           <View key={day} style={styles.daySection}>
-            <SectionLabel>{DAY_LABEL[day]}</SectionLabel>
+            <SectionLabel>{t(`days.long.${day}`)}</SectionLabel>
             {byDay.get(day)?.map((entry) => {
               const period = periods?.find((p) => p.id === entry.periodId);
               return (

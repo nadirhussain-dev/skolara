@@ -2,6 +2,7 @@ import { useSendMessage, useThreadMessages } from "@skolara/api-client";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "@skolara/i18n";
 import { getStoredAccessToken } from "@/lib/api-client";
 import { decodeJwtSubject } from "@/lib/jwt";
 import { colors, radius, spacing } from "@/lib/theme";
@@ -9,6 +10,7 @@ import { Button, Input, Screen } from "@/lib/ui";
 
 export default function ThreadScreen() {
   const { threadId } = useLocalSearchParams<{ threadId: string }>();
+  const { t } = useTranslation();
   const { data: messages, isLoading } = useThreadMessages(threadId);
   const sendMessage = useSendMessage();
   const [body, setBody] = useState("");
@@ -28,7 +30,7 @@ export default function ThreadScreen() {
 
   return (
     <Screen>
-      {isLoading && <Text style={styles.loading}>Loading messages...</Text>}
+      {isLoading && <Text style={styles.loading}>{t("common.loading")}</Text>}
       <FlatList
         style={{ flex: 1 }}
         contentContainerStyle={{ gap: spacing.xs }}
@@ -48,8 +50,13 @@ export default function ThreadScreen() {
         )}
       />
       <View style={styles.inputRow}>
-        <Input placeholder="Message" value={body} onChangeText={setBody} style={{ flex: 1 }} />
-        <Button title="Send" onPress={submit} style={styles.sendButton} />
+        <Input
+          placeholder={t("messaging.messagePlaceholder")}
+          value={body}
+          onChangeText={setBody}
+          style={{ flex: 1 }}
+        />
+        <Button title={t("messaging.send")} onPress={submit} style={styles.sendButton} />
       </View>
     </Screen>
   );

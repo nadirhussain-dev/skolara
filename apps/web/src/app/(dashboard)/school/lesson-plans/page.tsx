@@ -11,12 +11,7 @@ import {
   useSyllabusTopics,
   useUpdateSyllabusTopic,
 } from "@skolara/api-client";
-import {
-  SYLLABUS_STATUS_LABELS,
-  type Period,
-  type SchoolClass,
-  type SyllabusTopicStatus,
-} from "@skolara/types";
+import type { Period, SchoolClass, SyllabusTopicStatus } from "@skolara/types";
 import {
   Badge,
   Button,
@@ -29,8 +24,10 @@ import {
   Select,
   Textarea,
 } from "@skolara/ui";
+import { useTranslation, type MessageKey } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { intlLocale } from "@/lib/intl";
 
 const STATUS_TONE: Record<SyllabusTopicStatus, "neutral" | "warning" | "success"> = {
   NOT_STARTED: "neutral",
@@ -45,6 +42,17 @@ const NEXT_STATUS: Record<SyllabusTopicStatus, SyllabusTopicStatus> = {
   COMPLETED: "NOT_STARTED",
 };
 
+/**
+ * The button's whole phrase, keyed by the status it moves to — rather than
+ * "Mark " followed by a lower-cased label, which only parses as a sentence in
+ * English.
+ */
+const ADVANCE_LABEL: Record<SyllabusTopicStatus, MessageKey> = {
+  NOT_STARTED: "lessonPlans.markNotStarted",
+  IN_PROGRESS: "lessonPlans.markInProgress",
+  COMPLETED: "lessonPlans.markCovered",
+};
+
 function CoverageBar({ percent }: { percent: number }) {
   return (
     <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
@@ -57,6 +65,7 @@ function CoverageBar({ percent }: { percent: number }) {
 }
 
 export default function LessonPlansPage() {
+  const { t, locale } = useTranslation();
   const api = useApiClient();
   const { data: classes } = useQuery<SchoolClass[]>({
     queryKey: ["classes"],
@@ -130,11 +139,14 @@ export default function LessonPlansPage() {
       setTopicList("");
       setTopicMessage(
         result.added === result.requested
-          ? `Added ${result.added} topics.`
-          : `Added ${result.added} of ${result.requested} — the rest were already listed.`,
+          ? t("lessonPlans.addedAll", { count: result.added })
+          : t("lessonPlans.addedSome", {
+              added: result.added,
+              requested: result.requested,
+            }),
       );
     } catch (err) {
-      setTopicError(err instanceof Error ? err.message : "Couldn't add those topics");
+      setTopicError(err instanceof Error ? err.message : t("lessonPlans.couldNotAddTopics"));
     }
   }
 
@@ -159,27 +171,27 @@ export default function LessonPlansPage() {
       setPlanResources("");
       setPlanTopicId("");
     } catch (err) {
-      setPlanError(err instanceof Error ? err.message : "Couldn't save that lesson plan");
+      setPlanError(err instanceof Error ? err.message : t("lessonPlans.couldNotSavePlan"));
     }
   }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Lesson planning & syllabus"
-        description="What you mean to teach, and how much of the term's syllabus is actually covered."
+        title={t("lessonPlans.title")}
+        description={t("lessonPlans.description")}
       />
 
       <Card>
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-sm">
-            Class
+            {t("reportCards.class")}
             <Select
               value={classId}
               onChange={(e) => setClassId(e.target.value)}
               className="max-w-xs"
             >
-              <option value="">Select class</option>
+              <option value="">{t("fields.selectClass")}</option>
               {classes?.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name} — {c.section}
@@ -188,9 +200,9 @@ export default function LessonPlansPage() {
             </Select>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Term
+            {t("fields.term")}
             <Input
-              placeholder="all terms"
+              placeholder={t("lessonPlans.allTerms")}
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               className="max-w-[200px]"
@@ -203,8 +215,8 @@ export default function LessonPlansPage() {
         <Card>
           <EmptyState
             icon="🗂️"
-            title="Pick a class."
-            description="Syllabus coverage and lesson plans are per class and subject."
+            title={t("lessonPlans.pickClass")}
+            description={t("lessonPlans.pickClassBody")}
           />
         </Card>
       )}
@@ -213,12 +225,12 @@ export default function LessonPlansPage() {
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Syllabus coverage</CardTitle>
+              <CardTitle>{t("lessonPlans.coverage")}</CardTitle>
             </CardHeader>
             {coverage?.length === 0 && (
               <EmptyState
-                title="No syllabus entered yet."
-                description="Add the term's topics below and coverage follows from their status."
+                title={t("lessonPlans.noSyllabus")}
+                description={t("lessonPlans.noSyllabusBody")}
               />
             )}
             <div className="flex flex-col gap-4">
@@ -230,9 +242,15 @@ export default function LessonPlansPage() {
                       <span className="ml-2 text-sm font-normal text-slate-400">{row.term}</span>
                     </p>
                     <p className="text-sm tabular-nums text-slate-500">
-                      {row.completed}/{row.total} covered · {row.percentComplete}%
+                      {t("lessonPlans.coverageSummary", {
+                        completed: row.completed,
+                        total: row.total,
+                        percent: row.percentComplete,
+                      })}
                       {row.overdue > 0 && (
-                        <span className="ml-2 text-rose-600">{row.overdue} overdue</span>
+                        <span className="ml-2 text-rose-600">
+                          {t("lessonPlans.overdueCount", { count: row.overdue })}
+                        </span>
                       )}
                     </p>
                   </div>
@@ -244,20 +262,20 @@ export default function LessonPlansPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Add syllabus topics</CardTitle>
+              <CardTitle>{t("lessonPlans.addTopics")}</CardTitle>
             </CardHeader>
             <form onSubmit={handleAddTopics} className="flex flex-col gap-3">
               <div className="flex flex-wrap gap-3">
                 <Input
                   required
-                  placeholder="Subject"
+                  placeholder={t("fields.subject")}
                   value={topicSubject}
                   onChange={(e) => setTopicSubject(e.target.value)}
                   className="max-w-[180px]"
                 />
                 <Input
                   required
-                  placeholder="Term"
+                  placeholder={t("fields.term")}
                   value={topicTerm}
                   onChange={(e) => setTopicTerm(e.target.value)}
                   className="max-w-[180px]"
@@ -266,13 +284,13 @@ export default function LessonPlansPage() {
               <Textarea
                 required
                 rows={5}
-                placeholder={"One topic per line\nWaves and sound\nRefraction\nLenses"}
+                placeholder={t("lessonPlans.topicListHint")}
                 value={topicList}
                 onChange={(e) => setTopicList(e.target.value)}
               />
               <div className="flex items-center gap-3">
                 <Button type="submit" disabled={addTopics.isPending}>
-                  {addTopics.isPending ? "Adding…" : "Add topics"}
+                  {addTopics.isPending ? t("lessonPlans.addingTopics") : t("lessonPlans.addTopicsAction")}
                 </Button>
                 {topicMessage && <p className="text-sm text-emerald-600">{topicMessage}</p>}
                 {topicError && <p className="text-sm text-rose-600">{topicError}</p>}
@@ -282,9 +300,9 @@ export default function LessonPlansPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Topics</CardTitle>
+              <CardTitle>{t("lessonPlans.topics")}</CardTitle>
             </CardHeader>
-            {topics?.length === 0 && <EmptyState title="No topics yet." />}
+            {topics?.length === 0 && <EmptyState title={t("lessonPlans.noTopics")} />}
             <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
               {topics?.map((topic) => (
                 <li key={topic.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
@@ -293,19 +311,34 @@ export default function LessonPlansPage() {
                       <p className="font-medium">{topic.title}</p>
                       <Badge tone="neutral">{topic.subject}</Badge>
                       <Badge tone={STATUS_TONE[topic.status]}>
-                        {SYLLABUS_STATUS_LABELS[topic.status]}
+                        {t(`syllabusStatus.${topic.status}`)}
                       </Badge>
                     </div>
                     <p className="mt-1 text-sm text-slate-500">
                       {topic.term}
                       {topic.plannedForDate
-                        ? ` · planned ${new Date(topic.plannedForDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
+                        ? t("lessonPlans.plannedOn", {
+                            date: new Date(topic.plannedForDate).toLocaleDateString(
+                              intlLocale(locale),
+                              { day: "numeric", month: "short" },
+                            ),
+                          })
                         : ""}
                       {topic.completedOn
-                        ? ` · covered ${new Date(topic.completedOn).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
+                        ? t("lessonPlans.coveredOn", {
+                            date: new Date(topic.completedOn).toLocaleDateString(
+                              intlLocale(locale),
+                              { day: "numeric", month: "short" },
+                            ),
+                          })
                         : ""}
                       {topic._count.lessons > 0
-                        ? ` · ${topic._count.lessons} lesson${topic._count.lessons === 1 ? "" : "s"}`
+                        ? t(
+                            topic._count.lessons === 1
+                              ? "lessonPlans.lessonCount"
+                              : "lessonPlans.lessonCountPlural",
+                            { count: topic._count.lessons },
+                          )
                         : ""}
                     </p>
                   </div>
@@ -319,10 +352,10 @@ export default function LessonPlansPage() {
                         })
                       }
                     >
-                      Mark {SYLLABUS_STATUS_LABELS[NEXT_STATUS[topic.status]].toLowerCase()}
+                      {t(ADVANCE_LABEL[NEXT_STATUS[topic.status]])}
                     </Button>
                     <Button variant="ghost" onClick={() => removeTopic.mutate(topic.id)}>
-                      Remove
+                      {t("common.remove")}
                     </Button>
                   </div>
                 </li>
@@ -332,13 +365,13 @@ export default function LessonPlansPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>New lesson plan</CardTitle>
+              <CardTitle>{t("lessonPlans.newPlan")}</CardTitle>
             </CardHeader>
             <form onSubmit={handleCreatePlan} className="flex flex-col gap-3">
               <div className="flex flex-wrap gap-3">
                 <Input
                   required
-                  placeholder="Subject"
+                  placeholder={t("fields.subject")}
                   value={planSubject}
                   onChange={(e) => {
                     setPlanSubject(e.target.value);
@@ -350,7 +383,7 @@ export default function LessonPlansPage() {
                 />
                 <Input
                   required
-                  placeholder="Lesson title"
+                  placeholder={t("lessonPlans.lessonTitle")}
                   value={planTitle}
                   onChange={(e) => setPlanTitle(e.target.value)}
                   className="max-w-[240px]"
@@ -367,7 +400,7 @@ export default function LessonPlansPage() {
                   onChange={(e) => setPlanPeriodId(e.target.value)}
                   className="max-w-[180px]"
                 >
-                  <option value="">Any period</option>
+                  <option value="">{t("lessonPlans.anyPeriod")}</option>
                   {periods?.map((period) => (
                     <option key={period.id} value={period.id}>
                       {period.name} · {period.startTime}
@@ -380,7 +413,7 @@ export default function LessonPlansPage() {
                   className="max-w-[240px]"
                   disabled={pinnableTopics.length === 0}
                 >
-                  <option value="">No syllabus topic</option>
+                  <option value="">{t("lessonPlans.noTopicPinned")}</option>
                   {pinnableTopics.map((topic) => (
                     <option key={topic.id} value={topic.id}>
                       {topic.title}
@@ -390,25 +423,25 @@ export default function LessonPlansPage() {
               </div>
               <Textarea
                 rows={2}
-                placeholder="Objectives — what should they be able to do afterwards? (optional)"
+                placeholder={t("lessonPlans.objectivesHint")}
                 value={planObjectives}
                 onChange={(e) => setPlanObjectives(e.target.value)}
               />
               <Textarea
                 rows={3}
-                placeholder="Activities (optional)"
+                placeholder={t("lessonPlans.activitiesHint")}
                 value={planActivities}
                 onChange={(e) => setPlanActivities(e.target.value)}
               />
               <Textarea
                 rows={2}
-                placeholder="Resources needed (optional)"
+                placeholder={t("lessonPlans.resourcesHint")}
                 value={planResources}
                 onChange={(e) => setPlanResources(e.target.value)}
               />
               <div className="flex items-center gap-3">
                 <Button type="submit" disabled={createPlan.isPending}>
-                  {createPlan.isPending ? "Saving…" : "Save plan"}
+                  {createPlan.isPending ? t("common.saving") : t("lessonPlans.savePlan")}
                 </Button>
                 {planError && <p className="text-sm text-rose-600">{planError}</p>}
               </div>
@@ -417,9 +450,9 @@ export default function LessonPlansPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Planned lessons</CardTitle>
+              <CardTitle>{t("lessonPlans.plannedLessons")}</CardTitle>
             </CardHeader>
-            {plans?.length === 0 && <EmptyState title="No lessons planned yet." />}
+            {plans?.length === 0 && <EmptyState title={t("lessonPlans.noPlans")} />}
             <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
               {plans?.map((plan) => (
                 <li key={plan.id} className="flex items-start justify-between gap-4 py-3">
@@ -430,13 +463,15 @@ export default function LessonPlansPage() {
                       {plan.topic && <Badge tone="info">{plan.topic.title}</Badge>}
                     </div>
                     <p className="mt-1 text-sm text-slate-500">
-                      {new Date(plan.date).toLocaleDateString("en-GB", {
-                        weekday: "short",
-                        day: "numeric",
-                        month: "short",
+                      {t("lessonPlans.planWhen", {
+                        date: new Date(plan.date).toLocaleDateString(intlLocale(locale), {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                        }),
+                        period: plan.period ? ` · ${plan.period.name}` : "",
+                        teacher: `${plan.teacherUser.firstName} ${plan.teacherUser.lastName}`,
                       })}
-                      {plan.period ? ` · ${plan.period.name}` : ""} · {plan.teacherUser.firstName}{" "}
-                      {plan.teacherUser.lastName}
                     </p>
                     {plan.objectives && (
                       <p className="mt-1 text-sm text-slate-500">{plan.objectives}</p>
@@ -447,7 +482,9 @@ export default function LessonPlansPage() {
                       </p>
                     )}
                     {plan.resources && (
-                      <p className="mt-1 text-sm text-slate-400">Needs: {plan.resources}</p>
+                      <p className="mt-1 text-sm text-slate-400">
+                        {t("lessonPlans.needs", { resources: plan.resources })}
+                      </p>
                     )}
                   </div>
                   <Button
@@ -455,7 +492,7 @@ export default function LessonPlansPage() {
                     className="shrink-0"
                     onClick={() => removePlan.mutate(plan.id)}
                   >
-                    Delete
+                    {t("common.delete")}
                   </Button>
                 </li>
               ))}

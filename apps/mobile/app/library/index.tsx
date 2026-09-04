@@ -1,10 +1,13 @@
 import { useLoansForStudent, useMyChildren } from "@skolara/api-client";
 import { useState } from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "@skolara/i18n";
 import { colors, spacing, typography } from "@/lib/theme";
+import { intlLocale } from "@/lib/intl";
 import { Card, Chip, EmptyState, LoadingLine, Pill, Screen } from "@/lib/ui";
 
 export default function LibraryStatusScreen() {
+  const { t, locale } = useTranslation();
   const { data: children } = useMyChildren();
   const [studentId, setStudentId] = useState<string>();
   const { data: loans, isLoading } = useLoansForStudent(studentId);
@@ -24,12 +27,12 @@ export default function LibraryStatusScreen() {
 
       {!studentId && (
         <EmptyState
-          title="Select a child"
-          description="Pick a child above to see their borrowed books."
+          title={t("mobileFamily.selectChild")}
+          description={t("mobileFamily.selectChildBooks")}
         />
       )}
 
-      {studentId && isLoading && <LoadingLine label="Loading loans..." />}
+      {studentId && isLoading && <LoadingLine label={t("common.loading")} />}
 
       <FlatList
         data={loans}
@@ -43,21 +46,25 @@ export default function LibraryStatusScreen() {
                 <Text style={styles.title}>{item.book.title}</Text>
                 <Text style={styles.meta}>{item.book.author}</Text>
                 <Text style={styles.meta}>
-                  Due {new Date(item.dueAt).toLocaleDateString()}
+                  {t("mobileFamily.dueOn", {
+                    date: new Date(item.dueAt).toLocaleDateString(
+                      intlLocale(locale),
+                    ),
+                  })}
                 </Text>
               </View>
               {item.returnedAt ? (
-                <Pill label="Returned" tone="success" />
+                <Pill label={t("mobileFamily.returned")} tone="success" />
               ) : overdue ? (
-                <Pill label="Overdue" tone="danger" />
+                <Pill label={t("mobileFamily.overdue")} tone="danger" />
               ) : (
-                <Pill label="Borrowed" tone="brand" />
+                <Pill label={t("mobileFamily.borrowed")} tone="brand" />
               )}
             </Card>
           );
         }}
         ListEmptyComponent={
-          studentId && !isLoading ? <EmptyState title="No borrowed books" /> : null
+          studentId && !isLoading ? <EmptyState title={t("mobileFamily.noBorrowedBooks")} /> : null
         }
       />
     </Screen>

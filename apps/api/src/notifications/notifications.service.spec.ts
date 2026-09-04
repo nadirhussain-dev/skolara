@@ -1,6 +1,7 @@
 import { NotificationsService } from "./notifications.service";
 import type { EmailProvider } from "./email-provider.interface";
 import type { PushProvider } from "./push-provider.interface";
+import type { SmsProvider } from "./sms-provider.interface";
 import type { WhatsAppProvider } from "./whatsapp-provider.interface";
 import type { PrismaService } from "../prisma/prisma.service";
 
@@ -23,6 +24,7 @@ describe("NotificationsService.sendPush", () => {
       { send: jest.fn() } as unknown as WhatsAppProvider,
       { send: jest.fn() } as unknown as EmailProvider,
       push as unknown as PushProvider,
+      { send: jest.fn() } as unknown as SmsProvider,
       prisma as unknown as PrismaService,
     );
   });
@@ -74,5 +76,125 @@ describe("NotificationsService.sendPush", () => {
   it("does nothing when given no recipients", async () => {
     await service.sendPush([], { title: "Hi", body: "There" });
     expect(prisma.deviceToken.findMany).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("NotificationsService phone channel", () => {
+  const SCHOOL = "school-1";
+  const PHONE = "+923001234567";
+
+  let whatsapp: { send: jest.Mock };
+  let sms: { send: jest.Mock };
+  let prisma: { school: { findUnique: jest.Mock } };
+  let service: NotificationsService;
+
+  const channel = (value: string | null) =>
+    prisma.school.findUnique.mockResolvedValue(value ? { phoneChannel: value } : null);
+
+  beforeEach(() => {
+    whatsapp = { send: jest.fn() };
+    sms = { send: jest.fn() };
+    prisma = { school: { findUnique: jest.fn().mockResolvedValue({ phoneChannel: "WHATSAPP" }) } };
+    service = new NotificationsService(
+      whatsapp as unknown as WhatsAppProvider,
+      { send: jest.fn() } as unknown as EmailProvider,
+      { send: jest.fn() } as unknown as PushProvider,
+      sms as unknown as SmsProvider,
+      prisma as unknown as PrismaService,
+    );
+  });
+
+  describe("sendSms", () => {
+    it("sends to the number given", async () => {
+      await service.sendSms(PHONE, "Fees due Friday");
+
+      expect(sms.send).toHaveBeenCalledWith({ toPhone: PHONE, body: "Fees due Friday" });
+    });
+
+    it.each([null, undefined, ""])("sends nothing when the number is %p", async (phone) => {
+      await service.sendSms(phone, "Fees due Friday");
+
+      expect(sms.send).not.toHaveBeenCalled();
+    });
+
+    it("swallows a provider failure rather than failing the caller's operation", async () => {
+      sms.send.mockRejectedValue(new Error("twilio down"));
+
+      await expect(service.sendSms(PHONE, "Fees due Friday")).resolves.toBeUndefined();
+    });
+  });
+
+  describe("sendPhoneAlert", () => {
+    it("uses WhatsApp alone for a school that hasn't switched", async () => {
+      await service.sendPhoneAlert(SCHOOL, PHONE, "Ali was marked absent");
+
+      expect(whatsapp.send).toHaveBeenCalledTimes(1);
+      expect(sms.send).not.toHaveBeenCalled();
+    });
+
+    it("uses SMS alone for a school that has", async () => {
+      channel("SMS");
+
+      await service.sendPhoneAlert(SCHOOL, PHONE, "Ali was marked absent");
+
+      expect(sms.send).toHaveBeenCalledTimes(1);
+      expect(whatsapp.send).not.toHaveBeenCalled();
+    });
+
+    it("uses both only when the school asked for both", async () => {
+      channel("BOTH");
+
+      await service.sendPhoneAlert(SCHOOL, PHONE, "Ali was marked absent");
+
+      expect(whatsapp.send).toHaveBeenCalledTimes(1);
+      expect(sms.send).toHaveBeenCalledTimes(1);
+    });
+
+    it("falls back to WhatsApp rather than billing for SMS when the school can't be read", async () => {
+      channel(null);
+
+      await service.sendPhoneAlert(SCHOOL, PHONE, "Ali was marked absent");
+
+      expect(whatsapp.send).toHaveBeenCalledTimes(1);
+      expect(sms.send).not.toHaveBeenCalled();
+    });
+
+    it("does not read the school at all when there is no number to send to", async () => {
+      await service.sendPhoneAlert(SCHOOL, null, "Ali was marked absent");
+
+      expect(prisma.school.findUnique).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("sendPhoneAlerts", () => {
+    it("reads the school's choice once for a whole-school notice, not once per parent", async () => {
+      await service.sendPhoneAlerts(SCHOOL, ["+9230011", "+9230022", "+9230033"], "New notice");
+
+      expect(prisma.school.findUnique).toHaveBeenCalledTimes(1);
+      expect(whatsapp.send).toHaveBeenCalledTimes(3);
+    });
+
+    it("skips recipients with no number on file", async () => {
+      await service.sendPhoneAlerts(SCHOOL, ["+9230011", null, "+9230033"], "New notice");
+
+      expect(whatsapp.send).toHaveBeenCalledTimes(2);
+    });
+
+    it("sends nothing, and reads nothing, when no recipient has a number", async () => {
+      await service.sendPhoneAlerts(SCHOOL, [null, null], "New notice");
+
+      expect(prisma.school.findUnique).not.toHaveBeenCalled();
+      expect(whatsapp.send).not.toHaveBeenCalled();
+    });
+
+    it("sends on both channels to every recipient when the school asked for both", async () => {
+      channel("BOTH");
+
+      await service.sendPhoneAlerts(SCHOOL, ["+9230011", "+9230022"], "New notice");
+
+      expect(whatsapp.send).toHaveBeenCalledTimes(2);
+      expect(sms.send).toHaveBeenCalledTimes(2);
+    });
   });
 });

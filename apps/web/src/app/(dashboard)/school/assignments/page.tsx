@@ -3,12 +3,15 @@
 import { useApiClient, useClassAssignments, useCreateAssignment } from "@skolara/api-client";
 import type { SchoolClass } from "@skolara/types";
 import { Button, Card, CardHeader, CardTitle, EmptyState, Input, Select } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
+import { intlLocale } from "@/lib/intl";
 
 export default function AssignmentsPage() {
   const api = useApiClient();
+  const { t, locale } = useTranslation();
   const { data: classes } = useQuery<SchoolClass[]>({
     queryKey: ["classes"],
     queryFn: () => api.classes.list(),
@@ -43,11 +46,11 @@ export default function AssignmentsPage() {
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Assign homework</CardTitle>
+          <CardTitle>{t("assignments.assignHomework")}</CardTitle>
         </CardHeader>
         <div className="mb-3">
           <Select value={classId} onChange={(e) => setClassId(e.target.value)} className="max-w-xs">
-            <option value="">Select class</option>
+            <option value="">{t("fields.selectClass")}</option>
             {classes?.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} — {c.section}
@@ -57,21 +60,21 @@ export default function AssignmentsPage() {
         </div>
         <form onSubmit={handleSubmit} className="flex flex-wrap gap-3">
           <Input
-            placeholder="Subject"
+            placeholder={t("fields.subject")}
             required
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             className="max-w-[160px]"
           />
           <Input
-            placeholder="Title"
+            placeholder={t("fields.title")}
             required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="max-w-xs"
           />
           <Input
-            placeholder="Description (optional)"
+            placeholder={t("assignments.descriptionOptional")}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="max-w-xs"
@@ -84,18 +87,18 @@ export default function AssignmentsPage() {
             className="max-w-[160px]"
           />
           <Button type="submit" disabled={!classId || createAssignment.isPending}>
-            {createAssignment.isPending ? "Assigning..." : "Assign"}
+            {createAssignment.isPending ? t("assignments.assigning") : t("assignments.assign")}
           </Button>
         </form>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Assignments</CardTitle>
+          <CardTitle>{t("assignments.title")}</CardTitle>
         </CardHeader>
-        {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {classId && assignments?.length === 0 && (
-          <EmptyState title="No assignments for this class yet" />
+          <EmptyState title={t("assignments.noAssignments")} />
         )}
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {assignments?.map((a) => (
@@ -108,7 +111,9 @@ export default function AssignmentsPage() {
                 {a.title} ({a.subject})
               </span>
               <span className="text-sm text-slate-500">
-                Due {new Date(a.dueDate).toLocaleDateString()}
+                {t("assignments.dueOn", {
+                  date: new Date(a.dueDate).toLocaleDateString(intlLocale(locale)),
+                })}
               </span>
             </Link>
           ))}

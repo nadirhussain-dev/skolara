@@ -16,6 +16,7 @@ import { RolesGuard } from "../common/guards/roles.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
 import { ClassAccessService } from "../common/class-access.service";
+import { StudentAccessService } from "../common/student-access.service";
 import { AttendanceService } from "./attendance.service";
 
 @Controller("attendance")
@@ -24,6 +25,7 @@ export class AttendanceController {
   constructor(
     private attendanceService: AttendanceService,
     private classAccess: ClassAccessService,
+    private studentAccess: StudentAccessService,
   ) {}
 
   @Post()
@@ -65,11 +67,15 @@ export class AttendanceController {
 
   @Get("student/:studentId")
   @Roles("TEACHER", "SCHOOL_ADMIN", "PARENT", "STUDENT")
-  findForStudent(
+  async findForStudent(
     @Param("studentId") studentId: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!user.schoolId) throw new ForbiddenException("No school context");
+    // Without this, any parent at the school could read any other child's
+    // attendance history — including which days they were absent — by
+    // changing the id in the URL.
+    await this.studentAccess.assertCanAccessStudent(user, studentId);
     return this.attendanceService.findForStudent(user.schoolId, studentId);
   }
 }

@@ -18,12 +18,14 @@ import {
   TR,
   Table,
 } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { PerformanceLegend, SubjectPerformanceChart } from "@/components/performance-chart";
 
 export default function PerformancePage() {
   const api = useApiClient();
+  const { t } = useTranslation();
   const { data: classes } = useQuery<SchoolClass[]>({
     queryKey: ["classes"],
     queryFn: () => api.classes.list(),
@@ -42,20 +44,20 @@ export default function PerformancePage() {
   const { data: performance, isLoading } = useStudentPerformance(studentId || undefined);
 
   const student = students?.find((candidate) => candidate.id === studentId);
-  const studentLabel = student ? student.user.firstName : "Student";
+  const studentLabel = student ? student.user.firstName : t("performance.studentFallback");
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Performance over time"
-        description="Every assessment as a percentage, per subject, against the class average for the same paper."
+        title={t("performance.title")}
+        description={t("performance.description")}
       />
 
       {/* One filter row above everything it scopes. */}
       <Card>
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-sm">
-            Class
+            {t("reportCards.class")}
             <Select
               value={classId}
               onChange={(e) => {
@@ -64,7 +66,7 @@ export default function PerformancePage() {
               }}
               className="max-w-xs"
             >
-              <option value="">Select class</option>
+              <option value="">{t("fields.selectClass")}</option>
               {classes?.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name} — {c.section}
@@ -73,14 +75,14 @@ export default function PerformancePage() {
             </Select>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Student
+            {t("performance.student")}
             <Select
               value={studentId}
               onChange={(e) => setStudentId(e.target.value)}
               className="max-w-xs"
               disabled={!classId}
             >
-              <option value="">Select student</option>
+              <option value="">{t("fields.selectStudent")}</option>
               {students?.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.user.firstName} {s.user.lastName} · {s.admissionNumber}
@@ -95,19 +97,19 @@ export default function PerformancePage() {
         <Card>
           <EmptyState
             icon="📈"
-            title="Pick a student."
-            description="Their marks are plotted per subject in the order they were graded."
+            title={t("performance.pickStudent")}
+            description={t("performance.pickStudentBody")}
           />
         </Card>
       )}
 
-      {studentId && isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {studentId && isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
 
       {studentId && performance && performance.subjects.length === 0 && (
         <Card>
           <EmptyState
-            title="No marks recorded yet."
-            description="Once exams or quizzes are graded, the curve appears here."
+            title={t("performance.noMarks")}
+            description={t("performance.noMarksBody")}
           />
         </Card>
       )}
@@ -116,7 +118,7 @@ export default function PerformancePage() {
         <>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
             <StatCard
-              label="Overall average"
+              label={t("performance.overallAverage")}
               value={
                 performance.overallAverage === null
                   ? "—"
@@ -124,9 +126,9 @@ export default function PerformancePage() {
               }
               icon="📊"
             />
-            <StatCard label="Subjects" value={performance.subjects.length} icon="📚" />
+            <StatCard label={t("performance.subjects")} value={performance.subjects.length} icon="📚" />
             <StatCard
-              label="Assessments"
+              label={t("performance.assessments")}
               value={performance.subjects.reduce(
                 (sum, subject) => sum + subject.points.length,
                 0,
@@ -137,13 +139,13 @@ export default function PerformancePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>By subject</CardTitle>
+              <CardTitle>{t("performance.bySubject")}</CardTitle>
             </CardHeader>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <PerformanceLegend studentLabel={studentLabel} />
               {/* The table twin: every plotted value readable without hovering. */}
               <Button variant="ghost" onClick={() => setShowTable((current) => !current)}>
-                {showTable ? "Show charts" : "Show as table"}
+                {showTable ? t("performance.showCharts") : t("performance.showAsTable")}
               </Button>
             </div>
 
@@ -151,11 +153,11 @@ export default function PerformancePage() {
               <Table>
                 <THead>
                   <TR>
-                    <TH>Subject</TH>
-                    <TH>Term</TH>
-                    <TH>Assessment</TH>
+                    <TH>{t("fields.subject")}</TH>
+                    <TH>{t("fields.term")}</TH>
+                    <TH>{t("performance.assessment")}</TH>
                     <TH>{studentLabel}</TH>
-                    <TH>Class average</TH>
+                    <TH>{t("performance.classAverage")}</TH>
                   </TR>
                 </THead>
                 <TBody>

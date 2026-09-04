@@ -1,10 +1,13 @@
 import { useBusForStudent, useMyChildren } from "@skolara/api-client";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "@skolara/i18n";
 import { colors, spacing, typography } from "@/lib/theme";
+import { intlLocale } from "@/lib/intl";
 import { Card, Chip, EmptyState, LoadingLine, Pill, Screen, SectionLabel } from "@/lib/ui";
 
 export default function BusTrackingScreen() {
+  const { t, locale } = useTranslation();
   const { data: children } = useMyChildren();
   const [studentId, setStudentId] = useState<string>();
   const { data: busInfo, isLoading } = useBusForStudent(studentId);
@@ -24,42 +27,52 @@ export default function BusTrackingScreen() {
 
       {!studentId && (
         <EmptyState
-          title="Select a child"
-          description="Pick a child above to see their bus and live location."
+          title={t("mobileFamily.selectChild")}
+          description={t("mobileFamily.selectChildBus")}
         />
       )}
 
-      {studentId && isLoading && <LoadingLine label="Loading bus info..." />}
+      {studentId && isLoading && <LoadingLine label={t("common.loading")} />}
 
       {studentId && !isLoading && !busInfo && (
-        <EmptyState title="No bus assigned yet" description="Check back once your school assigns a route." />
+        <EmptyState
+          title={t("mobileFamily.noBusAssigned")}
+          description={t("mobileFamily.noBusAssignedBody")}
+        />
       )}
 
       {busInfo && (
         <Card>
-          <SectionLabel>Route</SectionLabel>
+          <SectionLabel>{t("mobileFamily.route")}</SectionLabel>
           <Text style={styles.route}>{busInfo.bus.routeName}</Text>
           <Text style={styles.meta}>
-            {busInfo.bus.plateNumber} · Driver {busInfo.bus.driverName}
+            {t("mobileFamily.busMeta", {
+              plate: busInfo.bus.plateNumber,
+              driver: busInfo.bus.driverName,
+            })}
             {busInfo.bus.driverPhone ? ` · ${busInfo.bus.driverPhone}` : ""}
           </Text>
 
           <View style={styles.divider} />
 
-          <SectionLabel>Live location</SectionLabel>
+          <SectionLabel>{t("mobileFamily.liveLocation")}</SectionLabel>
           {busInfo.latestLocation ? (
             <>
-              <Pill label="Live" tone="success" />
+              <Pill label={t("mobileFamily.live")} tone="success" />
               <Text style={styles.meta}>
                 {busInfo.latestLocation.latitude.toFixed(5)},{" "}
                 {busInfo.latestLocation.longitude.toFixed(5)}
               </Text>
               <Text style={styles.meta}>
-                Updated {new Date(busInfo.latestLocation.recordedAt).toLocaleTimeString()}
+                {t("mobileFamily.updatedAt", {
+                  time: new Date(busInfo.latestLocation.recordedAt).toLocaleTimeString(
+                    intlLocale(locale),
+                  ),
+                })}
               </Text>
             </>
           ) : (
-            <Text style={styles.meta}>No location reported yet.</Text>
+            <Text style={styles.meta}>{t("transport.noLocation")}</Text>
           )}
         </Card>
       )}

@@ -2,9 +2,11 @@
 
 import { useMySchool, useUpdateBranding, useUploadFile } from "@skolara/api-client";
 import { Button, Card, CardHeader, CardTitle, Input, PageHeader } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useEffect, useState } from "react";
 
 export default function BrandingPage() {
+  const { t } = useTranslation();
   const { data: school, isLoading } = useMySchool();
   const updateBranding = useUpdateBranding();
   const uploadFile = useUploadFile();
@@ -33,7 +35,7 @@ export default function BrandingPage() {
       const uploaded = await uploadFile.mutateAsync({ file, purpose: "SCHOOL_LOGO" });
       setLogoUrl(uploaded.url);
     } catch (error) {
-      setUploadError(error instanceof Error ? error.message : "Upload failed");
+      setUploadError(error instanceof Error ? error.message : t("branding.uploadFailed"));
     } finally {
       // Lets the same file be re-picked if the upload failed.
       e.target.value = "";
@@ -50,37 +52,37 @@ export default function BrandingPage() {
         primaryColor: primaryColor || undefined,
       },
     });
-    setSavedMessage("Branding updated.");
+    setSavedMessage(t("branding.saved"));
     setTimeout(() => setSavedMessage(""), 3000);
   }
 
   if (isLoading || !school) {
-    return <p className="text-sm text-slate-500">Loading...</p>;
+    return <p className="text-sm text-slate-500">{t("common.loading")}</p>;
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Branding" description="White-label your school's login and dashboard." />
+      <PageHeader title={t("branding.title")} description={t("branding.description")} />
       <Card>
         <CardHeader>
           <CardTitle>{school.name}</CardTitle>
         </CardHeader>
         <p className="text-sm text-slate-500">
-          {school.subdomain}.skolara.app · {school.plan} plan
+          {t("branding.schoolLine", { subdomain: school.subdomain, plan: school.plan })}
         </p>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>White-labeling</CardTitle>
+          <CardTitle>{t("branding.whiteLabeling")}</CardTitle>
         </CardHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              Logo
+              {t("branding.logo")}
               <Input
                 type="url"
-                placeholder="https://example.com/logo.png"
+                placeholder={t("branding.logoUrlHint")}
                 value={logoUrl}
                 onChange={(e) => setLogoUrl(e.target.value)}
                 className="min-w-[280px]"
@@ -93,12 +95,12 @@ export default function BrandingPage() {
                 className="mt-1 text-xs text-slate-500 file:mr-2 file:rounded-md file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs dark:file:bg-slate-800 dark:file:text-slate-200"
               />
               {uploadFile.isPending && (
-                <span className="text-xs text-slate-500">Uploading...</span>
+                <span className="text-xs text-slate-500">{t("branding.uploading")}</span>
               )}
               {uploadError && <span className="text-xs text-rose-600">{uploadError}</span>}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              Primary color
+              {t("branding.primaryColor")}
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -115,7 +117,7 @@ export default function BrandingPage() {
               </div>
             </label>
             <Button type="submit" disabled={updateBranding.isPending}>
-              {updateBranding.isPending ? "Saving..." : "Save branding"}
+              {updateBranding.isPending ? t("branding.saving") : t("branding.save")}
             </Button>
           </div>
           {savedMessage && <p className="text-sm text-emerald-600">{savedMessage}</p>}
@@ -124,12 +126,12 @@ export default function BrandingPage() {
         {logoUrl && (
           <div className="mt-6 flex items-center gap-3 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={logoUrl} alt="School logo preview" className="h-12 w-12 rounded object-contain" />
+            <img src={logoUrl} alt={t("branding.logoPreviewAlt")} className="h-12 w-12 rounded object-contain" />
             <span
               className="rounded-lg px-3 py-1.5 text-sm font-medium text-white"
               style={{ backgroundColor: primaryColor }}
             >
-              Preview
+              {t("branding.preview")}
             </span>
           </div>
         )}

@@ -2,11 +2,13 @@
 
 import { useGeneratePayslip, usePayslipsForStaff, useTeachers } from "@skolara/api-client";
 import { Button, Card, CardHeader, CardTitle, EmptyState, Input, PageHeader, Select } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { formatCurrency } from "@skolara/utils";
 import { useState } from "react";
 
 export default function PayrollPage() {
   const { data: teachers } = useTeachers();
+  const { t } = useTranslation();
   const generatePayslip = useGeneratePayslip();
 
   const [staffUserId, setStaffUserId] = useState("");
@@ -32,17 +34,17 @@ export default function PayrollPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Payroll" description="Generate and review staff payslips." />
+      <PageHeader title={t("payroll.title")} description={t("payroll.description")} />
       <Card>
         <CardHeader>
-          <CardTitle>Select staff member</CardTitle>
+          <CardTitle>{t("payroll.selectStaff")}</CardTitle>
         </CardHeader>
         <Select
           value={staffUserId}
           onChange={(e) => setStaffUserId(e.target.value)}
           className="max-w-xs"
         >
-          <option value="">Select teacher</option>
+          <option value="">{t("fields.selectTeacher")}</option>
           {teachers?.map((t) => (
             <option key={t.userId} value={t.userId}>
               {t.user.firstName} {t.user.lastName} ({t.employeeNumber})
@@ -55,7 +57,7 @@ export default function PayrollPage() {
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Generate payslip</CardTitle>
+              <CardTitle>{t("payroll.generatePayslip")}</CardTitle>
             </CardHeader>
             <form onSubmit={handleSubmit} className="flex flex-wrap gap-3">
               <Input
@@ -69,7 +71,7 @@ export default function PayrollPage() {
                 type="number"
                 min="0"
                 step="0.01"
-                placeholder="Basic salary"
+                placeholder={t("payroll.basicSalary")}
                 required
                 value={basicSalary}
                 onChange={(e) => setBasicSalary(e.target.value)}
@@ -79,31 +81,33 @@ export default function PayrollPage() {
                 type="number"
                 min="0"
                 step="0.01"
-                placeholder="Deductions"
+                placeholder={t("payroll.deductions")}
                 value={deductions}
                 onChange={(e) => setDeductions(e.target.value)}
                 className="max-w-[140px]"
               />
               <Button type="submit" disabled={generatePayslip.isPending}>
-                {generatePayslip.isPending ? "Generating..." : "Generate"}
+                {generatePayslip.isPending ? t("payroll.generating") : t("payroll.generate")}
               </Button>
             </form>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Payslips</CardTitle>
+              <CardTitle>{t("payroll.payslips")}</CardTitle>
             </CardHeader>
-            {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
-            {payslips?.length === 0 && <EmptyState title="No payslips generated yet" />}
+            {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
+            {payslips?.length === 0 && <EmptyState title={t("payroll.noPayslips")} />}
             <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
               {payslips?.map((p) => (
                 <div key={p.id} className="flex items-center justify-between py-3">
                   <div>
                     <p className="font-medium">{p.month}</p>
                     <p className="text-sm text-slate-500">
-                      Basic {formatCurrency(Number(p.basicSalary))} · Deductions{" "}
-                      {formatCurrency(Number(p.deductions))}
+                      {t("payroll.payslipSummary", {
+                        basic: formatCurrency(Number(p.basicSalary)),
+                        deductions: formatCurrency(Number(p.deductions)),
+                      })}
                     </p>
                   </div>
                   <span className="font-semibold text-brand-700 dark:text-brand-300">
