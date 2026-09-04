@@ -79,9 +79,9 @@ piece of day 2 that isn't finished, and it interacts with the day-6 Urdu work.
 
 ---
 
-## Day 3 — People workflows
+## Day 3 — People workflows ✅ done
 
-**Closes 5 rows.**
+**Closed 6 rows** — leave counts twice, since applying and approving are separate board entries.
 
 Five request-and-approve loops that share one shape: someone asks, someone with authority
 responds, both sides get notified. The notification and audit layers they need are already in.
@@ -97,7 +97,13 @@ responds, both sides get notified. The notification and audit layers they need a
 **Closes:** Staff leave approval · Teacher leave application · PTM booking · Support tickets ·
 Global broadcast · Staff directory
 
-**Cut line:** Staff directory and global broadcast — both small, both easy to pick up on day 6.
+**Cut line not needed** — everything planned landed, including the two items marked as first to
+drop.
+
+**Found on the way:** the staff directory needed a new endpoint. `GET /users` is school-admin only,
+and widening it for teachers would have exposed every parent and student in the school. The new
+route returns staff rows only, with the role filter fixed in the service rather than taken from a
+caller-supplied parameter.
 
 ---
 

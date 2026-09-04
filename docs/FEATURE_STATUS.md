@@ -1,13 +1,13 @@
 # Feature Status
 
 Every feature in [`PROPOSAL.md`](../PROPOSAL.md) §6–§10, checked against what is actually on
-`main` at `655ee3a`, plus the day-2 documents branch.
+`main` at `655ee3a`, plus the day-2 and day-3 branches.
 
 | State | Count | Meaning |
 |---|---|---|
-| ✅ Shipped | 67 | Built, tenant-scoped, guarded |
+| ✅ Shipped | 73 | Built, tenant-scoped, guarded |
 | 🟡 Partial | 6 | Mechanism exists, surface incomplete |
-| ⬜ Not built | 15 | No code |
+| ⬜ Not built | 9 | No code |
 
 **Partial** is the cheapest column to finish — the plumbing is done, the content or UI is not.
 
@@ -31,8 +31,8 @@ The commercial layer: who gets in, what they pay, what they can reach.
 | API key management | ✅ | Keys previously did nothing — no guard read them. Now authenticate, read-only by construction |
 | Revenue dashboard with downloadable reports | ✅ | MRR/ARR on screen, revenue-by-school CSV export |
 | Server / infra health monitor | 🟡 | `/health` and `/health/ready` answer for a load balancer; no dashboard |
-| Support / helpdesk ticket system | ⬜ | |
-| Global broadcast announcements | ⬜ | Notices exist but are school-scoped |
+| Support / helpdesk ticket system | ✅ | Schools raise, platform replies; internal notes hidden from the school in-query |
+| Global broadcast announcements | ✅ | Platform-wide, role-filterable, optional expiry; banner on every dashboard page |
 | Role & permission template editor | ⬜ | Roles fixed in code — fine for four roles |
 | Data export / backup per tenant | ⬜ | |
 | Super Admin mobile companion | ⬜ | Proposal marks this optional |
@@ -66,8 +66,8 @@ The daily operations surface. Deepest area, and the most complete.
 | Certificate / document generator | ✅ | Enrolment, character, leaving and bonafide, issued from the student page |
 | Hostel management | ⬜ | |
 | Inventory / asset management | ⬜ | |
-| Staff leave approval | ⬜ | |
-| Staff directory with click-to-call | ⬜ | |
+| Staff leave approval | ✅ | Approve or decline queue, oldest first |
+| Staff directory with click-to-call | ✅ | `tel:`/`mailto:` links; staff-only endpoint so teachers can use it safely |
 
 ## Teacher
 
@@ -86,7 +86,7 @@ Where the proposal says competitors underinvest. The mobile half is done; the we
 | Scoped to own classes | ✅ | Any teacher could previously take any register or overwrite a colleague's marks |
 | Upload class materials | 🟡 | Files attach to assignments; no standalone materials library |
 | Personal timetable | ✅ | Web grid and mobile day list |
-| Apply for leave, check balance | ⬜ | |
+| Apply for leave, check balance | ✅ | Mobile, with per-kind annual balances |
 | Lesson planning & syllabus tracker | ⬜ | |
 | Online quizzes with MCQ auto-grading | ⬜ | |
 | Schedule live / online class links | ⬜ | |
@@ -113,7 +113,7 @@ The parent app is the product most families will judge you on.
 | Timetable | ✅ | Mobile, scoped through the multi-child switcher |
 | Performance graphs over time | ⬜ | |
 | Leave application | ⬜ | |
-| Book parent–teacher meeting slots | ⬜ | |
+| Book parent–teacher meeting slots | ✅ | Teachers publish an evening of slots; booking is race-safe |
 | School events calendar | ✅ | Mobile, grouped by month, filtered from today |
 | Join live / online classes | ⬜ | |
 
@@ -147,9 +147,9 @@ Not proposal features, but they gate everything above.
 
 | Metric | Value | Notes |
 |---|---|---|
-| Tests passing | 182 | Up from 66. Targets what actually breaks — audit redaction, entitlement boundaries, class scoping, MRR arithmetic |
-| Services untested | 26 of 36 | Payments, invoices, grades and attendance are worth covering first |
-| Migrations | 15 (`001`–`015`) | CI applies all to a real Postgres and seeds through the generated client |
+| Tests passing | 228 | Up from 66. Targets what actually breaks — audit redaction, entitlement boundaries, class scoping, MRR arithmetic |
+| Services untested | 25 of 41 | Payments, invoices, grades and attendance are worth covering first |
+| Migrations | 19 (`001`–`019`) | CI applies all to a real Postgres and seeds through the generated client |
 | Deploy workflows | 0 | CI validates on every push; nothing ships automatically |
 
 ---

@@ -11,6 +11,7 @@ import { AuditInterceptor } from "./audit/audit.interceptor";
 import { AttendanceModule } from "./attendance/attendance.module";
 import { AuthModule } from "./auth/auth.module";
 import { BankStatementModule } from "./bank-statement/bank-statement.module";
+import { BroadcastsModule } from "./broadcasts/broadcasts.module";
 import { CalendarModule } from "./calendar/calendar.module";
 import { CertificatesModule } from "./certificates/certificates.module";
 import { ClassesModule } from "./classes/classes.module";
@@ -21,7 +22,9 @@ import { ExamsModule } from "./exams/exams.module";
 import { GradesModule } from "./grades/grades.module";
 import { HealthModule } from "./health/health.module";
 import { InvoicesModule } from "./invoices/invoices.module";
+import { LeaveModule } from "./leave/leave.module";
 import { LibraryModule } from "./library/library.module";
+import { MeetingsModule } from "./meetings/meetings.module";
 import { MessagingModule } from "./messaging/messaging.module";
 import { NoticesModule } from "./notices/notices.module";
 import { NotificationsModule } from "./notifications/notifications.module";
@@ -35,6 +38,7 @@ import { SchoolGroupsModule } from "./school-groups/school-groups.module";
 import { SchoolsModule } from "./schools/schools.module";
 import { StorageModule } from "./storage/storage.module";
 import { StudentsModule } from "./students/students.module";
+import { SupportModule } from "./support/support.module";
 import { TeachersModule } from "./teachers/teachers.module";
 import { TimetableModule } from "./timetable/timetable.module";
 import { TransportModule } from "./transport/transport.module";
@@ -63,9 +67,11 @@ import { validateEnv } from "./env.validation";
     SchoolGroupsModule,
     UsersModule,
     StudentsModule,
+    SupportModule,
     TeachersModule,
     TimetableModule,
     ClassesModule,
+    BroadcastsModule,
     CalendarModule,
     CertificatesModule,
     AttendanceModule,
@@ -76,9 +82,11 @@ import { validateEnv } from "./env.validation";
     GradesModule,
     NoticesModule,
     AssignmentsModule,
+    MeetingsModule,
     MessagingModule,
     ComplaintsModule,
     ExamsModule,
+    LeaveModule,
     LibraryModule,
     TransportModule,
     PayrollModule,

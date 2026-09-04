@@ -15,6 +15,8 @@ import type {
   BookLoan,
   BorrowBookInput,
   Bus,
+  CreateBroadcastInput,
+  PlatformBroadcast,
   BusLocationPing,
   CalendarEvent,
   Complaint,
@@ -45,8 +47,14 @@ import type {
   ImportBankStatementInput,
   Invoice,
   IssueCertificateInput,
+  LeaveBalance,
+  LeaveRequest,
+  LeaveStatus,
   LoginInput,
   MarkAttendanceInput,
+  MeetingSlot,
+  BookMeetingSlotInput,
+  PublishMeetingSlotsInput,
   Message,
   MessageThread,
   Notice,
@@ -57,6 +65,8 @@ import type {
   PlatformAnalytics,
   RankListEntry,
   RegisterDeviceInput,
+  RequestLeaveInput,
+  ReviewLeaveInput,
   RegisterSchoolInput,
   RegisterSchoolResponse,
   ReportBusLocationInput,
@@ -71,6 +81,12 @@ import type {
   SubmitAssignmentInput,
   SubmitPaymentInput,
   SuggestedMatch,
+  SupportTicket,
+  SupportTicketComment,
+  SupportTicketStatus,
+  CreateSupportTicketInput,
+  AddSupportCommentInput,
+  UpdateSupportTicketInput,
   UpdateBrandingInput,
   TimetableEntry,
   UpdateComplaintStatusInput,
@@ -159,6 +175,36 @@ export interface TimetableEntryDetail extends TimetableEntry {
   period: Period;
   teacherUser: { id: string; firstName: string; lastName: string };
   class: { id: string; name: string; section: string };
+}
+
+export interface SupportTicketDetail extends SupportTicket {
+  school: { id: string; name: string; subdomain: string; plan: string };
+  raisedByUser: { id: string; firstName: string; lastName: string; email: string };
+}
+
+export interface SupportTicketWithComments extends SupportTicketDetail {
+  comments: (SupportTicketComment & {
+    authorUser: { id: string; firstName: string; lastName: string; role: string };
+  })[];
+}
+
+export interface MeetingSlotDetail extends MeetingSlot {
+  teacherUser: { id: string; firstName: string; lastName: string };
+  student: {
+    id: string;
+    admissionNumber: string;
+    user: { firstName: string; lastName: string };
+  } | null;
+  bookedByParentUser: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+  } | null;
+}
+
+export interface LeaveRequestWithRequester extends LeaveRequest {
+  requesterUser: { id: string; firstName: string; lastName: string; role: string };
 }
 
 export interface GeneratedReportCard {
@@ -622,6 +668,75 @@ export function createApiClient({
         return request<AuditLogPage>(`/audit-logs${suffix ? `?${suffix}` : ""}`);
       },
     },
+    broadcasts: {
+      create: (input: CreateBroadcastInput) =>
+        request<PlatformBroadcast>("/broadcasts", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      active: () => request<PlatformBroadcast[]>("/broadcasts/active"),
+      list: () => request<PlatformBroadcast[]>("/broadcasts"),
+      withdraw: (id: string) => request<void>(`/broadcasts/${id}`, { method: "DELETE" }),
+    },
+    support: {
+      create: (input: CreateSupportTicketInput) =>
+        request<SupportTicketDetail>("/support/tickets", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      list: (status?: SupportTicketStatus) =>
+        request<SupportTicketDetail[]>(
+          `/support/tickets${status ? `?status=${status}` : ""}`,
+        ),
+      findOne: (id: string) => request<SupportTicketWithComments>(`/support/tickets/${id}`),
+      addComment: (id: string, input: AddSupportCommentInput) =>
+        request<SupportTicketComment>(`/support/tickets/${id}/comments`, {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      update: (id: string, input: UpdateSupportTicketInput) =>
+        request<SupportTicket>(`/support/tickets/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify(input),
+        }),
+    },
+    meetings: {
+      publish: (input: PublishMeetingSlotsInput) =>
+        request<{ published: number; requested: number }>("/meetings/slots", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      mine: () => request<MeetingSlotDetail[]>("/meetings/slots/mine"),
+      available: (teacherUserId?: string) =>
+        request<MeetingSlotDetail[]>(
+          `/meetings/slots/available${teacherUserId ? `?teacherUserId=${teacherUserId}` : ""}`,
+        ),
+      booked: () => request<MeetingSlotDetail[]>("/meetings/slots/booked"),
+      book: (slotId: string, input: BookMeetingSlotInput) =>
+        request<MeetingSlotDetail>(`/meetings/slots/${slotId}/book`, {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      cancelBooking: (slotId: string) =>
+        request<void>(`/meetings/slots/${slotId}/cancel-booking`, { method: "PATCH" }),
+      withdraw: (slotId: string) =>
+        request<void>(`/meetings/slots/${slotId}`, { method: "DELETE" }),
+    },
+    leave: {
+      request: (input: RequestLeaveInput) =>
+        request<LeaveRequest>("/leave", { method: "POST", body: JSON.stringify(input) }),
+      mine: () => request<LeaveRequest[]>("/leave/mine"),
+      balances: () => request<LeaveBalance[]>("/leave/balances"),
+      list: (status?: LeaveStatus) =>
+        request<LeaveRequestWithRequester[]>(`/leave${status ? `?status=${status}` : ""}`),
+      review: (id: string, input: ReviewLeaveInput) =>
+        request<LeaveRequest>(`/leave/${id}/review`, {
+          method: "PATCH",
+          body: JSON.stringify(input),
+        }),
+      cancel: (id: string) =>
+        request<LeaveRequest>(`/leave/${id}/cancel`, { method: "PATCH" }),
+    },
     reports: {
       platformRevenueCsv: () => requestText("/reports/platform-revenue.csv"),
       feeCollectionCsv: () => requestText("/reports/fee-collection.csv"),
@@ -716,6 +831,8 @@ export function createApiClient({
         request<User>("/users", { method: "POST", body: JSON.stringify(input) }),
       list: (role?: RoleType) =>
         request<User[]>(`/users${role ? `?role=${role}` : ""}`),
+      /** Staff only — safe for teachers, unlike the full user list. */
+      staffDirectory: () => request<User[]>("/users/staff-directory"),
       setActive: (id: string, isActive: boolean) =>
         request<User>(`/users/${id}/active`, {
           method: "PATCH",

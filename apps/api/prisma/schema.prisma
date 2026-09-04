@@ -114,6 +114,9 @@ model School {
   periods             Period[]
   timetableEntries    TimetableEntry[]
   calendarEvents      CalendarEvent[]
+  leaveRequests       LeaveRequest[]
+  meetingSlots        MeetingSlot[]
+  supportTickets      SupportTicket[]
   auditLogs           AuditLog[]
 
   @@index([schoolGroupId])
@@ -156,6 +159,13 @@ model User {
   deviceTokens            DeviceToken[]
   timetableLessons        TimetableEntry[]    @relation("TimetableTeacher")
   authoredCalendarEvents  CalendarEvent[]     @relation("CalendarEventAuthor")
+  leaveRequests           LeaveRequest[]      @relation("LeaveRequester")
+  reviewedLeaveRequests   LeaveRequest[]      @relation("LeaveReviewer")
+  offeredMeetingSlots     MeetingSlot[]       @relation("MeetingTeacher")
+  bookedMeetingSlots      MeetingSlot[]       @relation("MeetingParent")
+  raisedSupportTickets    SupportTicket[]        @relation("SupportRaiser")
+  supportTicketComments   SupportTicketComment[] @relation("SupportCommenter")
+  platformBroadcasts      PlatformBroadcast[]    @relation("BroadcastAuthor")
   auditLogs               AuditLog[]          @relation("AuditActor")
   classAssignments        ClassTeacher[]      @relation("ClassTeachers")
 
@@ -257,6 +267,7 @@ model StudentProfile {
   complaints         Complaint[]
   bookLoans          BookLoan[]
   busAssignment      BusAssignment?
+  meetingSlots       MeetingSlot[]
 
   @@unique([schoolId, admissionNumber])
   @@index([schoolId])
@@ -798,4 +809,145 @@ model CalendarEvent {
 
   @@index([schoolId, startsAt])
   @@index([classId])
+}
+
+enum LeaveKind {
+  CASUAL
+  SICK
+  UNPAID
+  MATERNITY
+  OTHER
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  // Withdrawn by the requester before anyone acted on it.
+  CANCELLED
+}
+
+// A staff member asking for time off. Requester is a User rather than a
+// TeacherProfile because school admins take leave too.
+model LeaveRequest {
+  id               String      @id @default(uuid())
+  schoolId         String
+  school           School      @relation(fields: [schoolId], references: [id])
+  requesterUserId  String
+  requesterUser    User        @relation("LeaveRequester", fields: [requesterUserId], references: [id])
+  kind             LeaveKind
+  startDate        DateTime
+  endDate          DateTime
+  reason           String?
+  status           LeaveStatus @default(PENDING)
+  reviewedByUserId String?
+  reviewedByUser   User?       @relation("LeaveReviewer", fields: [reviewedByUserId], references: [id])
+  reviewedAt       DateTime?
+  reviewNote       String?
+  createdAt        DateTime    @default(now())
+
+  @@index([schoolId, status])
+  @@index([requesterUserId])
+}
+
+// A slot a teacher offers for parent meetings. Booking is represented by the
+// nullable parent/student columns rather than a separate Booking table: a slot
+// holds at most one meeting, so a second table would only add a join and the
+// chance of two bookings existing for one slot.
+model MeetingSlot {
+  id                   String    @id @default(uuid())
+  schoolId             String
+  school               School    @relation(fields: [schoolId], references: [id])
+  teacherUserId        String
+  teacherUser          User      @relation("MeetingTeacher", fields: [teacherUserId], references: [id], onDelete: Cascade)
+  startsAt             DateTime
+  endsAt               DateTime
+  bookedByParentUserId String?
+  bookedByParentUser   User?     @relation("MeetingParent", fields: [bookedByParentUserId], references: [id], onDelete: SetNull)
+  // Which child the meeting is about — a parent with two children at the
+  // school needs the teacher to know which one.
+  studentId            String?
+  student              StudentProfile? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  bookedAt             DateTime?
+  note                 String?
+  createdAt            DateTime  @default(now())
+
+  // A teacher can't offer two slots starting at the same moment.
+  @@unique([teacherUserId, startsAt])
+  @@index([schoolId, startsAt])
+  @@index([bookedByParentUserId])
+}
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  // Waiting on the school to answer a question — distinct from OPEN so the
+  // platform queue doesn't show work that isn't actionable.
+  WAITING_ON_SCHOOL
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// A school asking the platform owner for help. One tier above Complaint,
+// which is a parent asking a school.
+model SupportTicket {
+  id             String                 @id @default(uuid())
+  schoolId       String
+  school         School                 @relation(fields: [schoolId], references: [id])
+  raisedByUserId String
+  raisedByUser   User                   @relation("SupportRaiser", fields: [raisedByUserId], references: [id])
+  subject        String
+  body           String
+  status         SupportTicketStatus    @default(OPEN)
+  priority       SupportTicketPriority  @default(NORMAL)
+  resolvedAt     DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  comments SupportTicketComment[]
+
+  @@index([status, priority])
+  @@index([schoolId])
+}
+
+model SupportTicketComment {
+  id           String        @id @default(uuid())
+  ticketId     String
+  ticket       SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorUserId String
+  authorUser   User          @relation("SupportCommenter", fields: [authorUserId], references: [id])
+  body         String
+  // Platform-side working notes. Never returned to the school — see the
+  // service, which filters on this rather than relying on the caller.
+  internal     Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+
+  @@index([ticketId])
+}
+
+// A message from the platform owner to every tenant — maintenance windows,
+// new features, billing changes. Distinct from Notice, which is one school
+// talking to its own community.
+model PlatformBroadcast {
+  id                String   @id @default(uuid())
+  title             String
+  body              String
+  // Empty means everyone. Otherwise only these roles see it, so a billing
+  // notice can go to school admins without reaching parents.
+  audienceRoles     Role[]
+  publishedByUserId String
+  publishedByUser   User     @relation("BroadcastAuthor", fields: [publishedByUserId], references: [id])
+  // Null means it stays up until withdrawn. A dated maintenance notice should
+  // disappear on its own rather than needing someone to remember.
+  expiresAt         DateTime?
+  createdAt         DateTime @default(now())
+
+  @@index([expiresAt])
 }

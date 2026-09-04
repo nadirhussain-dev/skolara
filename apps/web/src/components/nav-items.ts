@@ -23,6 +23,12 @@ export const NAV_ITEMS: NavItem[] = [
     groupKey: "nav.platform",
   },
   {
+    href: "/super-admin/broadcasts",
+    labelKey: "nav.broadcasts",
+    roles: ["SUPER_ADMIN"],
+    groupKey: "nav.platform",
+  },
+  {
     href: "/super-admin/analytics",
     labelKey: "nav.analytics",
     roles: ["SUPER_ADMIN"],
@@ -72,6 +78,12 @@ export const NAV_ITEMS: NavItem[] = [
     labelKey: "nav.timetable",
     roles: ["TEACHER"],
     groupKey: "nav.academics",
+  },
+  {
+    href: "/teacher/meetings",
+    labelKey: "nav.meetings",
+    roles: ["TEACHER"],
+    groupKey: "nav.communication",
   },
   {
     href: "/teacher/gradebook",
@@ -143,6 +155,20 @@ export const NAV_ITEMS: NavItem[] = [
   },
 
   {
+    href: "/school/directory",
+    labelKey: "nav.directory",
+    roles: ["SCHOOL_ADMIN", "TEACHER"],
+    groupKey: "nav.people",
+  },
+
+  {
+    href: "/school/leave",
+    labelKey: "nav.leave",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.people",
+  },
+
+  {
     href: "/school/library",
     labelKey: "nav.library",
     roles: ["SCHOOL_ADMIN"],
@@ -159,6 +185,13 @@ export const NAV_ITEMS: NavItem[] = [
     labelKey: "nav.payroll",
     roles: ["SCHOOL_ADMIN"],
     groupKey: "nav.operations",
+  },
+
+  {
+    href: "/support",
+    labelKey: "nav.support",
+    roles: ["SCHOOL_ADMIN", "SUPER_ADMIN"],
+    groupKey: "nav.settings",
   },
 
   {

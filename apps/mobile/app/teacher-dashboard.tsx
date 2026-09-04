@@ -17,6 +17,7 @@ const links = [
   { href: "/timetable", label: "My timetable", icon: "🗓️" },
   { href: "/calendar", label: "School calendar", icon: "📅" },
   { href: "/assignments", label: "Homework & assignments", icon: "📝" },
+  { href: "/leave", label: "Leave", icon: "🌴" },
   { href: "/payroll", label: "My payslips", icon: "💰" },
   { href: "/messages", label: "Messages", icon: "💬" },
 ] as const;

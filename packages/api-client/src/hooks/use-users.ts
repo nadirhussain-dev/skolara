@@ -30,3 +30,15 @@ export function useSetUserActive() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: usersQueryKey }),
   });
 }
+
+/**
+ * Colleagues' contact details. Returns staff only, so it's readable by
+ * teachers as well as admins.
+ */
+export function useStaffDirectory() {
+  const api = useApiClient();
+  return useQuery({
+    queryKey: ["users", "staff-directory"],
+    queryFn: () => api.users.staffDirectory(),
+  });
+}

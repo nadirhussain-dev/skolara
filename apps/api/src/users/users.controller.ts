@@ -46,6 +46,15 @@ export class UsersController {
     return this.usersService.createSchoolUser(body);
   }
 
+  // Overrides the controller-level SCHOOL_ADMIN: teachers need this one, and
+  // it returns staff only rather than every user in the school.
+  @Get("staff-directory")
+  @Roles("SCHOOL_ADMIN", "TEACHER")
+  staffDirectory(@CurrentUser() user: AuthenticatedUser) {
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    return this.usersService.staffDirectory(user.schoolId);
+  }
+
   @Get()
   findAll(
     @Query("role") role: RoleType | undefined,

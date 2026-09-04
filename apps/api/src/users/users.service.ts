@@ -35,6 +35,22 @@ export class UsersService {
     });
   }
 
+  /**
+   * Staff only, for the directory.
+   *
+   * A separate method rather than widening findAllBySchool: teachers need
+   * colleagues' contact details, but the general user list also contains every
+   * parent and student, and a role parameter a caller controls is one typo
+   * away from handing a teacher the whole parent roster.
+   */
+  staffDirectory(schoolId: string) {
+    return this.prisma.user.findMany({
+      where: { schoolId, role: { in: ["SCHOOL_ADMIN", "TEACHER"] } },
+      orderBy: [{ role: "asc" }, { firstName: "asc" }],
+      select: PUBLIC_USER_SELECT,
+    });
+  }
+
   findAllBySchool(schoolId: string, role?: RoleType) {
     return this.prisma.user.findMany({
       where: { schoolId, ...(role ? { role } : {}) },
