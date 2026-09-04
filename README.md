@@ -21,7 +21,9 @@ the full product thinking.
 | Auth | JWT access + rotating refresh tokens, RBAC |
 | Storage | Supabase Storage, local disk in development |
 | Push | Expo push notifications |
+| SMS | Twilio, console fallback — off unless a school opts in |
 | AI | Claude (report-card comments, fee-defaulter risk) |
+| i18n | English and Urdu with RTL, 1,208 keys — UI only, see below |
 
 ```
 apps/
@@ -119,6 +121,9 @@ The API refuses to boot with placeholder secrets.
 ## Project status & roadmap
 
 - [docs/FEATURE_STATUS.md](docs/FEATURE_STATUS.md) — every feature in `PROPOSAL.md`
-  checked against what's on `main`: 81 shipped, 3 partial, 2 not built.
-- [docs/SIX_DAY_PLAN.md](docs/SIX_DAY_PLAN.md) — how the remaining work is sequenced,
-  in dependency order, with an explicit cut line per day.
+  checked against what's on `main`: 86 shipped, 0 partial, 0 not built. Read the three
+  caveats at the top before treating that as finished — most importantly, everything the
+  server sends is still English regardless of the reader's language.
+- [docs/SIX_DAY_PLAN.md](docs/SIX_DAY_PLAN.md) — how the work was sequenced and what each
+  day found, including the bugs later days found in earlier days' code.
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — what ships, in what order, and how to roll back.
