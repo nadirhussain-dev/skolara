@@ -28,3 +28,34 @@ export const upsertGradeEntrySchema = z.object({
   comments: z.string().optional(),
 });
 export type UpsertGradeEntryInput = z.infer<typeof upsertGradeEntrySchema>;
+
+/**
+ * One assessment on a student's performance curve.
+ *
+ * Percentages, not raw marks: a 45/50 quiz and a 68/100 exam are not
+ * comparable as marks, and a chart that plots them on one axis is lying.
+ */
+export interface PerformancePoint {
+  term: string;
+  examType: string;
+  percentage: number;
+  /** The same assessment averaged across the class, for context. */
+  classAveragePercentage: number | null;
+  gradedAt: Date;
+}
+
+export interface SubjectPerformance {
+  subject: string;
+  points: PerformancePoint[];
+  /** Mean of the student's own percentages in this subject. */
+  average: number;
+  /** Mean of the class averages over the same assessments. */
+  classAverage: number | null;
+}
+
+export interface StudentPerformance {
+  studentId: string;
+  subjects: SubjectPerformance[];
+  /** Across every subject, so the page can lead with one number. */
+  overallAverage: number | null;
+}

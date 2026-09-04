@@ -121,6 +121,36 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["SCHOOL_ADMIN", "TEACHER"],
     groupKey: "nav.academics",
   },
+  {
+    href: "/school/materials",
+    labelKey: "nav.studyMaterials",
+    roles: ["SCHOOL_ADMIN", "TEACHER"],
+    groupKey: "nav.academics",
+  },
+  {
+    href: "/school/quizzes",
+    labelKey: "nav.quizzes",
+    roles: ["SCHOOL_ADMIN", "TEACHER"],
+    groupKey: "nav.academics",
+  },
+  {
+    href: "/school/lesson-plans",
+    labelKey: "nav.lessonPlans",
+    roles: ["SCHOOL_ADMIN", "TEACHER"],
+    groupKey: "nav.academics",
+  },
+  {
+    href: "/school/live-classes",
+    labelKey: "nav.liveClasses",
+    roles: ["SCHOOL_ADMIN", "TEACHER"],
+    groupKey: "nav.academics",
+  },
+  {
+    href: "/school/performance",
+    labelKey: "nav.performance",
+    roles: ["SCHOOL_ADMIN", "TEACHER"],
+    groupKey: "nav.academics",
+  },
 
   {
     href: "/school/invoices",

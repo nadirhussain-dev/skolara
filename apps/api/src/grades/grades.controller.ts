@@ -65,6 +65,25 @@ export class GradesController {
     return this.gradesService.findForStudent(user.schoolId, studentId);
   }
 
+  /**
+   * The performance curve behind the graphs parents and teachers see.
+   *
+   * Ungated, unlike the school-wide analytics dashboard: a family on the
+   * cheapest plan still gets to see how their own child is doing over time.
+   * It is derived from grade entries they can already read one at a time.
+   */
+  @Get("student/:studentId/performance")
+  @Roles("TEACHER", "SCHOOL_ADMIN", "PARENT", "STUDENT")
+  async performanceForStudent(
+    @Param("studentId") studentId: string,
+    @Query("subject") subject: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    await this.studentAccess.assertCanAccessStudent(user, studentId);
+    return this.gradesService.performanceForStudent(user.schoolId, studentId, subject);
+  }
+
   @Patch(":id/generate-comment")
   @Roles("TEACHER", "SCHOOL_ADMIN")
   @RequiresFeature("AI")

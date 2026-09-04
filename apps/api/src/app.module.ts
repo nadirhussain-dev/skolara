@@ -23,7 +23,9 @@ import { GradesModule } from "./grades/grades.module";
 import { HealthModule } from "./health/health.module";
 import { InvoicesModule } from "./invoices/invoices.module";
 import { LeaveModule } from "./leave/leave.module";
+import { LessonsModule } from "./lessons/lessons.module";
 import { LibraryModule } from "./library/library.module";
+import { LiveClassesModule } from "./live-classes/live-classes.module";
 import { MeetingsModule } from "./meetings/meetings.module";
 import { MessagingModule } from "./messaging/messaging.module";
 import { NoticesModule } from "./notices/notices.module";
@@ -32,12 +34,14 @@ import { PaymentGatewayModule } from "./payment-gateway/payment-gateway.module";
 import { PaymentsModule } from "./payments/payments.module";
 import { PayrollModule } from "./payroll/payroll.module";
 import { PrismaModule } from "./prisma/prisma.module";
+import { QuizzesModule } from "./quizzes/quizzes.module";
 import { ReportCardsModule } from "./report-cards/report-cards.module";
 import { ReportsModule } from "./reports/reports.module";
 import { SchoolGroupsModule } from "./school-groups/school-groups.module";
 import { SchoolsModule } from "./schools/schools.module";
 import { StorageModule } from "./storage/storage.module";
 import { StudentsModule } from "./students/students.module";
+import { StudyMaterialsModule } from "./study-materials/study-materials.module";
 import { SupportModule } from "./support/support.module";
 import { TeachersModule } from "./teachers/teachers.module";
 import { TimetableModule } from "./timetable/timetable.module";
@@ -67,6 +71,7 @@ import { validateEnv } from "./env.validation";
     SchoolGroupsModule,
     UsersModule,
     StudentsModule,
+    StudyMaterialsModule,
     SupportModule,
     TeachersModule,
     TimetableModule,
@@ -80,6 +85,7 @@ import { validateEnv } from "./env.validation";
     PaymentGatewayModule,
     BankStatementModule,
     GradesModule,
+    QuizzesModule,
     NoticesModule,
     AssignmentsModule,
     MeetingsModule,
@@ -87,7 +93,9 @@ import { validateEnv } from "./env.validation";
     ComplaintsModule,
     ExamsModule,
     LeaveModule,
+    LessonsModule,
     LibraryModule,
+    LiveClassesModule,
     TransportModule,
     PayrollModule,
     AnalyticsModule,

@@ -43,6 +43,11 @@ export default function RootLayout() {
         <Stack.Screen name="calendar/index" options={{ title: "Calendar" }} />
         <Stack.Screen name="leave/index" options={{ title: "Leave" }} />
         <Stack.Screen name="meetings/index" options={{ title: "Meetings" }} />
+        <Stack.Screen name="materials/index" options={{ title: "Study materials" }} />
+        <Stack.Screen name="quizzes/index" options={{ title: "Quizzes" }} />
+        <Stack.Screen name="quizzes/[quizId]" options={{ title: "Quiz" }} />
+        <Stack.Screen name="live-classes/index" options={{ title: "Online classes" }} />
+        <Stack.Screen name="performance/index" options={{ title: "Progress" }} />
       </Stack>
     </Providers>
   );

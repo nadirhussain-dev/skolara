@@ -78,6 +78,25 @@ import type {
   SchoolGroup,
   SendMessageInput,
   StartThreadInput,
+  StudyMaterial,
+  PublishStudyMaterialInput,
+  CreateQuizInput,
+  Quiz,
+  QuizAnswer,
+  QuizAttempt,
+  QuizQuestion,
+  QuizQuestionForStudent,
+  ReplaceQuizQuestionsInput,
+  SaveQuizAnswerInput,
+  AddSyllabusTopicsInput,
+  LessonPlan,
+  SyllabusCoverage,
+  SyllabusTopic,
+  UpdateSyllabusTopicInput,
+  UpsertLessonPlanInput,
+  LiveClass,
+  UpsertLiveClassInput,
+  StudentPerformance,
   SubmitAssignmentInput,
   SubmitPaymentInput,
   SuggestedMatch,
@@ -186,6 +205,116 @@ export interface SupportTicketWithComments extends SupportTicketDetail {
   comments: (SupportTicketComment & {
     authorUser: { id: string; firstName: string; lastName: string; role: string };
   })[];
+}
+
+export interface StudyMaterialDetail extends StudyMaterial {
+  uploadedByUser: { id: string; firstName: string; lastName: string };
+  class: { id: string; name: string; section: string };
+}
+
+export interface QuizSummary extends Quiz {
+  class: { id: string; name: string; section: string };
+  _count: { questions: number; attempts: number };
+}
+
+export interface QuizWithQuestions extends Quiz {
+  questions: QuizQuestion[];
+  class: { id: string; name: string; section: string };
+  _count: { attempts: number };
+}
+
+/** A student's own view of a quiz: never the questions, never the answer key. */
+export interface QuizForStudent extends Quiz {
+  totalMarks: number;
+  isOpen: boolean;
+  canAttempt: boolean;
+  _count: { questions: number };
+  attempts: Pick<
+    QuizAttempt,
+    | "id"
+    | "attemptNumber"
+    | "status"
+    | "startedAt"
+    | "expiresAt"
+    | "submittedAt"
+    | "score"
+    | "maxScore"
+  >[];
+}
+
+/** The paper as handed to a student mid-attempt. */
+export interface QuizAttemptPaper extends QuizAttempt {
+  quiz: Quiz;
+  questions: QuizQuestionForStudent[];
+  answers: Pick<QuizAnswer, "questionId" | "selectedIndex">[];
+}
+
+/** The marked paper, released only once the attempt is settled. */
+export interface QuizAttemptResult extends QuizAttempt {
+  quiz: Quiz;
+  questions: {
+    id: string;
+    prompt: string;
+    options: string[];
+    marks: number;
+    correctIndex: number;
+    selectedIndex: number | null;
+    isCorrect: boolean;
+    marksAwarded: number;
+  }[];
+}
+
+export interface QuizAttemptWithQuiz extends QuizAttempt {
+  quiz: { id: string; title: string; subject: string };
+}
+
+export interface QuizResults {
+  quizId: string;
+  maxScore: number;
+  rows: {
+    student: {
+      id: string;
+      admissionNumber: string;
+      user: { firstName: string; lastName: string };
+    };
+    attemptCount: number;
+    bestScore: number | null;
+    percentage: number | null;
+    lastStatus: QuizAttempt["status"] | null;
+  }[];
+}
+
+export interface SyllabusTopicWithCounts extends SyllabusTopic {
+  _count: { lessons: number };
+}
+
+export interface LessonPlanDetail extends LessonPlan {
+  topic: { id: string; title: string; status: SyllabusTopic["status"] } | null;
+  period: { id: string; name: string; startTime: string; endTime: string } | null;
+  teacherUser: { id: string; firstName: string; lastName: string };
+}
+
+export interface LiveClassDetail extends LiveClass {
+  hostUser: { id: string; firstName: string; lastName: string };
+  class: { id: string; name: string; section: string };
+}
+
+/**
+ * A student's view. `meetingUrl` is null until `joinableFrom` and again once
+ * the lesson ends — the API withholds it, so this is not a UI convention the
+ * client could choose to ignore.
+ */
+export interface JoinableLiveClass {
+  id: string;
+  classId: string;
+  subject: string;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  hostUser: { id: string; firstName: string; lastName: string };
+  meetingUrl: string | null;
+  joinable: boolean;
+  joinableFrom: Date;
 }
 
 export interface MeetingSlotDetail extends MeetingSlot {
@@ -514,6 +643,10 @@ export function createApiClient({
         ),
       forStudent: (studentId: string) =>
         request<GradeEntry[]>(`/grades/student/${studentId}`),
+      performance: (studentId: string, subject?: string) =>
+        request<StudentPerformance>(
+          `/grades/student/${studentId}/performance${subject ? `?subject=${encodeURIComponent(subject)}` : ""}`,
+        ),
     },
     notices: {
       create: (input: CreateNoticeInput) =>
@@ -700,6 +833,120 @@ export function createApiClient({
           body: JSON.stringify(input),
         }),
     },
+    liveClasses: {
+      create: (input: UpsertLiveClassInput) =>
+        request<LiveClassDetail>("/live-classes", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      update: (id: string, input: UpsertLiveClassInput) =>
+        request<LiveClassDetail>(`/live-classes/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      remove: (id: string) => request<void>(`/live-classes/${id}`, { method: "DELETE" }),
+      forClass: (classId: string, includePast = false) =>
+        request<LiveClassDetail[]>(
+          `/live-classes/class/${classId}${includePast ? "?includePast=true" : ""}`,
+        ),
+      mine: (includePast = false) =>
+        request<LiveClassDetail[]>(`/live-classes/mine${includePast ? "?includePast=true" : ""}`),
+      forStudent: (studentId: string) =>
+        request<JoinableLiveClass[]>(`/live-classes/student/${studentId}`),
+    },
+    lessons: {
+      addTopics: (input: AddSyllabusTopicsInput) =>
+        request<{ added: number; requested: number }>("/lessons/topics", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      topicsForClass: (classId: string, filters: { subject?: string; term?: string } = {}) => {
+        const query = new URLSearchParams();
+        if (filters.subject) query.set("subject", filters.subject);
+        if (filters.term) query.set("term", filters.term);
+        const suffix = query.toString();
+        return request<SyllabusTopicWithCounts[]>(
+          `/lessons/topics/class/${classId}${suffix ? `?${suffix}` : ""}`,
+        );
+      },
+      updateTopic: (id: string, input: UpdateSyllabusTopicInput) =>
+        request<SyllabusTopic>(`/lessons/topics/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify(input),
+        }),
+      removeTopic: (id: string) => request<void>(`/lessons/topics/${id}`, { method: "DELETE" }),
+      coverage: (classId: string, term?: string) =>
+        request<SyllabusCoverage[]>(
+          `/lessons/coverage/class/${classId}${term ? `?term=${encodeURIComponent(term)}` : ""}`,
+        ),
+      createPlan: (input: UpsertLessonPlanInput) =>
+        request<LessonPlanDetail>("/lessons/plans", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      updatePlan: (id: string, input: UpsertLessonPlanInput) =>
+        request<LessonPlanDetail>(`/lessons/plans/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      minePlans: (range: { from?: string; to?: string } = {}) =>
+        request<LessonPlanDetail[]>(`/lessons/plans/mine${dateRangeQuery(range)}`),
+      plansForClass: (classId: string, range: { from?: string; to?: string } = {}) =>
+        request<LessonPlanDetail[]>(`/lessons/plans/class/${classId}${dateRangeQuery(range)}`),
+      removePlan: (id: string) => request<void>(`/lessons/plans/${id}`, { method: "DELETE" }),
+    },
+    quizzes: {
+      create: (input: CreateQuizInput) =>
+        request<QuizWithQuestions>("/quizzes", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      replaceQuestions: (id: string, input: ReplaceQuizQuestionsInput) =>
+        request<QuizWithQuestions>(`/quizzes/${id}/questions`, {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      publish: (id: string) =>
+        request<QuizWithQuestions>(`/quizzes/${id}/publish`, { method: "PATCH" }),
+      remove: (id: string) => request<void>(`/quizzes/${id}`, { method: "DELETE" }),
+      forClass: (classId: string, subject?: string) =>
+        request<QuizSummary[]>(
+          `/quizzes/class/${classId}${subject ? `?subject=${encodeURIComponent(subject)}` : ""}`,
+        ),
+      findOne: (id: string) => request<QuizWithQuestions>(`/quizzes/${id}`),
+      results: (id: string) => request<QuizResults>(`/quizzes/${id}/results`),
+      availableForStudent: (studentId: string) =>
+        request<QuizForStudent[]>(`/quizzes/student/${studentId}/available`),
+      attemptsForStudent: (studentId: string) =>
+        request<QuizAttemptWithQuiz[]>(`/quizzes/student/${studentId}/attempts`),
+      startAttempt: (quizId: string) =>
+        request<QuizAttemptPaper>(`/quizzes/${quizId}/attempts`, { method: "POST" }),
+      saveAnswer: (attemptId: string, input: SaveQuizAnswerInput) =>
+        request<{ saved: true; questionId: string }>(`/quizzes/attempts/${attemptId}/answer`, {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      submitAttempt: (attemptId: string) =>
+        request<QuizAttemptResult>(`/quizzes/attempts/${attemptId}/submit`, { method: "POST" }),
+    },
+    studyMaterials: {
+      publish: (input: PublishStudyMaterialInput) =>
+        request<StudyMaterialDetail>("/study-materials", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      forClass: (classId: string, subject?: string) =>
+        request<StudyMaterialDetail[]>(
+          `/study-materials/class/${classId}${subject ? `?subject=${encodeURIComponent(subject)}` : ""}`,
+        ),
+      subjectsForClass: (classId: string) =>
+        request<string[]>(`/study-materials/class/${classId}/subjects`),
+      forStudent: (studentId: string, subject?: string) =>
+        request<StudyMaterialDetail[]>(
+          `/study-materials/student/${studentId}${subject ? `?subject=${encodeURIComponent(subject)}` : ""}`,
+        ),
+      withdraw: (id: string) => request<void>(`/study-materials/${id}`, { method: "DELETE" }),
+    },
     meetings: {
       publish: (input: PublishMeetingSlotsInput) =>
         request<{ published: number; requested: number }>("/meetings/slots", {
@@ -843,3 +1090,12 @@ export function createApiClient({
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;
+
+/** `?from=&to=` for the routes that take a date window, omitted when empty. */
+function dateRangeQuery(range: { from?: string; to?: string }): string {
+  const query = new URLSearchParams();
+  if (range.from) query.set("from", range.from);
+  if (range.to) query.set("to", range.to);
+  const suffix = query.toString();
+  return suffix ? `?${suffix}` : "";
+}

@@ -1,6 +1,6 @@
 # Six-Day Delivery Plan
 
-Sequencing the 21 unbuilt modules and 9 partials from [FEATURE_STATUS.md](./FEATURE_STATUS.md)
+Sequencing the unbuilt modules and partials from [FEATURE_STATUS.md](./FEATURE_STATUS.md)
 into six days. Each day is a coherent theme that lands green, in several commits, so any day
 can stop early without leaving the tree broken.
 
@@ -107,12 +107,14 @@ caller-supplied parameter.
 
 ---
 
-## Day 4 — Learning & insight
+## Day 4 — Learning & insight ✅ done
 
-**Closes 5 rows.**
+**Closed 7 rows** — two more than planned. Study materials and live classes each close a teacher
+row *and* a parent row, because both features are only finished when the family side can read
+them.
 
 The teacher's web depth, which the proposal identifies as the half competitors underinvest in.
-Quizzes are the largest item here and the one with real logic in it.
+Quizzes were the largest item and the one with real logic in it.
 
 | # | Chunk | Detail |
 |---|---|---|
@@ -122,10 +124,39 @@ Quizzes are the largest item here and the one with real logic in it.
 | 4 | Live class links | Scheduled links surfaced to the right class at the right time. Deliberately not a video stack. |
 | 5 | Student performance graphs | Marks over time by subject, for parents and teachers. |
 
-**Closes:** Study materials · Quizzes · Lesson planning · Live class links · Performance graphs
+**Closes:** Study materials (teacher upload · family access) · Quizzes · Lesson planning ·
+Live class links (teacher schedule · family join) · Performance graphs
 
-**Cut line:** Quiz question types beyond MCQ. Auto-grading is the differentiator and MCQ is what
-auto-grades.
+**Cut line taken:** Quiz question types beyond MCQ, as planned. Auto-grading is the
+differentiator and MCQ is what auto-grades.
+
+**The design question quizzes actually posed** wasn't the grading — comparing an index to an
+answer key is trivial. It was what a timed paper does when the clock runs out. Posting every
+answer in one request at submit forces a choice between penalising network lag and letting the
+client's clock decide, and both are wrong. Saving each answer as it is chosen removes the
+dilemma: the deadline is fixed by the server when the paper opens, and an expired attempt is
+graded on whatever arrived in time. It cost one extra endpoint and made a dead battery cost the
+remaining questions rather than the whole sitting.
+
+**Quiz marks go into `GradeEntry`,** not a parallel score table. That is why the performance
+graphs picked quizzes up for free, and why a quiz mark reaches a report card through the same
+path an exam mark does. The cost is that two quizzes could claim one gradebook cell; a unique
+index refuses that rather than letting one silently overwrite the other.
+
+**Rendering the chart found two bugs that reading the code had not.** A subject with a single
+assessment drew no class-average line, because a one-point SVG path has no stroke length — the
+comparison silently vanished. And the endpoint label was struck through by the class-average
+line whenever a student sat just below their class. Both were fixed only because the chart was
+rendered and looked at, which is now the last step of any chart work here.
+
+**Lesson planning is web-only.** The plan framed day 4 as the teacher's web depth and that is
+where it landed; a teacher's own plans are not yet on mobile. Small, and worth adding, but it
+was not in scope and is not being counted as done.
+
+**Two rows were widened deliberately.** The upload allowlist is now per-purpose so the materials
+library accepts Office documents — a library that refuses a `.docx` is a library nobody uses —
+and `GET /grades/student/:id/performance` is ungated, unlike the analytics dashboard, so a
+family on the cheapest plan can still see their own child's progress.
 
 ---
 
@@ -188,18 +219,27 @@ Neither is code, and both block a pilot.
 
 ## Where to push back
 
-**Four of these thirty are on the list for the wrong reason.**
+**Four of these thirty were on the list for the wrong reason.**
 
 Hostel, inventory, live classes and quizzes are each substantial builds, and none of them
 appears anywhere in the gap analysis in `PROPOSAL.md` as a wedge. They are on the roadmap
 because full-featured competitors list them — not because a small Multan private school is
 choosing a platform on them.
 
-Building all four costs roughly a day and a half of these six. Dropping them would let days 4
-and 5 absorb the slack the other days will almost certainly need, and would buy back the polish
-time that makes the difference between "feature complete" and "a school will actually use this".
+Two of the four are now built. Live classes and quizzes turned out cheap in this codebase:
+live classes are one table plus a release-window rule, and quizzes reuse `GradeEntry` instead
+of inventing a parallel score store, which is also why they showed up in the performance
+graphs for free. The warning stands for the other two — hostel and inventory are new domains,
+not new views of existing ones, and there is no equivalent lever to pull.
 
-Recommendation: hold them until a pilot school asks. That is a recommendation, not a decision.
+**Updated recommendation: drop hostel and inventory from day 5** and let that day absorb the
+slack days 5 and 6 will need. That buys back the polish time that makes the difference between
+"feature complete" and "a school will actually use this". Still a recommendation, not a
+decision.
+
+**One backlog row belongs to no day.** Student and parent *leave application* is unbuilt: day 3
+covered staff leave, and neither day 5 nor day 6 picks up the family side. It needs adding to a
+day or dropping on purpose — day 5 has room for it if hostel and inventory come out.
 
 ---
 
