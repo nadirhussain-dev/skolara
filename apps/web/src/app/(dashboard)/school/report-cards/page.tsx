@@ -15,11 +15,13 @@ import {
   Input,
   PageHeader,
 } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 export default function ReportCardsPage() {
   const api = useApiClient();
+  const { t } = useTranslation();
   const { data: classes } = useQuery<SchoolClass[]>({
     queryKey: ["classes"],
     queryFn: () => api.classes.list(),
@@ -38,31 +40,31 @@ export default function ReportCardsPage() {
     try {
       setCards(await generate.mutateAsync({ classId, term }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't generate report cards");
+      setError(err instanceof Error ? err.message : t("reportCards.couldNotGenerate"));
     }
   }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Report cards"
-        description="Assemble marks, attendance and teacher remarks into a PDF per student."
+        title={t("reportCards.title")}
+        description={t("reportCards.description")}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Generate for a class</CardTitle>
+          <CardTitle>{t("reportCards.generateForClass")}</CardTitle>
         </CardHeader>
         <form onSubmit={handleGenerate} className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-sm">
-            Class
+            {t("reportCards.class")}
             <select
               value={classId}
               onChange={(e) => setClassId(e.target.value)}
               required
               className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
             >
-              <option value="">Select a class…</option>
+              <option value="">{t("reportCards.selectAClass")}</option>
               {classes?.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name} {c.section}
@@ -71,22 +73,22 @@ export default function ReportCardsPage() {
             </select>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Term
+            {t("fields.term")}
             <Input
-              placeholder="e.g. Term 1 2026"
+              placeholder={t("reportCards.termHint")}
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               required
             />
           </label>
           <Button type="submit" disabled={generate.isPending}>
-            {generate.isPending ? "Generating…" : "Generate"}
+            {generate.isPending ? t("reportCards.generating") : t("reportCards.generate")}
           </Button>
         </form>
 
         {generate.isPending && (
           <p className="mt-3 text-sm text-slate-500">
-            Rendering one card at a time — a large class takes a few moments.
+            {t("reportCards.renderingHint")}
           </p>
         )}
         {error && <p className="mt-3 text-sm text-rose-600">{error}</p>}
@@ -96,7 +98,9 @@ export default function ReportCardsPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {cards.length} card{cards.length === 1 ? "" : "s"} generated
+              {cards.length === 1
+                ? t("reportCards.cardGenerated", { count: cards.length })
+                : t("reportCards.cardsGenerated", { count: cards.length })}
             </CardTitle>
           </CardHeader>
           <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
@@ -112,7 +116,7 @@ export default function ReportCardsPage() {
                   rel="noreferrer"
                   className="text-sm text-brand-700 underline"
                 >
-                  Open PDF
+                  {t("reportCards.openPdf")}
                 </a>
               </li>
             ))}
@@ -121,7 +125,7 @@ export default function ReportCardsPage() {
       )}
 
       {cards.length === 0 && !generate.isPending && !error && (
-        <EmptyState title="Pick a class and term to generate cards." />
+        <EmptyState title={t("reportCards.pickClassAndTerm")} />
       )}
     </div>
   );
