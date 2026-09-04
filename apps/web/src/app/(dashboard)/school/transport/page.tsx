@@ -10,11 +10,14 @@ import {
 } from "@skolara/api-client";
 import type { SchoolClass } from "@skolara/types";
 import { Button, Card, CardHeader, CardTitle, EmptyState, Input, PageHeader, Select } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { intlLocale } from "@/lib/intl";
 
 export default function TransportPage() {
   const api = useApiClient();
+  const { t, locale } = useTranslation();
   const { data: buses, isLoading } = useBuses();
   const createBus = useCreateBus();
   const assignStudent = useAssignStudentToBus();
@@ -59,58 +62,58 @@ export default function TransportPage() {
       busId: assignBusId,
       input: { studentId: assignStudentId },
     });
-    setAssignedMessage("Student assigned to bus.");
+    setAssignedMessage(t("transport.assigned"));
     setTimeout(() => setAssignedMessage(""), 3000);
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Transport" description="Manage the bus fleet and student assignments." />
+      <PageHeader title={t("transport.title")} description={t("transport.description")} />
       <Card>
         <CardHeader>
-          <CardTitle>Add a bus</CardTitle>
+          <CardTitle>{t("transport.addBus")}</CardTitle>
         </CardHeader>
         <form onSubmit={handleCreateBus} className="flex flex-wrap gap-3">
           <Input
-            placeholder="Plate number"
+            placeholder={t("transport.plateNumber")}
             required
             value={plateNumber}
             onChange={(e) => setPlateNumber(e.target.value)}
             className="max-w-[140px]"
           />
           <Input
-            placeholder="Driver name"
+            placeholder={t("transport.driverName")}
             required
             value={driverName}
             onChange={(e) => setDriverName(e.target.value)}
             className="max-w-[160px]"
           />
           <Input
-            placeholder="Driver phone (optional)"
+            placeholder={t("transport.driverPhoneOptional")}
             value={driverPhone}
             onChange={(e) => setDriverPhone(e.target.value)}
             className="max-w-[160px]"
           />
           <Input
-            placeholder="Route name"
+            placeholder={t("transport.routeName")}
             required
             value={routeName}
             onChange={(e) => setRouteName(e.target.value)}
             className="max-w-[160px]"
           />
           <Button type="submit" disabled={createBus.isPending}>
-            {createBus.isPending ? "Adding..." : "Add bus"}
+            {createBus.isPending ? t("transport.adding") : t("transport.add")}
           </Button>
         </form>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Fleet</CardTitle>
+          <CardTitle>{t("transport.fleet")}</CardTitle>
         </CardHeader>
-        {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {buses?.length === 0 && (
-          <EmptyState title="No buses yet" description="Add your first bus above." />
+          <EmptyState title={t("transport.noBuses")} description={t("transport.noBusesBody")} />
         )}
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {buses?.map((bus) => (
@@ -125,7 +128,7 @@ export default function TransportPage() {
                 </p>
               </div>
               <Button variant="ghost" onClick={() => setTrackBusId(bus.id)}>
-                Track
+                {t("transport.track")}
               </Button>
             </div>
           ))}
@@ -135,11 +138,14 @@ export default function TransportPage() {
           <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm dark:bg-slate-900">
             {location ? (
               <p>
-                Last seen at {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)} ·{" "}
-                {new Date(location.recordedAt).toLocaleTimeString()}
+                {t("transport.lastSeen", {
+                  latitude: location.latitude.toFixed(5),
+                  longitude: location.longitude.toFixed(5),
+                  time: new Date(location.recordedAt).toLocaleTimeString(intlLocale(locale)),
+                })}
               </p>
             ) : (
-              <p className="text-slate-500">No location reported yet.</p>
+              <p className="text-slate-500">{t("transport.noLocation")}</p>
             )}
           </div>
         )}
@@ -147,7 +153,7 @@ export default function TransportPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Assign a student to a bus</CardTitle>
+          <CardTitle>{t("transport.assignStudent")}</CardTitle>
         </CardHeader>
         <form onSubmit={handleAssign} className="flex flex-wrap items-center gap-3">
           <Select
@@ -156,7 +162,7 @@ export default function TransportPage() {
             onChange={(e) => setAssignBusId(e.target.value)}
             className="max-w-xs"
           >
-            <option value="">Select bus</option>
+            <option value="">{t("transport.selectBus")}</option>
             {buses?.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.plateNumber} — {b.routeName}
@@ -171,7 +177,7 @@ export default function TransportPage() {
             }}
             className="max-w-xs"
           >
-            <option value="">Select class</option>
+            <option value="">{t("fields.selectClass")}</option>
             {classes?.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} — {c.section}
@@ -185,7 +191,7 @@ export default function TransportPage() {
             className="max-w-xs"
             disabled={!classId}
           >
-            <option value="">Select student</option>
+            <option value="">{t("fields.selectStudent")}</option>
             {students?.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.user.firstName} {s.user.lastName} ({s.admissionNumber})
@@ -193,7 +199,7 @@ export default function TransportPage() {
             ))}
           </Select>
           <Button type="submit" disabled={assignStudent.isPending}>
-            {assignStudent.isPending ? "Assigning..." : "Assign"}
+            {assignStudent.isPending ? t("transport.assigning") : t("transport.assign")}
           </Button>
         </form>
         {assignedMessage && <p className="mt-2 text-sm text-emerald-600">{assignedMessage}</p>}

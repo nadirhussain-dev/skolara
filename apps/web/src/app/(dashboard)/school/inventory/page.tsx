@@ -14,7 +14,6 @@ import {
   type StudentWithUser,
 } from "@skolara/api-client";
 import {
-  ASSET_CONDITION_LABELS,
   assetConditionSchema,
   type AssetCondition,
   type SchoolClass,
@@ -31,8 +30,10 @@ import {
   Select,
   StatCard,
 } from "@skolara/ui";
+import { useTranslation, type Locale } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { intlLocale } from "@/lib/intl";
 
 const CONDITION_TONE: Record<AssetCondition, "success" | "neutral" | "warning" | "danger"> = {
   NEW: "success",
@@ -43,11 +44,18 @@ const CONDITION_TONE: Record<AssetCondition, "success" | "neutral" | "warning" |
   WRITTEN_OFF: "danger",
 };
 
-const pkr = new Intl.NumberFormat("en-PK", {
-  style: "currency",
-  currency: "PKR",
-  maximumFractionDigits: 0,
-});
+/**
+ * Rupees, formatted for whoever is reading. The currency is fixed and the
+ * locale isn't: an Urdu reader should see Urdu digits and grouping, not
+ * English ones on a Pakistani currency.
+ */
+function formatPkr(value: number, locale: Locale): string {
+  return new Intl.NumberFormat(intlLocale(locale), {
+    style: "currency",
+    currency: "PKR",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
 
 function holderName(assignment: {
   assignedToUser: { firstName: string; lastName: string } | null;
@@ -60,6 +68,7 @@ function holderName(assignment: {
 }
 
 export default function InventoryPage() {
+  const { t, locale } = useTranslation();
   const api = useApiClient();
   const { data: summary } = useInventorySummary();
   const { data: categories } = useInventoryCategories();
@@ -121,7 +130,7 @@ export default function InventoryPage() {
       setAssetTag("");
       setCost("");
     } catch (err) {
-      setItemError(err instanceof Error ? err.message : "Couldn't add that item");
+      setItemError(err instanceof Error ? err.message : t("inventory.couldNotAdd"));
     }
   }
 
@@ -144,34 +153,38 @@ export default function InventoryPage() {
       setHolderId("");
       setDueBackOn("");
     } catch (err) {
-      setIssueError(err instanceof Error ? err.message : "Couldn't issue that");
+      setIssueError(err instanceof Error ? err.message : t("inventory.couldNotIssue"));
     }
   }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Inventory & assets"
-        description="What the school owns, how much of it is out, and who has it."
+        title={t("inventory.title")}
+        description={t("inventory.description")}
       />
 
       {summary && (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
-          <StatCard label="Items" value={summary.items} icon="📦" />
-          <StatCard label="Units" value={summary.units} icon="🔢" />
-          <StatCard label="Out" value={summary.unitsOut} icon="📤" />
-          <StatCard label="Overdue" value={summary.overdue} icon="⏰" />
-          <StatCard label="Book value" value={pkr.format(summary.totalValuePkr)} icon="💰" />
+          <StatCard label={t("inventory.items")} value={summary.items} icon="📦" />
+          <StatCard label={t("inventory.units")} value={summary.units} icon="🔢" />
+          <StatCard label={t("inventory.out")} value={summary.unitsOut} icon="📤" />
+          <StatCard label={t("inventory.overdue")} value={summary.overdue} icon="⏰" />
+          <StatCard
+            label={t("inventory.bookValue")}
+            value={formatPkr(summary.totalValuePkr, locale)}
+            icon="💰"
+          />
         </div>
       )}
 
       {(summary?.needsAttention ?? 0) > 0 && (
         <Card>
           <p className="text-sm">
-            <Badge tone="danger">{summary?.needsAttention} needs attention</Badge>{" "}
-            <span className="text-slate-500">
-              Damaged or written-off items stay in the list but can&apos;t be issued.
-            </span>
+            <Badge tone="danger">
+              {t("inventory.needsAttention", { count: summary?.needsAttention ?? 0 })}
+            </Badge>{" "}
+            <span className="text-slate-500">{t("inventory.needsAttentionBody")}</span>
           </p>
         </Card>
       )}
@@ -179,7 +192,7 @@ export default function InventoryPage() {
       {(outstanding?.length ?? 0) > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Out now</CardTitle>
+            <CardTitle>{t("inventory.outNow")}</CardTitle>
           </CardHeader>
           <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
             {outstanding?.map((assignment) => {
@@ -203,16 +216,24 @@ export default function InventoryPage() {
                       {assignment.item.assetTag && (
                         <Badge tone="neutral">{assignment.item.assetTag}</Badge>
                       )}
-                      {overdue && <Badge tone="danger">Overdue</Badge>}
+                      {overdue && <Badge tone="danger">{t("inventory.overdue")}</Badge>}
                     </div>
                     <p className="mt-1 text-sm text-slate-500">
-                      {holderName(assignment)} · since{" "}
-                      {new Date(assignment.assignedAt).toLocaleDateString("en-GB", {
-                        day: "numeric",
-                        month: "short",
+                      {t("inventory.holderSince", {
+                        holder: holderName(assignment),
+                        date: new Date(assignment.assignedAt).toLocaleDateString(
+                          intlLocale(locale),
+                          { day: "numeric", month: "short" },
+                        ),
                       })}
-                      {assignment.dueBackOn &&
-                        ` · due ${new Date(assignment.dueBackOn).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
+                      {assignment.dueBackOn
+                        ? t("inventory.dueSuffix", {
+                            date: new Date(assignment.dueBackOn).toLocaleDateString(
+                              intlLocale(locale),
+                              { day: "numeric", month: "short" },
+                            ),
+                          })
+                        : ""}
                     </p>
                   </div>
                   <Select
@@ -230,10 +251,10 @@ export default function InventoryPage() {
                   >
                     {/* Condition is asked at the moment of return, because
                         that is the moment anyone would notice damage. */}
-                    <option value="">Return as…</option>
+                    <option value="">{t("inventory.returnAs")}</option>
                     {assetConditionSchema.options.map((condition) => (
                       <option key={condition} value={condition}>
-                        {ASSET_CONDITION_LABELS[condition]}
+                        {t(`assetCondition.${condition}`)}
                       </option>
                     ))}
                   </Select>
@@ -246,11 +267,11 @@ export default function InventoryPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Add an item</CardTitle>
+          <CardTitle>{t("inventory.addItem")}</CardTitle>
         </CardHeader>
         <form onSubmit={handleCreateItem} className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-sm">
-            Name
+            {t("fields.name")}
             <Input
               required
               value={name}
@@ -259,7 +280,7 @@ export default function InventoryPage() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Category
+            {t("inventory.category")}
             <Input
               required
               list="inventory-categories"
@@ -274,7 +295,7 @@ export default function InventoryPage() {
             </datalist>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Asset tag
+            {t("inventory.assetTag")}
             <Input
               placeholder="optional"
               value={assetTag}
@@ -283,7 +304,7 @@ export default function InventoryPage() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Location
+            {t("inventory.location")}
             <Input
               placeholder="optional"
               value={location}
@@ -292,7 +313,7 @@ export default function InventoryPage() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Units
+            {t("inventory.units")}
             <Input
               type="number"
               min={0}
@@ -302,7 +323,7 @@ export default function InventoryPage() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Cost each (PKR)
+            {t("inventory.costEach")}
             <Input
               type="number"
               min={0}
@@ -313,7 +334,7 @@ export default function InventoryPage() {
             />
           </label>
           <Button type="submit" disabled={createItem.isPending}>
-            {createItem.isPending ? "Adding…" : "Add item"}
+            {createItem.isPending ? t("inventory.adding") : t("inventory.add")}
           </Button>
           {itemError && <p className="text-sm text-rose-600">{itemError}</p>}
         </form>
@@ -321,7 +342,7 @@ export default function InventoryPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Items</CardTitle>
+          <CardTitle>{t("inventory.items")}</CardTitle>
         </CardHeader>
         <div className="mb-3 flex flex-wrap items-end gap-3">
           <Select
@@ -329,7 +350,7 @@ export default function InventoryPage() {
             onChange={(e) => setCategory(e.target.value)}
             className="max-w-[200px]"
           >
-            <option value="">All categories</option>
+            <option value="">{t("inventory.allCategories")}</option>
             {categories?.map((existing) => (
               <option key={existing} value={existing}>
                 {existing}
@@ -337,16 +358,16 @@ export default function InventoryPage() {
             ))}
           </Select>
           <Input
-            placeholder="Search name or tag"
+            placeholder={t("inventory.searchHint")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-[240px]"
           />
         </div>
 
-        {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {!isLoading && items?.length === 0 && (
-          <EmptyState icon="📦" title="Nothing here yet." />
+          <EmptyState icon="📦" title={t("inventory.nothingHere")} />
         )}
         <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {items?.map((entry) => (
@@ -357,13 +378,16 @@ export default function InventoryPage() {
                   <Badge tone="neutral">{entry.category}</Badge>
                   {entry.assetTag && <Badge tone="info">{entry.assetTag}</Badge>}
                   <Badge tone={CONDITION_TONE[entry.condition]}>
-                    {ASSET_CONDITION_LABELS[entry.condition]}
+                    {t(`assetCondition.${entry.condition}`)}
                   </Badge>
                 </div>
                 <p className="mt-1 text-sm tabular-nums text-slate-500">
-                  {entry.available} of {entry.quantity} available
-                  {entry.unitsOut > 0 && ` · ${entry.unitsOut} out`}
-                  {entry.location && ` · ${entry.location}`}
+                  {t("inventory.availableOfTotal", {
+                    available: entry.available,
+                    total: entry.quantity,
+                  })}
+                  {entry.unitsOut > 0 ? t("inventory.outSuffix", { count: entry.unitsOut }) : ""}
+                  {entry.location ? ` · ${entry.location}` : ""}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
@@ -373,11 +397,11 @@ export default function InventoryPage() {
                     setOpenItemId((current) => (current === entry.id ? undefined : entry.id))
                   }
                 >
-                  {openItemId === entry.id ? "Close" : "Issue"}
+                  {openItemId === entry.id ? t("common.close") : t("inventory.issue")}
                 </Button>
                 {entry.unitsOut === 0 && (
                   <Button variant="ghost" onClick={() => removeItem.mutate(entry.id)}>
-                    Delete
+                    {t("common.delete")}
                   </Button>
                 )}
               </div>
@@ -390,13 +414,17 @@ export default function InventoryPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {item.name} — {item.available} of {item.quantity} available
+              {t("inventory.itemHeading", {
+                name: item.name,
+                available: item.available,
+                total: item.quantity,
+              })}
             </CardTitle>
           </CardHeader>
 
           <form onSubmit={handleIssue} className="mb-4 flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              Issue to
+              {t("inventory.issueTo")}
               <Select
                 value={holderKind}
                 onChange={(e) => {
@@ -405,19 +433,19 @@ export default function InventoryPage() {
                 }}
                 className="max-w-[140px]"
               >
-                <option value="STAFF">A staff member</option>
-                <option value="CLASS">A class</option>
+                <option value="STAFF">{t("inventory.aStaffMember")}</option>
+                <option value="CLASS">{t("inventory.aClass")}</option>
               </Select>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              {holderKind === "STAFF" ? "Staff member" : "Class"}
+              {holderKind === "STAFF" ? t("inventory.staffMember") : t("reportCards.class")}
               <Select
                 required
                 value={holderId}
                 onChange={(e) => setHolderId(e.target.value)}
                 className="max-w-xs"
               >
-                <option value="">Select…</option>
+                <option value="">{t("inventory.selectPlaceholder")}</option>
                 {holderKind === "STAFF"
                   ? staff?.map((person) => (
                       <option key={person.id} value={person.id}>
@@ -432,7 +460,7 @@ export default function InventoryPage() {
               </Select>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              Units
+              {t("inventory.units")}
               <Input
                 type="number"
                 min={1}
@@ -443,7 +471,7 @@ export default function InventoryPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              Due back
+              {t("inventory.dueBack")}
               <Input
                 type="date"
                 value={dueBackOn}
@@ -452,13 +480,15 @@ export default function InventoryPage() {
               />
             </label>
             <Button type="submit" disabled={issue.isPending || !item.issuable}>
-              {issue.isPending ? "Issuing…" : "Issue"}
+              {issue.isPending ? t("inventory.issuing") : t("inventory.issue")}
             </Button>
             {!item.issuable && (
               <p className="text-sm text-slate-500">
                 {item.available === 0
-                  ? "Nothing available."
-                  : `Marked ${ASSET_CONDITION_LABELS[item.condition].toLowerCase()} — not issuable.`}
+                  ? t("inventory.nothingAvailable")
+                  : t("inventory.notIssuable", {
+                      condition: t(`assetCondition.${item.condition}`),
+                    })}
               </p>
             )}
             {issueError && <p className="text-sm text-rose-600">{issueError}</p>}
@@ -467,20 +497,27 @@ export default function InventoryPage() {
           {item.history.length > 0 && (
             <details>
               <summary className="cursor-pointer text-sm text-slate-500">
-                Returned ({item.history.length})
+                {t("inventory.returnedCount", { count: item.history.length })}
               </summary>
               <ul className="mt-2 flex flex-col gap-1 text-sm text-slate-500">
                 {item.history.map((assignment) => (
                   <li key={assignment.id}>
-                    {holderName(assignment)} · ×{assignment.units} · back{" "}
-                    {assignment.returnedAt &&
-                      new Date(assignment.returnedAt).toLocaleDateString("en-GB", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    {assignment.returnedCondition &&
-                      ` · ${ASSET_CONDITION_LABELS[assignment.returnedCondition]}`}
+                    {t("inventory.historyLine", {
+                      holder: holderName(assignment),
+                      units: assignment.units,
+                      date: assignment.returnedAt
+                        ? new Date(assignment.returnedAt).toLocaleDateString(intlLocale(locale), {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : "",
+                    })}
+                    {assignment.returnedCondition
+                      ? t("inventory.conditionSuffix", {
+                          condition: t(`assetCondition.${assignment.returnedCondition}`),
+                        })
+                      : ""}
                   </li>
                 ))}
               </ul>

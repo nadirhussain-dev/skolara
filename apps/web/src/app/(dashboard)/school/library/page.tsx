@@ -11,11 +11,14 @@ import {
 } from "@skolara/api-client";
 import type { SchoolClass } from "@skolara/types";
 import { Badge, Button, Card, CardHeader, CardTitle, EmptyState, Input, PageHeader, Select } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { intlLocale } from "@/lib/intl";
 
 export default function LibraryPage() {
   const api = useApiClient();
+  const { t, locale } = useTranslation();
   const { data: books, isLoading: booksLoading } = useBooks();
   const createBook = useCreateBook();
   const borrowBook = useBorrowBook();
@@ -62,28 +65,28 @@ export default function LibraryPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Library" description="Manage the catalog and track book loans." />
+      <PageHeader title={t("library.title")} description={t("library.description")} />
       <Card>
         <CardHeader>
-          <CardTitle>Add a book</CardTitle>
+          <CardTitle>{t("library.addBook")}</CardTitle>
         </CardHeader>
         <form onSubmit={handleCreateBook} className="flex flex-wrap gap-3">
           <Input
-            placeholder="Title"
+            placeholder={t("fields.title")}
             required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="max-w-xs"
           />
           <Input
-            placeholder="Author"
+            placeholder={t("library.author")}
             required
             value={author}
             onChange={(e) => setAuthor(e.target.value)}
             className="max-w-[180px]"
           />
           <Input
-            placeholder="ISBN (optional)"
+            placeholder={t("library.isbnOptional")}
             value={isbn}
             onChange={(e) => setIsbn(e.target.value)}
             className="max-w-[160px]"
@@ -91,25 +94,25 @@ export default function LibraryPage() {
           <Input
             type="number"
             min="1"
-            placeholder="Copies"
+            placeholder={t("library.copies")}
             required
             value={totalCopies}
             onChange={(e) => setTotalCopies(e.target.value)}
             className="max-w-[100px]"
           />
           <Button type="submit" disabled={createBook.isPending}>
-            {createBook.isPending ? "Adding..." : "Add book"}
+            {createBook.isPending ? t("library.adding") : t("library.add")}
           </Button>
         </form>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Catalog</CardTitle>
+          <CardTitle>{t("library.catalog")}</CardTitle>
         </CardHeader>
-        {booksLoading && <p className="text-sm text-slate-500">Loading...</p>}
+        {booksLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {books?.length === 0 && (
-          <EmptyState title="No books yet" description="Add your first book above." />
+          <EmptyState title={t("library.noBooks")} description={t("library.noBooksBody")} />
         )}
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {books?.map((b) => (
@@ -122,7 +125,10 @@ export default function LibraryPage() {
                 </p>
               </div>
               <span className="text-sm text-slate-500">
-                {b.availableCopies} / {b.totalCopies} available
+                {t("library.availableOfTotal", {
+                  available: b.availableCopies,
+                  total: b.totalCopies,
+                })}
               </span>
             </div>
           ))}
@@ -131,7 +137,7 @@ export default function LibraryPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Loans</CardTitle>
+          <CardTitle>{t("library.loans")}</CardTitle>
         </CardHeader>
         <div className="mb-4 flex flex-wrap gap-3">
           <Select
@@ -142,7 +148,7 @@ export default function LibraryPage() {
             }}
             className="max-w-xs"
           >
-            <option value="">Select class</option>
+            <option value="">{t("fields.selectClass")}</option>
             {classes?.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} — {c.section}
@@ -155,7 +161,7 @@ export default function LibraryPage() {
             className="max-w-xs"
             disabled={!classId}
           >
-            <option value="">Select student</option>
+            <option value="">{t("fields.selectStudent")}</option>
             {students?.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.user.firstName} {s.user.lastName} ({s.admissionNumber})
@@ -173,7 +179,7 @@ export default function LibraryPage() {
                 onChange={(e) => setBookId(e.target.value)}
                 className="max-w-xs"
               >
-                <option value="">Select book to borrow</option>
+                <option value="">{t("library.selectBookToBorrow")}</option>
                 {books
                   ?.filter((b) => b.availableCopies > 0)
                   .map((b) => (
@@ -190,31 +196,33 @@ export default function LibraryPage() {
                 className="max-w-[160px]"
               />
               <Button type="submit" disabled={borrowBook.isPending}>
-                {borrowBook.isPending ? "Borrowing..." : "Borrow"}
+                {borrowBook.isPending ? t("library.borrowing") : t("library.borrow")}
               </Button>
             </form>
 
-            {loansLoading && <p className="text-sm text-slate-500">Loading...</p>}
-            {loans?.length === 0 && <EmptyState title="No loans for this student" />}
+            {loansLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
+            {loans?.length === 0 && <EmptyState title={t("library.noLoans")} />}
             <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
               {loans?.map((loan) => (
                 <div key={loan.id} className="flex items-center justify-between py-3">
                   <div>
                     <p className="font-medium">{loan.book.title}</p>
                     <p className="text-sm text-slate-500">
-                      Borrowed {new Date(loan.borrowedAt).toLocaleDateString()} · Due{" "}
-                      {new Date(loan.dueAt).toLocaleDateString()}
+                      {t("library.loanDates", {
+                        borrowed: new Date(loan.borrowedAt).toLocaleDateString(intlLocale(locale)),
+                        due: new Date(loan.dueAt).toLocaleDateString(intlLocale(locale)),
+                      })}
                     </p>
                   </div>
                   {loan.returnedAt ? (
-                    <Badge tone="success">Returned</Badge>
+                    <Badge tone="success">{t("library.returned")}</Badge>
                   ) : (
                     <Button
                       variant="secondary"
                       onClick={() => returnBook.mutate(loan.id)}
                       disabled={returnBook.isPending}
                     >
-                      Mark returned
+                      {t("library.markReturned")}
                     </Button>
                   )}
                 </div>
