@@ -77,6 +77,7 @@ export const en = {
     schools: "Schools",
     schoolGroups: "School groups",
     analytics: "Analytics",
+    infrastructure: "Infrastructure",
     students: "Students",
     teachers: "Teachers",
     classes: "Classes",
@@ -104,11 +105,15 @@ export const en = {
     notices: "Notices",
     complaints: "Complaints",
     library: "Library",
+    hostel: "Hostel",
+    inventory: "Inventory",
     transport: "Transport",
     payroll: "Payroll",
     branding: "Branding",
+    roles: "Roles & permissions",
     apiKeys: "API keys",
     auditLog: "Audit log",
+    dataExport: "Export data",
   },
 
   attendance: {

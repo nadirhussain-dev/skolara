@@ -10,6 +10,12 @@ export const userSchema = z.object({
   lastName: z.string().min(1),
   phone: z.string().nullable(),
   isActive: z.boolean(),
+  /**
+   * The access template narrowing this account, if any. Null for every user
+   * until a school builds one — a template only ever removes access, never
+   * grants it, so the role above remains the source of what they *could* do.
+   */
+  roleTemplateId: z.string().uuid().nullable(),
   createdAt: z.coerce.date(),
 });
 export type User = z.infer<typeof userSchema>;

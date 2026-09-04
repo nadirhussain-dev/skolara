@@ -160,12 +160,11 @@ family on the cheapest plan can still see their own child's progress.
 
 ---
 
-## Day 5 — Operations & tenancy
+## Day 5 — Operations & tenancy ✅ done
 
-**Closes 5 rows.**
-
-The remaining standalone modules, plus the two tenancy tools a platform owner needs once real
-schools are on it.
+**Closed 7 rows** — two more than planned. The tenant export also answers the cross-cutting
+"automated backups and data export tools" row, and the health monitor closed a partial rather
+than an unbuilt row.
 
 | # | Chunk | Detail |
 |---|---|---|
@@ -175,9 +174,44 @@ schools are on it.
 | 4 | Role & permission template editor | Custom roles per school on top of the four built-in ones. |
 | 5 | Infra health monitor | A dashboard over the health endpoints that already answer. |
 
-**Closes:** Hostel · Inventory · Data export/backup · Role templates · Health monitor
+**Closes:** Hostel · Inventory · Data export/backup · Automated backups & export tools ·
+Role templates · Health monitor
 
-**Cut line:** Hostel and inventory — see [Where to push back](#where-to-push-back).
+**Cut line not taken.** Hostel and inventory were named as the first things to drop, and the
+recommendation to drop them was restated at the end of day 4. They were built because the
+instruction was to work the day's list, and the recommendation was a recommendation. What that
+cost is visible: they are two of the five chunks and the two with no strategic argument behind
+them.
+
+**The day's real problem was chunk 4, and it wasn't the editor.** "Custom roles per school" reads
+like a schema change and is actually an authorisation rewrite: four roles are baked into every
+`@Roles` check and into the JWT, so replacing them means touching ninety endpoints at once in code
+that currently enforces tenancy correctly. The way out was to make a template **narrow** a role
+instead of replacing it — the user keeps their role, so every existing check still governs them,
+and a template only subtracts. That is a one-directional change with a bounded blast radius: the
+worst a bad template does is lock someone out.
+
+Two rules carry it, and both are tested. A template's base role must equal its holder's actual
+role, or a SCHOOL_ADMIN template on a teacher would read as an escalation. And nobody may template
+themselves, or an admin could narrow their own account out of the editor with no way back.
+`role-templates` is deliberately absent from the capability catalogue so a templated account is
+refused the editor by construction, with a clear-only escape hatch for the platform owner.
+
+**Two races were closed by making the database decide, not the service.** Hostel beds are claimed
+by two partial unique indexes rather than by counting occupants, and inventory stock is reserved in
+the same UPDATE that checks it. Both replace a read-then-write that looks safe inside a transaction
+and isn't: at Postgres' default READ COMMITTED isolation two callers read the same figure and both
+commit.
+
+**Found on the way:** the library's borrow path has exactly that bug — `availableCopies < 1`
+checked and then decremented inside a transaction. Not fixed here; flagged for day 6 rather than
+smuggled into an inventory commit.
+
+**The export's security design is an allowlist**, not a denylist. Every table names its columns, so
+a column added later is absent until someone adds it deliberately — failing open with a missing
+field beats failing open with a disclosure. Credentials, platform-internal support notes and
+operational logs are excluded, and the spec asserts each exclusion rather than trusting the
+comment.
 
 ---
 
@@ -192,7 +226,7 @@ not optional padding — without it nothing reaches a school.
 |---|---|---|
 | 1 | Wire 26 admin pages to i18n | The translator, both locales and RTL are built and tested; no admin page calls `t()` yet. This is wiring plus Urdu copy, and it is bigger than "translation content". |
 | 2 | Deploy workflow | API container and web app. CI validates today and ships nothing. |
-| 3 | Tests for the money paths | Payments, invoices, grades, attendance. Money-handling code with no coverage is the riskiest thing left in the repo. |
+| 3 | Tests for the money paths | Payments, invoices, attendance. Money-handling code with no coverage is the riskiest thing left in the repo. Grades picked up coverage on day 4. **Add the library over-borrow race** found on day 5: `availableCopies` is checked and then decremented inside a transaction, which at READ COMMITTED lets two concurrent borrows both pass. The hostel and inventory modules show the fix. |
 | 4 | SMS channel | Alongside WhatsApp, email and push. |
 | 5 | Super Admin mobile companion | Approve signups and read revenue on the move. The proposal marks it optional; it is last for that reason. |
 
@@ -232,14 +266,15 @@ of inventing a parallel score store, which is also why they showed up in the per
 graphs for free. The warning stands for the other two — hostel and inventory are new domains,
 not new views of existing ones, and there is no equivalent lever to pull.
 
-**Updated recommendation: drop hostel and inventory from day 5** and let that day absorb the
-slack days 5 and 6 will need. That buys back the polish time that makes the difference between
-"feature complete" and "a school will actually use this". Still a recommendation, not a
-decision.
+**All four were built.** Hostel and inventory landed on day 5 despite the recommendation above,
+because the instruction was to work the day's list. The recommendation is now moot, and what it
+would have bought — slack for day 6 — was not bought. Day 6 has five chunks and two of them
+(the deploy workflow and the money-path tests) were already named as uncuttable.
 
-**One backlog row belongs to no day.** Student and parent *leave application* is unbuilt: day 3
-covered staff leave, and neither day 5 nor day 6 picks up the family side. It needs adding to a
-day or dropping on purpose — day 5 has room for it if hostel and inventory come out.
+**One backlog row still belongs to no day.** Student and parent *leave application* is unbuilt:
+day 3 covered staff leave, and day 6's list doesn't pick up the family side. It is small — the
+staff leave module is most of the shape — but it needs adding to day 6 or dropping on purpose
+rather than quietly not happening.
 
 ---
 

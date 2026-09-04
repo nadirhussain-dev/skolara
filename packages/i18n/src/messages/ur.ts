@@ -80,6 +80,7 @@ export const ur: Messages = {
     schools: "اسکول",
     schoolGroups: "اسکول گروپس",
     analytics: "تجزیات",
+    infrastructure: "انفراسٹرکچر",
     students: "طلبہ",
     teachers: "اساتذہ",
     classes: "جماعتیں",
@@ -107,11 +108,15 @@ export const ur: Messages = {
     notices: "اعلانات",
     complaints: "شکایات",
     library: "لائبریری",
+    hostel: "ہاسٹل",
+    inventory: "انوینٹری",
     transport: "ٹرانسپورٹ",
     payroll: "تنخواہیں",
     branding: "برانڈنگ",
+    roles: "کردار اور اجازتیں",
     apiKeys: "اے پی آئی کیز",
     auditLog: "آڈٹ لاگ",
+    dataExport: "ڈیٹا برآمد کریں",
   },
 
   attendance: {

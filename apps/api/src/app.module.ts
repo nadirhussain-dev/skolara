@@ -19,8 +19,11 @@ import { ComplaintsModule } from "./complaints/complaints.module";
 import { DevicesModule } from "./devices/devices.module";
 import { DocumentsModule } from "./documents/documents.module";
 import { ExamsModule } from "./exams/exams.module";
+import { ExportModule } from "./export/export.module";
 import { GradesModule } from "./grades/grades.module";
 import { HealthModule } from "./health/health.module";
+import { HostelModule } from "./hostel/hostel.module";
+import { InventoryModule } from "./inventory/inventory.module";
 import { InvoicesModule } from "./invoices/invoices.module";
 import { LeaveModule } from "./leave/leave.module";
 import { LessonsModule } from "./lessons/lessons.module";
@@ -37,6 +40,7 @@ import { PrismaModule } from "./prisma/prisma.module";
 import { QuizzesModule } from "./quizzes/quizzes.module";
 import { ReportCardsModule } from "./report-cards/report-cards.module";
 import { ReportsModule } from "./reports/reports.module";
+import { RoleTemplatesModule } from "./role-templates/role-templates.module";
 import { SchoolGroupsModule } from "./school-groups/school-groups.module";
 import { SchoolsModule } from "./schools/schools.module";
 import { StorageModule } from "./storage/storage.module";
@@ -48,6 +52,7 @@ import { TimetableModule } from "./timetable/timetable.module";
 import { TransportModule } from "./transport/transport.module";
 import { UsersModule } from "./users/users.module";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
+import { PermissionGuard } from "./common/guards/permission.guard";
 import { validateEnv } from "./env.validation";
 
 @Module({
@@ -68,6 +73,7 @@ import { validateEnv } from "./env.validation";
     SchoolsModule,
     ReportCardsModule,
     ReportsModule,
+    RoleTemplatesModule,
     SchoolGroupsModule,
     UsersModule,
     StudentsModule,
@@ -92,7 +98,10 @@ import { validateEnv } from "./env.validation";
     MessagingModule,
     ComplaintsModule,
     ExamsModule,
+    ExportModule,
     LeaveModule,
+    HostelModule,
+    InventoryModule,
     LessonsModule,
     LibraryModule,
     LiveClassesModule,
@@ -103,6 +112,12 @@ import { validateEnv } from "./env.validation";
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // Global rather than per-controller, for the same reason the audit
+    // interceptor is: a new endpoint falls under a user's access template the
+    // moment it exists, instead of whenever somebody remembers to annotate it.
+    // A no-op for every account without a template, which is all of them until
+    // a school builds one.
+    { provide: APP_GUARD, useClass: PermissionGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     // Global rather than per-controller: a new write endpoint is audited the
     // moment it exists, instead of whenever someone remembers to add it.

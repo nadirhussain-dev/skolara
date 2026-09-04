@@ -34,6 +34,12 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["SUPER_ADMIN"],
     groupKey: "nav.platform",
   },
+  {
+    href: "/super-admin/health",
+    labelKey: "nav.infrastructure",
+    roles: ["SUPER_ADMIN"],
+    groupKey: "nav.platform",
+  },
 
   {
     href: "/school/analytics",
@@ -205,6 +211,18 @@ export const NAV_ITEMS: NavItem[] = [
     groupKey: "nav.operations",
   },
   {
+    href: "/school/hostel",
+    labelKey: "nav.hostel",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.operations",
+  },
+  {
+    href: "/school/inventory",
+    labelKey: "nav.inventory",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.operations",
+  },
+  {
     href: "/school/transport",
     labelKey: "nav.transport",
     roles: ["SCHOOL_ADMIN"],
@@ -231,6 +249,12 @@ export const NAV_ITEMS: NavItem[] = [
     groupKey: "nav.settings",
   },
   {
+    href: "/school/roles",
+    labelKey: "nav.roles",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.settings",
+  },
+  {
     href: "/school/api-keys",
     labelKey: "nav.apiKeys",
     roles: ["SCHOOL_ADMIN"],
@@ -240,6 +264,12 @@ export const NAV_ITEMS: NavItem[] = [
     href: "/school/audit-logs",
     labelKey: "nav.auditLog",
     roles: ["SUPER_ADMIN", "SCHOOL_ADMIN"],
+    groupKey: "nav.settings",
+  },
+  {
+    href: "/school/data-export",
+    labelKey: "nav.dataExport",
+    roles: ["SCHOOL_ADMIN"],
     groupKey: "nav.settings",
   },
 ];

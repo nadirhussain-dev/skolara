@@ -103,6 +103,12 @@ export class AuthService {
         lastName: user.lastName,
         phone: user.phone,
         isActive: user.isActive,
+        // Carried on the login response so the app can tell a restricted
+        // account from an unrestricted one without a second request. It is not
+        // what enforces anything — PermissionGuard reads the template from the
+        // database on every request, so revoking one takes effect at once
+        // rather than at the next login.
+        roleTemplateId: user.roleTemplateId,
         createdAt: user.createdAt,
       },
     };

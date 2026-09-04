@@ -14,3 +14,14 @@ export function saveCsv(csv: string, filename: string): void {
 export function datedFilename(prefix: string): string {
   return `${prefix}-${new Date().toISOString().slice(0, 10)}.csv`;
 }
+
+/** Same, for a JSON bundle. No BOM — nothing opens these in Excel. */
+export function saveJson(json: string, filename: string): void {
+  const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}

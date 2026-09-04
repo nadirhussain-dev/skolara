@@ -97,6 +97,25 @@ import type {
   LiveClass,
   UpsertLiveClassInput,
   StudentPerformance,
+  AllocateHostelBedInput,
+  HostelAllocation,
+  HostelOccupancy,
+  HostelRoom,
+  HostelSummary,
+  UpsertHostelRoomInput,
+  AssetAssignment,
+  InventoryItem,
+  InventorySummary,
+  IssueAssetInput,
+  ReturnAssetInput,
+  UpsertInventoryItemInput,
+  AssignRoleTemplateInput,
+  CAPABILITY_GROUPS,
+  ROLE_TEMPLATE_PRESETS,
+  RoleTemplate,
+  TEMPLATABLE_ROLES,
+  UpsertRoleTemplateInput,
+  HealthDetail,
   SubmitAssignmentInput,
   SubmitPaymentInput,
   SuggestedMatch,
@@ -317,6 +336,63 @@ export interface JoinableLiveClass {
   joinableFrom: Date;
 }
 
+export interface HostelRoomWithOccupancy extends HostelOccupancy {
+  notes: string | null;
+}
+
+export interface HostelResident extends HostelAllocation {
+  student: {
+    id: string;
+    admissionNumber: string;
+    user: { firstName: string; lastName: string; phone: string | null };
+    class: { id: string; name: string; section: string } | null;
+  };
+}
+
+export interface HostelRoomDetail extends HostelRoom {
+  residents: HostelResident[];
+  past: HostelResident[];
+  freeBeds: number[];
+}
+
+export interface HostelAllocationWithRoom extends HostelAllocation {
+  room: { id: string; blockName: string; roomNumber: string; floor: number | null };
+}
+
+export interface InventoryItemWithAvailability
+  extends Omit<InventoryItem, "purchaseCostPkr"> {
+  purchaseCostPkr: number | null;
+  /** quantity minus what is out. */
+  available: number;
+  /** Available *and* in a condition that may go out again. */
+  issuable: boolean;
+}
+
+export interface AssetAssignmentDetail extends AssetAssignment {
+  item: { id: string; name: string; category: string; assetTag: string | null };
+  assignedToUser: { id: string; firstName: string; lastName: string; role: string } | null;
+  class: { id: string; name: string; section: string } | null;
+}
+
+export interface InventoryItemDetail extends InventoryItemWithAvailability {
+  out: AssetAssignmentDetail[];
+  history: AssetAssignmentDetail[];
+}
+
+export interface RoleTemplateWithCount extends RoleTemplate {
+  _count: { users: number };
+}
+
+export interface RoleTemplateDetail extends RoleTemplate {
+  users: { id: string; firstName: string; lastName: string; email: string; role: RoleType }[];
+}
+
+export interface CapabilityCatalogue {
+  groups: typeof CAPABILITY_GROUPS;
+  presets: typeof ROLE_TEMPLATE_PRESETS;
+  templatableRoles: typeof TEMPLATABLE_ROLES;
+}
+
 export interface MeetingSlotDetail extends MeetingSlot {
   teacherUser: { id: string; firstName: string; lastName: string };
   student: {
@@ -465,11 +541,14 @@ export function createApiClient({
    * These are behind the bearer token, so a plain `<a href>` would arrive
    * unauthenticated — the body has to come through the client.
    */
-  async function requestText(path: string, isRetry = false): Promise<string> {
+  async function requestText(
+    path: string,
+    { accept = "text/csv", isRetry = false }: { accept?: string; isRetry?: boolean } = {},
+  ): Promise<string> {
     const token = await getAccessToken();
     const res = await fetch(`${baseUrl}${path}`, {
       headers: {
-        Accept: "text/csv",
+        Accept: accept,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
     });
@@ -477,7 +556,7 @@ export function createApiClient({
     if (!res.ok) {
       if (res.status === 401 && !isRetry && getRefreshToken) {
         const newToken = await refreshAccessToken();
-        if (newToken) return requestText(path, true);
+        if (newToken) return requestText(path, { accept, isRetry: true });
         await onAuthFailure?.();
       }
       throw new ApiError(res.status, res.statusText);
@@ -568,6 +647,8 @@ export function createApiClient({
         }),
       byClass: (classId: string) =>
         request<StudentWithUser[]>(`/students?classId=${classId}`),
+      /** Every student in the school — hostel and inventory aren't per class. */
+      all: () => request<StudentWithUser[]>("/students"),
       mine: () => request<StudentWithUser[]>("/students/mine"),
       findOne: (id: string) => request<StudentWithUser>(`/students/${id}`),
       assignClass: (id: string, classId: string) =>
@@ -833,6 +914,104 @@ export function createApiClient({
           body: JSON.stringify(input),
         }),
     },
+    health: {
+      /** Guarded — the two probes a load balancer uses stay unauthenticated. */
+      detail: () => request<HealthDetail>("/health/detail"),
+    },
+    roleTemplates: {
+      catalogue: () => request<CapabilityCatalogue>("/role-templates/catalogue"),
+      create: (input: UpsertRoleTemplateInput) =>
+        request<RoleTemplate>("/role-templates", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      list: () => request<RoleTemplateWithCount[]>("/role-templates"),
+      findOne: (id: string) => request<RoleTemplateDetail>(`/role-templates/${id}`),
+      update: (id: string, input: UpsertRoleTemplateInput) =>
+        request<RoleTemplate>(`/role-templates/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      remove: (id: string) => request<void>(`/role-templates/${id}`, { method: "DELETE" }),
+      assign: (userId: string, input: AssignRoleTemplateInput) =>
+        request<User>(`/role-templates/users/${userId}`, {
+          method: "PATCH",
+          body: JSON.stringify(input),
+        }),
+    },
+    inventory: {
+      createItem: (input: UpsertInventoryItemInput) =>
+        request<InventoryItem>("/inventory/items", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      updateItem: (id: string, input: UpsertInventoryItemInput) =>
+        request<InventoryItem>(`/inventory/items/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      removeItem: (id: string) =>
+        request<void>(`/inventory/items/${id}`, { method: "DELETE" }),
+      items: (
+        filters: { category?: string; search?: string; onlyAvailable?: boolean } = {},
+      ) => {
+        const query = new URLSearchParams();
+        if (filters.category) query.set("category", filters.category);
+        if (filters.search) query.set("search", filters.search);
+        if (filters.onlyAvailable) query.set("onlyAvailable", "true");
+        const suffix = query.toString();
+        return request<InventoryItemWithAvailability[]>(
+          `/inventory/items${suffix ? `?${suffix}` : ""}`,
+        );
+      },
+      itemDetail: (id: string) => request<InventoryItemDetail>(`/inventory/items/${id}`),
+      summary: () => request<InventorySummary>("/inventory/summary"),
+      categories: () => request<string[]>("/inventory/categories"),
+      outstanding: () => request<AssetAssignmentDetail[]>("/inventory/outstanding"),
+      issue: (itemId: string, input: IssueAssetInput) =>
+        request<AssetAssignmentDetail>(`/inventory/items/${itemId}/assignments`, {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      returnAsset: (assignmentId: string, input: ReturnAssetInput) =>
+        request<AssetAssignmentDetail>(`/inventory/assignments/${assignmentId}/return`, {
+          method: "PATCH",
+          body: JSON.stringify(input),
+        }),
+    },
+    hostel: {
+      createRoom: (input: UpsertHostelRoomInput) =>
+        request<HostelRoom>("/hostel/rooms", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      updateRoom: (id: string, input: UpsertHostelRoomInput) =>
+        request<HostelRoom>(`/hostel/rooms/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      removeRoom: (id: string) => request<void>(`/hostel/rooms/${id}`, { method: "DELETE" }),
+      rooms: (filters: { blockName?: string; onlyWithFreeBeds?: boolean } = {}) => {
+        const query = new URLSearchParams();
+        if (filters.blockName) query.set("blockName", filters.blockName);
+        if (filters.onlyWithFreeBeds) query.set("onlyWithFreeBeds", "true");
+        const suffix = query.toString();
+        return request<HostelRoomWithOccupancy[]>(`/hostel/rooms${suffix ? `?${suffix}` : ""}`);
+      },
+      roomDetail: (id: string) => request<HostelRoomDetail>(`/hostel/rooms/${id}`),
+      summary: () => request<HostelSummary>("/hostel/summary"),
+      allocate: (roomId: string, input: AllocateHostelBedInput) =>
+        request<HostelResident>(`/hostel/rooms/${roomId}/allocations`, {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      vacate: (allocationId: string) =>
+        request<HostelResident>(`/hostel/allocations/${allocationId}/vacate`, {
+          method: "PATCH",
+        }),
+      forStudent: (studentId: string) =>
+        request<HostelAllocationWithRoom[]>(`/hostel/student/${studentId}`),
+    },
     liveClasses: {
       create: (input: UpsertLiveClassInput) =>
         request<LiveClassDetail>("/live-classes", {
@@ -987,6 +1166,20 @@ export function createApiClient({
     reports: {
       platformRevenueCsv: () => requestText("/reports/platform-revenue.csv"),
       feeCollectionCsv: () => requestText("/reports/fee-collection.csv"),
+    },
+    exports: {
+      tables: () => request<{ tables: string[] }>("/export/tables"),
+      /**
+       * The whole bundle as text. Fetched through the client rather than a
+       * plain link because the route is behind the bearer token, and returned
+       * as a string so the caller can hand it straight to a download without
+       * a parse-then-restringify round trip.
+       */
+      schoolJson: () => requestText("/export/school.json", { accept: "application/json" }),
+      tableCsv: (table: string) =>
+        requestText(`/export/school.csv?table=${encodeURIComponent(table)}`),
+      schoolJsonFor: (schoolId: string) =>
+        requestText(`/export/school/${schoolId}.json`, { accept: "application/json" }),
     },
     certificates: {
       issue: (input: IssueCertificateInput) =>

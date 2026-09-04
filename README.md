@@ -115,6 +115,6 @@ The API refuses to boot with placeholder secrets.
 ## Project status & roadmap
 
 - [docs/FEATURE_STATUS.md](docs/FEATURE_STATUS.md) — every feature in `PROPOSAL.md`
-  checked against what's on `main`: 75 shipped, 4 partial, 7 not built.
+  checked against what's on `main`: 81 shipped, 3 partial, 2 not built.
 - [docs/SIX_DAY_PLAN.md](docs/SIX_DAY_PLAN.md) — how the remaining work is sequenced,
   in dependency order, with an explicit cut line per day.
