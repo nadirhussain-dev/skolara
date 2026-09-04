@@ -1076,6 +1076,26 @@ export const ur: Messages = {
     both: "واٹس ایپ اور SMS",
   },
 
+  absences: {
+    title: "طلبا کی غیر حاضری",
+    description:
+      "گھر والوں کی بتائی ہوئی غیر حاضریاں۔ منظوری سے وہ دن غیر حاضر کے بجائے باجواز درج ہوتے ہیں۔",
+    requests: "درخواستیں",
+    nothingToReview: "دیکھنے کے لیے کچھ نہیں۔",
+    requestDates: "{dates} · اطلاع {reporter} کی طرف سے",
+    approve: "منظور کریں",
+    decline: "مسترد کریں",
+    declineReasonLabel: "مسترد کرنے کی وجہ — گھر والوں کو یہ نظر آئے گی",
+    declineReasonHint: "مثلاً اُس ہفتے امتحانات ہیں",
+    sendDecline: "مسترد کرنا بھیجیں",
+    couldNotApprove: "یہ درخواست منظور نہیں ہو سکی",
+    couldNotDecline: "یہ درخواست مسترد نہیں ہو سکی",
+    excusedOne: "منظور — 1 حاضری باجواز میں تبدیل ہو گئی۔",
+    excusedMany: "منظور — {count} حاضریاں باجواز میں تبدیل ہو گئیں۔",
+    excusedNone: "منظور۔ اُن دنوں کی حاضری باجواز درج ہوگی۔",
+    classLine: "{className} · {admissionNumber}",
+  },
+
   roles: {
     SUPER_ADMIN: "پلیٹ فارم ایڈمن",
     SCHOOL_ADMIN: "اسکول ایڈمن",
@@ -1137,6 +1157,7 @@ export const ur: Messages = {
     timetable: "ٹائم ٹیبل",
     calendar: "کیلنڈر",
     reportCards: "رپورٹ کارڈ",
+    absences: "طلبا کی غیر حاضری",
     leave: "عملے کی رخصت",
     meetings: "والدین سے ملاقاتیں",
     support: "معاونت",
@@ -1212,6 +1233,7 @@ export const ur: Messages = {
     liveClasses: "آن لائن کلاسز",
     performance: "پیش رفت",
     busTracking: "بس کی نگرانی",
+    reportAbsence: "غیر حاضری کی اطلاع",
     library: "لائبریری",
     complaints: "شکایات",
     messages: "پیغامات",

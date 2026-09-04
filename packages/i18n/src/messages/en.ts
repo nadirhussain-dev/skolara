@@ -1084,6 +1084,26 @@ export const en = {
     both: "WhatsApp and SMS",
   },
 
+  absences: {
+    title: "Pupil absences",
+    description:
+      "Absences families have reported. Approving one records the days as excused rather than absent.",
+    requests: "Requests",
+    nothingToReview: "Nothing to review.",
+    requestDates: "{dates} · reported by {reporter}",
+    approve: "Approve",
+    decline: "Decline",
+    declineReasonLabel: "Reason for declining — the family sees this",
+    declineReasonHint: "e.g. Exams that week",
+    sendDecline: "Send decline",
+    couldNotApprove: "Couldn't approve that request",
+    couldNotDecline: "Couldn't decline that request",
+    excusedOne: "Approved — 1 register updated to excused.",
+    excusedMany: "Approved — {count} registers updated to excused.",
+    excusedNone: "Approved. Registers for those days will record it as excused.",
+    classLine: "{className} · {admissionNumber}",
+  },
+
   roles: {
     SUPER_ADMIN: "Platform admin",
     SCHOOL_ADMIN: "School admin",
@@ -1145,6 +1165,7 @@ export const en = {
     timetable: "Timetable",
     calendar: "Calendar",
     reportCards: "Report cards",
+    absences: "Pupil absences",
     leave: "Staff leave",
     meetings: "Parent meetings",
     support: "Support",
@@ -1220,6 +1241,7 @@ export const en = {
     liveClasses: "Online classes",
     performance: "Progress",
     busTracking: "Bus tracking",
+    reportAbsence: "Report an absence",
     library: "Library",
     complaints: "Complaints",
     messages: "Messages",

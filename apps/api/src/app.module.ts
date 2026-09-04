@@ -25,6 +25,7 @@ import { HealthModule } from "./health/health.module";
 import { HostelModule } from "./hostel/hostel.module";
 import { InventoryModule } from "./inventory/inventory.module";
 import { InvoicesModule } from "./invoices/invoices.module";
+import { AbsencesModule } from "./absences/absences.module";
 import { LeaveModule } from "./leave/leave.module";
 import { LessonsModule } from "./lessons/lessons.module";
 import { LibraryModule } from "./library/library.module";
@@ -99,6 +100,7 @@ import { validateEnv } from "./env.validation";
     ComplaintsModule,
     ExamsModule,
     ExportModule,
+    AbsencesModule,
     LeaveModule,
     HostelModule,
     InventoryModule,

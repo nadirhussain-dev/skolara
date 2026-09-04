@@ -12,6 +12,7 @@ describe("AttendanceService", () => {
   let prisma: {
     schoolClass: { findFirst: jest.Mock; findMany: jest.Mock };
     studentProfile: { findMany: jest.Mock };
+    absenceRequest: { findMany: jest.Mock };
     attendanceRecord: { upsert: jest.Mock; findMany: jest.Mock };
     $transaction: jest.Mock;
   };
@@ -22,6 +23,8 @@ describe("AttendanceService", () => {
 
   /** Who is enrolled in the class, as the roster check reads them. */
   let enrolled: { id: string }[];
+  /** Students the school has already excused for the day being marked. */
+  let excused: { studentId: string }[];
   /** Absent students with their parents, as the alert reads them. */
   let absentees: {
     id: string;
@@ -32,6 +35,7 @@ describe("AttendanceService", () => {
   beforeEach(() => {
     enrolled = roster("s1", "s2");
     absentees = [];
+    excused = [];
     prisma = {
       schoolClass: {
         findFirst: jest.fn().mockResolvedValue({ id: CLASS }),
@@ -49,6 +53,7 @@ describe("AttendanceService", () => {
         upsert: jest.fn().mockResolvedValue({ id: "record-1" }),
         findMany: jest.fn().mockResolvedValue([]),
       },
+      absenceRequest: { findMany: jest.fn().mockImplementation(() => Promise.resolve(excused)) },
       $transaction: jest.fn().mockImplementation(async (arg) =>
         typeof arg === "function" ? arg(prisma) : Promise.all(arg),
       ),
@@ -139,6 +144,90 @@ describe("AttendanceService", () => {
       await service.markAttendance(SCHOOL, TEACHER, register([]));
 
       expect(prisma.studentProfile.findMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("approved absences", () => {
+    const statusOf = (studentId: string) => {
+      const call = prisma.attendanceRecord.upsert.mock.calls.find(
+        ([args]) =>
+          (args as { where: { classId_studentId_date: { studentId: string } } }).where
+            .classId_studentId_date.studentId === studentId,
+      );
+      return (call?.[0] as { create: { status: string } }).create.status;
+    };
+
+    it("records an approved absence as excused rather than absent", async () => {
+      excused = [{ studentId: "s2" }];
+
+      await service.markAttendance(
+        SCHOOL,
+        TEACHER,
+        register([
+          { studentId: "s1", status: "ABSENT" },
+          { studentId: "s2", status: "ABSENT" },
+        ]),
+      );
+
+      expect(statusOf("s1")).toBe("ABSENT");
+      expect(statusOf("s2")).toBe("EXCUSED");
+    });
+
+    it("leaves a pupil who turned up marked present, note or no note", async () => {
+      excused = [{ studentId: "s1" }];
+
+      await service.markAttendance(
+        SCHOOL,
+        TEACHER,
+        register([{ studentId: "s1", status: "PRESENT" }]),
+      );
+
+      expect(statusOf("s1")).toBe("PRESENT");
+    });
+
+    it("only looks up absences for the day being marked", async () => {
+      await service.markAttendance(
+        SCHOOL,
+        TEACHER,
+        register([{ studentId: "s1", status: "ABSENT" }]),
+      );
+
+      expect(prisma.absenceRequest.findMany).toHaveBeenCalledWith({
+        where: {
+          schoolId: SCHOOL,
+          studentId: { in: ["s1"] },
+          status: "APPROVED",
+          startDate: { lte: DATE },
+          endDate: { gte: DATE },
+        },
+        select: { studentId: true },
+      });
+    });
+
+    it("skips the lookup entirely when nobody is absent", async () => {
+      await service.markAttendance(
+        SCHOOL,
+        TEACHER,
+        register([
+          { studentId: "s1", status: "PRESENT" },
+          { studentId: "s2", status: "LATE" },
+        ]),
+      );
+
+      expect(prisma.absenceRequest.findMany).not.toHaveBeenCalled();
+    });
+
+    it("asks once for the whole register, not once per pupil", async () => {
+      await service.markAttendance(
+        SCHOOL,
+        TEACHER,
+        register([
+          { studentId: "s1", status: "ABSENT" },
+          { studentId: "s2", status: "ABSENT" },
+        ]),
+      );
+
+      expect(prisma.absenceRequest.findMany).toHaveBeenCalledTimes(1);
     });
   });
 
