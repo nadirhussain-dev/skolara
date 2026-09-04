@@ -12,6 +12,7 @@ import {
   Textarea,
   PageHeader,
 } from "@skolara/ui";
+import { useTranslation, type MessageKey } from "@skolara/i18n";
 import { formatCurrency } from "@skolara/utils";
 import { useState } from "react";
 
@@ -22,17 +23,26 @@ const statusTone = {
   NEEDS_INFO: "info",
 } as const;
 
-const REJECTION_REASONS: { value: PaymentRejectionReason; label: string }[] = [
-  { value: "AMOUNT_MISMATCH", label: "Amount doesn't match the invoice" },
-  { value: "SCREENSHOT_UNCLEAR", label: "Screenshot unclear or unreadable" },
-  { value: "WRONG_ACCOUNT", label: "Paid into the wrong account" },
-  { value: "DUPLICATE_SUBMISSION", label: "Duplicate submission" },
-  { value: "OTHER", label: "Other" },
+const REJECTION_REASONS: { value: PaymentRejectionReason; labelKey: MessageKey }[] = [
+  { value: "AMOUNT_MISMATCH", labelKey: "paymentQueue.reasonAmountMismatch" },
+  { value: "SCREENSHOT_UNCLEAR", labelKey: "paymentQueue.reasonScreenshotUnclear" },
+  { value: "WRONG_ACCOUNT", labelKey: "paymentQueue.reasonWrongAccount" },
+  { value: "DUPLICATE_SUBMISSION", labelKey: "paymentQueue.reasonDuplicate" },
+  { value: "OTHER", labelKey: "paymentQueue.reasonOther" },
 ];
+
+/** The queue's four states, as the catalogue already names them. */
+const STATUS_LABEL: Record<keyof typeof statusTone, MessageKey> = {
+  PENDING_VERIFICATION: "payments.pendingVerification",
+  VERIFIED: "payments.verified",
+  REJECTED: "payments.rejected",
+  NEEDS_INFO: "payments.needsInfo",
+};
 
 type OpenAction = { id: string; kind: "REJECT" | "NEEDS_INFO" } | null;
 
 export default function PaymentQueuePage() {
+  const { t } = useTranslation();
   const { data: submissions, isLoading } = usePaymentQueue();
   const review = useReviewPayment();
 
@@ -63,12 +73,12 @@ export default function PaymentQueuePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Payment queue" description="Verify parent-submitted fee payments." />
+      <PageHeader title={t("paymentQueue.title")} description={t("paymentQueue.description")} />
       <Card>
         <CardHeader>
-          <CardTitle>Payment verification queue</CardTitle>
+          <CardTitle>{t("paymentQueue.cardTitle")}</CardTitle>
         </CardHeader>
-        {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
 
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {submissions?.map((submission) => {
@@ -88,7 +98,7 @@ export default function PaymentQueuePage() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={submission.screenshotUrl}
-                        alt={`Transfer screenshot for ${submission.referenceId}`}
+                        alt={t("paymentQueue.screenshotAlt", { reference: submission.referenceId })}
                         className="h-20 w-20 rounded-lg border border-slate-200 object-cover dark:border-slate-800"
                       />
                     </a>
@@ -106,9 +116,10 @@ export default function PaymentQueuePage() {
                         {submission.invoice.term}
                       </p>
                       <p className="text-sm text-slate-500">
-                        Invoice: {formatCurrency(Number(submission.invoice.amountDue))} due
-                        {" · "}
-                        {formatCurrency(Number(submission.invoice.amountPaid))} paid so far
+                        {t("paymentQueue.invoiceSummary", {
+                          due: formatCurrency(Number(submission.invoice.amountDue)),
+                          paid: formatCurrency(Number(submission.invoice.amountPaid)),
+                        })}
                       </p>
                       {submission.reviewNote && (
                         <p className="mt-1 text-xs text-amber-600">{submission.reviewNote}</p>
@@ -120,14 +131,14 @@ export default function PaymentQueuePage() {
                           rel="noreferrer"
                           className="mt-1 inline-block text-xs text-brand-700 underline"
                         >
-                          Receipt PDF
+                          {t("paymentQueue.receiptPdf")}
                         </a>
                       )}
                     </div>
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2">
-                    <Badge tone={statusTone[submission.status]}>{submission.status}</Badge>
+                    <Badge tone={statusTone[submission.status]}>{t(STATUS_LABEL[submission.status])}</Badge>
                     {submission.status === "PENDING_VERIFICATION" && !isOpen && (
                       <>
                         <Button
@@ -137,7 +148,7 @@ export default function PaymentQueuePage() {
                             review.mutate({ id: submission.id, input: { status: "VERIFIED" } })
                           }
                         >
-                          Verify
+                          {t("payments.verify")}
                         </Button>
                         <Button
                           variant="secondary"
@@ -145,13 +156,13 @@ export default function PaymentQueuePage() {
                             setOpenAction({ id: submission.id, kind: "NEEDS_INFO" })
                           }
                         >
-                          Needs info
+                          {t("payments.needsInfo")}
                         </Button>
                         <Button
                           variant="ghost"
                           onClick={() => setOpenAction({ id: submission.id, kind: "REJECT" })}
                         >
-                          Reject
+                          {t("payments.reject")}
                         </Button>
                       </>
                     )}
@@ -162,7 +173,7 @@ export default function PaymentQueuePage() {
                   <div className="mt-4 flex flex-col gap-3 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
                     {openAction.kind === "REJECT" && (
                       <label className="flex flex-col gap-1 text-sm">
-                        Reason
+                        {t("payments.rejectionReason")}
                         <Select
                           value={rejectionReason}
                           onChange={(e) =>
@@ -172,7 +183,7 @@ export default function PaymentQueuePage() {
                         >
                           {REJECTION_REASONS.map((reason) => (
                             <option key={reason.value} value={reason.value}>
-                              {reason.label}
+                              {t(reason.labelKey)}
                             </option>
                           ))}
                         </Select>
@@ -180,16 +191,16 @@ export default function PaymentQueuePage() {
                     )}
                     <label className="flex flex-col gap-1 text-sm">
                       {openAction.kind === "REJECT"
-                        ? "Note to the parent (optional)"
-                        : "What do you need from the parent?"}
+                        ? t("paymentQueue.noteToParentOptional")
+                        : t("payments.whatDoYouNeed")}
                       <Textarea
                         rows={2}
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
                         placeholder={
                           openAction.kind === "REJECT"
-                            ? "e.g. The amount transferred was Rs. 2,000 short."
-                            : "e.g. Please send a clearer screenshot showing the date."
+                            ? t("paymentQueue.notePlaceholderReject")
+                            : t("paymentQueue.notePlaceholderNeedsInfo")
                         }
                       />
                     </label>
@@ -202,13 +213,13 @@ export default function PaymentQueuePage() {
                         onClick={() => submitAction(submission.id, openAction.kind)}
                       >
                         {review.isPending
-                          ? "Saving..."
+                          ? t("common.saving")
                           : openAction.kind === "REJECT"
-                            ? "Reject payment"
-                            : "Request more info"}
+                            ? t("paymentQueue.rejectPayment")
+                            : t("payments.requestMoreInfo")}
                       </Button>
                       <Button variant="ghost" onClick={closeAction}>
-                        Cancel
+                        {t("common.cancel")}
                       </Button>
                     </div>
                   </div>
@@ -218,7 +229,7 @@ export default function PaymentQueuePage() {
           })}
           {submissions?.length === 0 && (
             <p className="py-8 text-center text-sm text-slate-500">
-              No payment submissions to review.
+              {t("paymentQueue.nothingToReview")}
             </p>
           )}
         </div>
