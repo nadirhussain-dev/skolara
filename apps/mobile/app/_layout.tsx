@@ -23,6 +23,7 @@ export default function RootLayout() {
         <Stack.Screen name="payments/submit" options={{ title: "Submit payment" }} />
         <Stack.Screen name="dashboard" options={{ title: "Skolara" }} />
         <Stack.Screen name="teacher-dashboard" options={{ title: "Skolara" }} />
+        <Stack.Screen name="super-admin/index" options={{ title: "Skolara" }} />
         <Stack.Screen name="results/index" options={{ title: "Results" }} />
         <Stack.Screen name="notices/index" options={{ title: "Notices" }} />
         <Stack.Screen name="assignments/index" options={{ title: "Select class" }} />
