@@ -109,6 +109,12 @@ import type {
   IssueAssetInput,
   ReturnAssetInput,
   UpsertInventoryItemInput,
+  AssignRoleTemplateInput,
+  CAPABILITY_GROUPS,
+  ROLE_TEMPLATE_PRESETS,
+  RoleTemplate,
+  TEMPLATABLE_ROLES,
+  UpsertRoleTemplateInput,
   SubmitAssignmentInput,
   SubmitPaymentInput,
   SuggestedMatch,
@@ -370,6 +376,20 @@ export interface AssetAssignmentDetail extends AssetAssignment {
 export interface InventoryItemDetail extends InventoryItemWithAvailability {
   out: AssetAssignmentDetail[];
   history: AssetAssignmentDetail[];
+}
+
+export interface RoleTemplateWithCount extends RoleTemplate {
+  _count: { users: number };
+}
+
+export interface RoleTemplateDetail extends RoleTemplate {
+  users: { id: string; firstName: string; lastName: string; email: string; role: RoleType }[];
+}
+
+export interface CapabilityCatalogue {
+  groups: typeof CAPABILITY_GROUPS;
+  presets: typeof ROLE_TEMPLATE_PRESETS;
+  templatableRoles: typeof TEMPLATABLE_ROLES;
 }
 
 export interface MeetingSlotDetail extends MeetingSlot {
@@ -889,6 +909,27 @@ export function createApiClient({
         }),
       update: (id: string, input: UpdateSupportTicketInput) =>
         request<SupportTicket>(`/support/tickets/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify(input),
+        }),
+    },
+    roleTemplates: {
+      catalogue: () => request<CapabilityCatalogue>("/role-templates/catalogue"),
+      create: (input: UpsertRoleTemplateInput) =>
+        request<RoleTemplate>("/role-templates", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      list: () => request<RoleTemplateWithCount[]>("/role-templates"),
+      findOne: (id: string) => request<RoleTemplateDetail>(`/role-templates/${id}`),
+      update: (id: string, input: UpsertRoleTemplateInput) =>
+        request<RoleTemplate>(`/role-templates/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      remove: (id: string) => request<void>(`/role-templates/${id}`, { method: "DELETE" }),
+      assign: (userId: string, input: AssignRoleTemplateInput) =>
+        request<User>(`/role-templates/users/${userId}`, {
           method: "PATCH",
           body: JSON.stringify(input),
         }),

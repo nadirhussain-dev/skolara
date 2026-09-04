@@ -109,6 +109,7 @@ export const en = {
     transport: "Transport",
     payroll: "Payroll",
     branding: "Branding",
+    roles: "Roles & permissions",
     apiKeys: "API keys",
     auditLog: "Audit log",
     dataExport: "Export data",

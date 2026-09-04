@@ -127,6 +127,7 @@ model School {
   hostelAllocations   HostelAllocation[]
   inventoryItems      InventoryItem[]
   assetAssignments    AssetAssignment[]
+  roleTemplates       RoleTemplate[]
   auditLogs           AuditLog[]
 
   @@index([schoolGroupId])
@@ -147,6 +148,10 @@ model User {
   lastName      String
   phone         String?
   isActive      Boolean   @default(true)
+  // Narrows what this user may reach, without changing `role`. Null means
+  // the role governs on its own, which is every existing account.
+  roleTemplateId String?
+  roleTemplate   RoleTemplate? @relation(fields: [roleTemplateId], references: [id], onDelete: SetNull)
   createdAt     DateTime  @default(now())
 
   studentProfile          StudentProfile?
@@ -1340,4 +1345,32 @@ model AssetAssignment {
   @@index([schoolId])
   @@index([itemId, returnedAt])
   @@index([assignedToUserId])
+}
+
+// A named narrowing of one built-in role.
+//
+// Deliberately not a replacement for the role system. A user keeps their
+// `role`, so every `@Roles` check in the API still governs them; a template
+// additionally requires each request to fall inside `permissions`. That makes
+// this safe for a school admin to edit — the worst a bad template can do is
+// lock somebody out, never grant them something their role doesn't have.
+//
+// Capabilities are `<resource>:<read|write>` strings rather than rows, because
+// they are a closed set defined in `@skolara/types` and validated on write. A
+// join table would buy referential integrity against a list that only ever
+// changes when the code does.
+model RoleTemplate {
+  id          String   @id @default(uuid())
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id])
+  name        String
+  baseRole    Role
+  permissions String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users User[]
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
 }

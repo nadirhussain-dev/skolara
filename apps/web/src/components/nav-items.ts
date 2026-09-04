@@ -243,6 +243,12 @@ export const NAV_ITEMS: NavItem[] = [
     groupKey: "nav.settings",
   },
   {
+    href: "/school/roles",
+    labelKey: "nav.roles",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.settings",
+  },
+  {
     href: "/school/api-keys",
     labelKey: "nav.apiKeys",
     roles: ["SCHOOL_ADMIN"],

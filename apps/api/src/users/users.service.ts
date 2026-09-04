@@ -12,6 +12,9 @@ const PUBLIC_USER_SELECT = {
   lastName: true,
   phone: true,
   isActive: true,
+  // Shown in the accounts list so an admin can see who is restricted. Not
+  // sensitive: it names a template inside the same school and grants nothing.
+  roleTemplateId: true,
   createdAt: true,
 } as const;
 

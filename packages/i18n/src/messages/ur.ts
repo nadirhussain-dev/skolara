@@ -112,6 +112,7 @@ export const ur: Messages = {
     transport: "ٹرانسپورٹ",
     payroll: "تنخواہیں",
     branding: "برانڈنگ",
+    roles: "کردار اور اجازتیں",
     apiKeys: "اے پی آئی کیز",
     auditLog: "آڈٹ لاگ",
     dataExport: "ڈیٹا برآمد کریں",
