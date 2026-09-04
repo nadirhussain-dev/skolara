@@ -48,9 +48,9 @@ with no route behind it.
 
 ---
 
-## Day 2 — Documents: report cards, receipts, certificates
+## Day 2 — Documents: report cards, receipts, certificates ✅ done
 
-**Closes 4 rows.**
+**Closed 5 rows** — the parent-facing digital report card closed alongside the admin generator.
 
 Three unbuilt modules and two partials all need the same thing: a way to render a document.
 Build that once and four rows close behind it. Best ratio of rows cleared to new concepts
@@ -66,9 +66,16 @@ introduced anywhere in the backlog.
 
 **Closes:** Report card generator · Digital receipts · Certificate generator · Revenue reports download
 
-**Risk to flag now:** Headless-browser PDF rendering would roughly triple the API image size.
-A lightweight PDF library comes first; escalate only if template fidelity genuinely demands it.
-Which one, and why, gets reported at the end of the day.
+**Risk resolved:** no headless browser. `pdfmake` 0.2.x takes a declarative document definition
+and renders without one — 13MB rather than the ~300MB Chromium would have added. Using the
+standard-14 PDF fonts avoids embedding a font family too.
+
+Pinned to 0.2.x deliberately: 0.3 is a rewrite whose Node path expects a URL resolver it never
+constructs, so `createPdfKitDocument` throws before producing anything.
+
+**Known limitation:** the standard-14 fonts are Latin-only, so a name in Urdu script renders
+blank. Fine for the pilot; needs an embedded font before that stops being true. This is the one
+piece of day 2 that isn't finished, and it interacts with the day-6 Urdu work.
 
 ---
 

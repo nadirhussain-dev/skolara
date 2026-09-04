@@ -64,6 +64,8 @@ export const paymentSubmissionSchema = z.object({
   reviewNote: z.string().nullable(),
   reviewedByUserId: z.string().uuid().nullable(),
   reviewedAt: z.coerce.date().nullable(),
+  /** Rendered on verification; null until then. */
+  receiptUrl: z.string().url().nullable(),
   createdAt: z.coerce.date(),
 });
 export type PaymentSubmission = z.infer<typeof paymentSubmissionSchema>;

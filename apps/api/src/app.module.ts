@@ -12,9 +12,11 @@ import { AttendanceModule } from "./attendance/attendance.module";
 import { AuthModule } from "./auth/auth.module";
 import { BankStatementModule } from "./bank-statement/bank-statement.module";
 import { CalendarModule } from "./calendar/calendar.module";
+import { CertificatesModule } from "./certificates/certificates.module";
 import { ClassesModule } from "./classes/classes.module";
 import { ComplaintsModule } from "./complaints/complaints.module";
 import { DevicesModule } from "./devices/devices.module";
+import { DocumentsModule } from "./documents/documents.module";
 import { ExamsModule } from "./exams/exams.module";
 import { GradesModule } from "./grades/grades.module";
 import { HealthModule } from "./health/health.module";
@@ -27,6 +29,8 @@ import { PaymentGatewayModule } from "./payment-gateway/payment-gateway.module";
 import { PaymentsModule } from "./payments/payments.module";
 import { PayrollModule } from "./payroll/payroll.module";
 import { PrismaModule } from "./prisma/prisma.module";
+import { ReportCardsModule } from "./report-cards/report-cards.module";
+import { ReportsModule } from "./reports/reports.module";
 import { SchoolGroupsModule } from "./school-groups/school-groups.module";
 import { SchoolsModule } from "./schools/schools.module";
 import { StorageModule } from "./storage/storage.module";
@@ -49,10 +53,13 @@ import { validateEnv } from "./env.validation";
     HealthModule,
     NotificationsModule,
     StorageModule,
+    DocumentsModule,
     AiModule,
     AuthModule,
     DevicesModule,
     SchoolsModule,
+    ReportCardsModule,
+    ReportsModule,
     SchoolGroupsModule,
     UsersModule,
     StudentsModule,
@@ -60,6 +67,7 @@ import { validateEnv } from "./env.validation";
     TimetableModule,
     ClassesModule,
     CalendarModule,
+    CertificatesModule,
     AttendanceModule,
     InvoicesModule,
     PaymentsModule,

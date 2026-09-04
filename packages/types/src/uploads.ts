@@ -9,6 +9,9 @@ export const uploadPurposeSchema = z.enum([
   "ASSIGNMENT_SUBMISSION",
   "SCHOOL_LOGO",
   "STUDENT_DOCUMENT",
+  // Rendered by the API rather than uploaded by a person — report cards, fee
+  // receipts, certificates.
+  "GENERATED_DOCUMENT",
 ]);
 export type UploadPurpose = z.infer<typeof uploadPurposeSchema>;
 

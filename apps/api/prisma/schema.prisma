@@ -333,6 +333,10 @@ model PaymentSubmission {
   reviewedByUserId   String?
   reviewedByUser     User?                     @relation("ReviewedByUser", fields: [reviewedByUserId], references: [id])
   reviewedAt         DateTime?
+  // Rendered when the submission is verified. Null until then — a receipt for
+  // an unverified payment would be a receipt for money the school hasn't
+  // confirmed receiving.
+  receiptUrl         String?
   createdAt          DateTime                  @default(now())
   matchedBankStatementLine BankStatementLine?
 

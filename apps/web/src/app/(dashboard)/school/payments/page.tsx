@@ -113,6 +113,16 @@ export default function PaymentQueuePage() {
                       {submission.reviewNote && (
                         <p className="mt-1 text-xs text-amber-600">{submission.reviewNote}</p>
                       )}
+                      {submission.receiptUrl && (
+                        <a
+                          href={submission.receiptUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-1 inline-block text-xs text-brand-700 underline"
+                        >
+                          Receipt PDF
+                        </a>
+                      )}
                     </div>
                   </div>
 

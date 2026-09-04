@@ -44,6 +44,7 @@ import type {
   GradeEntry,
   ImportBankStatementInput,
   Invoice,
+  IssueCertificateInput,
   LoginInput,
   MarkAttendanceInput,
   Message,
@@ -158,6 +159,12 @@ export interface TimetableEntryDetail extends TimetableEntry {
   period: Period;
   teacherUser: { id: string; firstName: string; lastName: string };
   class: { id: string; name: string; section: string };
+}
+
+export interface GeneratedReportCard {
+  studentId: string;
+  studentName: string;
+  file: UploadedFile;
 }
 
 export interface BusWithLatestLocation {
@@ -278,8 +285,35 @@ export function createApiClient({
     return res.json() as Promise<UploadedFile>;
   }
 
+  /**
+   * Text sibling of `request`, for endpoints that return CSV rather than JSON.
+   * These are behind the bearer token, so a plain `<a href>` would arrive
+   * unauthenticated — the body has to come through the client.
+   */
+  async function requestText(path: string, isRetry = false): Promise<string> {
+    const token = await getAccessToken();
+    const res = await fetch(`${baseUrl}${path}`, {
+      headers: {
+        Accept: "text/csv",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (!res.ok) {
+      if (res.status === 401 && !isRetry && getRefreshToken) {
+        const newToken = await refreshAccessToken();
+        if (newToken) return requestText(path, true);
+        await onAuthFailure?.();
+      }
+      throw new ApiError(res.status, res.statusText);
+    }
+
+    return res.text();
+  }
+
   return {
     request,
+    requestText,
     auth: {
       login: (input: LoginInput) =>
         request<AuthResponse>("/auth/login", {
@@ -587,6 +621,29 @@ export function createApiClient({
         const suffix = query.toString();
         return request<AuditLogPage>(`/audit-logs${suffix ? `?${suffix}` : ""}`);
       },
+    },
+    reports: {
+      platformRevenueCsv: () => requestText("/reports/platform-revenue.csv"),
+      feeCollectionCsv: () => requestText("/reports/fee-collection.csv"),
+    },
+    certificates: {
+      issue: (input: IssueCertificateInput) =>
+        request<UploadedFile & { serial: string }>("/certificates", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+    },
+    reportCards: {
+      forStudent: (studentId: string, term: string) =>
+        request<GeneratedReportCard>(
+          `/report-cards/student/${studentId}?term=${encodeURIComponent(term)}`,
+          { method: "POST" },
+        ),
+      forClass: (classId: string, term: string) =>
+        request<GeneratedReportCard[]>(
+          `/report-cards/class/${classId}?term=${encodeURIComponent(term)}`,
+          { method: "POST" },
+        ),
     },
     timetable: {
       periods: () => request<Period[]>("/timetable/periods"),
