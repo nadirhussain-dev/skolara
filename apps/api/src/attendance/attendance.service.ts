@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import type { MarkAttendanceInput } from "@skolara/types";
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -19,6 +24,8 @@ export class AttendanceService {
       where: { id: input.classId, schoolId },
     });
     if (!schoolClass) throw new NotFoundException("Class not found");
+
+    await this.assertEntriesAreOnTheRegister(schoolId, input);
 
     const records = await this.prisma.$transaction(
       input.entries.map((entry) =>
@@ -50,6 +57,40 @@ export class AttendanceService {
 
     await this.alertAbsentees(input);
     return records;
+  }
+
+  /**
+   * Every id in the register has to be a student actually enrolled in this
+   * class.
+   *
+   * The controller has already established that the caller may teach the
+   * class, but the student ids come from the request body, and the upsert key
+   * is `(classId, studentId, date)` — nothing in it requires the two to be
+   * related. Without this, a teacher could file a mark against a child in a
+   * colleague's class, which is the same thing class scoping was introduced to
+   * stop, reached by a different door.
+   */
+  private async assertEntriesAreOnTheRegister(
+    schoolId: string,
+    input: MarkAttendanceInput,
+  ) {
+    const submitted = [...new Set(input.entries.map((entry) => entry.studentId))];
+    if (submitted.length === 0) return;
+
+    const enrolled = await this.prisma.studentProfile.findMany({
+      where: { id: { in: submitted }, schoolId, classId: input.classId },
+      select: { id: true },
+    });
+
+    const known = new Set(enrolled.map((student) => student.id));
+    const strangers = submitted.filter((id) => !known.has(id));
+    if (strangers.length === 0) return;
+
+    throw new BadRequestException(
+      strangers.length === 1
+        ? "One of those students isn't in this class"
+        : `${strangers.length} of those students aren't in this class`,
+    );
   }
 
   /**

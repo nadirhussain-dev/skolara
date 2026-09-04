@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import { formatPaymentReference } from "@skolara/utils";
 import type {
   PaymentSubmissionStatus,
@@ -131,27 +132,45 @@ export class PaymentsService {
 
     if (input.status === "VERIFIED") {
       const updated = await this.prisma.$transaction(async (tx) => {
-        const invoice = await tx.invoice.findUniqueOrThrow({
-          where: { id: submission.invoiceId },
+        // Claim the submission before crediting anything. The status test lives
+        // in the WHERE clause rather than in the `if` above because the read
+        // above and this write are two round trips: at Postgres' default READ
+        // COMMITTED isolation two admins clearing the same queue both read
+        // PENDING_VERIFICATION, both pass that check, and both credit the
+        // invoice for one transfer. Only the caller whose UPDATE matched a row
+        // gets to go on.
+        const claimed = await tx.paymentSubmission.updateMany({
+          where: { id, schoolId, status: { not: "VERIFIED" } },
+          data: { status: "VERIFIED", reviewedByUserId, reviewedAt: new Date() },
         });
-        const amountPaid =
-          Number(invoice.amountPaid) + Number(submission.amountClaimed);
-        const status =
-          amountPaid >= Number(invoice.amountDue) ? "PAID" : "PARTIALLY_PAID";
+        if (claimed.count === 0) {
+          throw new BadRequestException("Submission already verified");
+        }
 
-        await tx.invoice.update({
-          where: { id: invoice.id },
-          data: { amountPaid, status },
-        });
+        // One statement adds the money and settles the status from the result.
+        //
+        // Reading `amountPaid`, adding to it in JavaScript and writing the
+        // total back loses money outright: two *different* submissions against
+        // one invoice both read a balance of 0, one computes 3,000 and the
+        // other 5,000, and whichever commits second overwrites the first — the
+        // invoice shows one payment while both submissions read VERIFIED. That
+        // is a parent who has paid and a school that has no record of it, so
+        // the addition belongs to the database, which holds the row while it
+        // does it.
+        const credited = await tx.$executeRaw`
+          UPDATE "Invoice"
+          SET "amountPaid" = "amountPaid" + ${submission.amountClaimed.toString()}::numeric,
+              "status" = CASE
+                WHEN "amountPaid" + ${submission.amountClaimed.toString()}::numeric >= "amountDue"
+                  THEN 'PAID'::"InvoiceStatus"
+                ELSE 'PARTIALLY_PAID'::"InvoiceStatus"
+              END
+          WHERE "id" = ${submission.invoiceId}
+            AND "schoolId" = ${schoolId}
+        `;
+        if (credited === 0) throw new NotFoundException("Invoice not found");
 
-        return tx.paymentSubmission.update({
-          where: { id },
-          data: {
-            status: "VERIFIED",
-            reviewedByUserId,
-            reviewedAt: new Date(),
-          },
-        });
+        return tx.paymentSubmission.findUniqueOrThrow({ where: { id } });
       });
 
       // After the transaction, not inside it: a PDF render and an upload have
@@ -164,15 +183,12 @@ export class PaymentsService {
     }
 
     if (input.status === "REJECTED") {
-      const updated = await this.prisma.paymentSubmission.update({
-        where: { id },
-        data: {
-          status: "REJECTED",
-          rejectionReason: input.rejectionReason,
-          reviewNote: input.reviewNote ?? null,
-          reviewedByUserId,
-          reviewedAt: new Date(),
-        },
+      const updated = await this.claimForReview(schoolId, id, {
+        status: "REJECTED",
+        rejectionReason: input.rejectionReason,
+        reviewNote: input.reviewNote ?? null,
+        reviewedByUserId,
+        reviewedAt: new Date(),
       });
 
       await notify(
@@ -181,18 +197,40 @@ export class PaymentsService {
       return updated;
     }
 
-    const updated = await this.prisma.paymentSubmission.update({
-      where: { id },
-      data: {
-        status: "NEEDS_INFO",
-        reviewNote: input.reviewNote,
-        reviewedByUserId,
-        reviewedAt: new Date(),
-      },
+    const updated = await this.claimForReview(schoolId, id, {
+      status: "NEEDS_INFO",
+      reviewNote: input.reviewNote,
+      reviewedByUserId,
+      reviewedAt: new Date(),
     });
 
     await notify(`Payment ${submission.referenceId} needs more info: ${input.reviewNote}`);
     return updated;
+  }
+
+  /**
+   * Stamps a review outcome onto a submission that hasn't been verified yet.
+   *
+   * Rejecting and asking for more information move no money, but they must
+   * still lose to a concurrent verification rather than overwrite it: a
+   * submission marked REJECTED whose invoice was already credited is a payment
+   * the school has banked and disowned in the same breath.
+   */
+  private async claimForReview(
+    schoolId: string,
+    id: string,
+    // The unchecked variant, because `reviewedByUserId` is a relation's
+    // foreign key and the checked `UpdateMany` input omits those.
+    data: Prisma.PaymentSubmissionUncheckedUpdateManyInput,
+  ) {
+    const claimed = await this.prisma.paymentSubmission.updateMany({
+      where: { id, schoolId, status: { not: "VERIFIED" } },
+      data,
+    });
+    if (claimed.count === 0) {
+      throw new BadRequestException("Submission already verified");
+    }
+    return this.prisma.paymentSubmission.findUniqueOrThrow({ where: { id } });
   }
 
   /**
