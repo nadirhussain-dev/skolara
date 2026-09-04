@@ -1,17 +1,23 @@
 # Feature Status
 
 Every feature in [`PROPOSAL.md`](../PROPOSAL.md) §6–§10, checked against what is actually on
-`main` at `655ee3a`, plus the day-2, day-3 and day-4 branches.
+`main` at `655ee3a`, plus the day-2 through day-5 branches.
 
 | State | Count | Meaning |
 |---|---|---|
-| ✅ Shipped | 75 | Built, tenant-scoped, guarded |
-| 🟡 Partial | 4 | Mechanism exists, surface incomplete |
-| ⬜ Not built | 7 | No code |
+| ✅ Shipped | 81 | Built, tenant-scoped, guarded |
+| 🟡 Partial | 3 | Mechanism exists, surface incomplete |
+| ⬜ Not built | 2 | No code |
 
-> These counts were recomputed from the rows below on day 4 and previously
-> disagreed with them — the summary said 73/6/9 against a table holding 68/6/12.
-> The row marks were right; the totals had drifted.
+> Recomputed from the rows below at the end of each day. They disagreed once —
+> before day 4 the summary said 73/6/9 against a table holding 68/6/12 — so
+> they are now recounted rather than incremented.
+
+**Everything left is day 6's, bar one row.** The three partials plus the Super
+Admin mobile companion are the ship-readiness work: i18n wiring, a deploy
+workflow, an SMS channel, and the optional mobile console. The one row that
+belongs to no day is student and parent leave application, which needs adding
+or dropping on purpose.
 
 **Partial** is the cheapest column to finish — the plumbing is done, the content or UI is not.
 
@@ -34,11 +40,11 @@ The commercial layer: who gets in, what they pay, what they can reach.
 | Audit logs across all schools | ✅ | Every state-changing request, credential fields redacted before write |
 | API key management | ✅ | Keys previously did nothing — no guard read them. Now authenticate, read-only by construction |
 | Revenue dashboard with downloadable reports | ✅ | MRR/ARR on screen, revenue-by-school CSV export |
-| Server / infra health monitor | 🟡 | `/health` and `/health/ready` answer for a load balancer; no dashboard |
+| Server / infra health monitor | ✅ | Guarded `/health/detail` behind the two unchanged probes; checks, integration wiring, migration state and estate counts |
 | Support / helpdesk ticket system | ✅ | Schools raise, platform replies; internal notes hidden from the school in-query |
 | Global broadcast announcements | ✅ | Platform-wide, role-filterable, optional expiry; banner on every dashboard page |
-| Role & permission template editor | ⬜ | Roles fixed in code — fine for four roles |
-| Data export / backup per tenant | ⬜ | |
+| Role & permission template editor | ✅ | Templates **narrow** a built-in role rather than replacing it, so no endpoint had to change. Capability derived from path + method by a global guard |
+| Data export / backup per tenant | ✅ | Full JSON bundle or any table as CSV, on an explicit column allowlist |
 | Super Admin mobile companion | ⬜ | Proposal marks this optional |
 
 ## School Management — principal & admin
@@ -68,8 +74,8 @@ The daily operations surface. Deepest area, and the most complete.
 | Timetable builder with conflict detection | ✅ | Week grid per class. Clashes are refused by database constraints, not warned about, so concurrent edits can't both win |
 | Academic calendar & event management | ✅ | School-wide or class-scoped; mobile shows what's ahead |
 | Certificate / document generator | ✅ | Enrolment, character, leaving and bonafide, issued from the student page |
-| Hostel management | ⬜ | |
-| Inventory / asset management | ⬜ | |
+| Hostel management | ✅ | Rooms, beds and residents; double-allocation refused by two partial unique indexes rather than a counted check |
+| Inventory / asset management | ✅ | Items, issue and return with condition. Stock reserved in the same statement that checks it, so concurrent issues can't over-draw |
 | Staff leave approval | ✅ | Approve or decline queue, oldest first |
 | Staff directory with click-to-call | ✅ | `tel:`/`mailto:` links; staff-only endpoint so teachers can use it safely |
 
@@ -141,7 +147,7 @@ The parent app is the product most families will judge you on.
 | Optional Stripe gateway as per-school add-on | ✅ | |
 | Bilingual UI — Urdu and English with RTL | 🟡 | 152 keys, both locales complete and integrity-tested. **No admin page calls `t()` yet** — remaining work is wiring 26 pages plus copy |
 | Scalable cloud infrastructure | 🟡 | API containerised, web deploys as standard Next.js. No CD workflow |
-| Automated backups and data export tools | ⬜ | Supabase takes managed backups; nothing tenant-facing |
+| Automated backups and data export tools | ✅ | Supabase takes managed backups; a school can now also export everything itself, with the limits stated on the page |
 
 ---
 
@@ -151,9 +157,9 @@ Not proposal features, but they gate everything above.
 
 | Metric | Value | Notes |
 |---|---|---|
-| Tests passing | 310 | Up from 66. Targets what actually breaks — audit redaction, entitlement boundaries, class scoping, quiz grading and expiry, MRR arithmetic |
-| Services untested | 25 of 45 | Payments, invoices and attendance are worth covering first; grades now has coverage on the performance maths |
-| Migrations | 23 (`001`–`023`) | CI applies all to a real Postgres and seeds through the generated client |
+| Tests passing | 405 | Up from 66. Targets what actually breaks — audit redaction, entitlement boundaries, class scoping, quiz grading and expiry, stock and bed races, export field allowlists, template escalation |
+| Services untested | 22 of 51 | Payments, invoices and attendance are the ones still worth covering, and they are day 6's chunk 3 |
+| Migrations | 26 (`001`–`026`) | CI applies all to a real Postgres and seeds through the generated client |
 | Deploy workflows | 0 | CI validates on every push; nothing ships automatically |
 
 ---
