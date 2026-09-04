@@ -100,11 +100,15 @@ is the authoritative description of payload shapes.
 
 ## Deployment
 
-- **API** — container, built from the repo root:
+Every commit on `main` ships through `.github/workflows/deploy.yml`: API image →
+migrations → API release → web. Full setup, the secrets it needs and how to roll
+back are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+- **API** — container published to GHCR. Locally:
   `docker build -f apps/api/Dockerfile -t skolara-api .`
 - **Web** — Vercel, or any Next.js host. Set `NEXT_PUBLIC_API_URL`.
 - **Mobile** — EAS Build. Set `expo.extra.eas.projectId` in `app.json`; push
-  notifications need it.
+  notifications need it. Not part of the workflow — store releases are manual.
 - **Database** — Supabase. Deploy schema with `pnpm db:deploy`, never
   `supabase db push` against the same database.
 
