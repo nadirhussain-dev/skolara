@@ -20,12 +20,9 @@ import {
   Input,
   Select,
 } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { formatCurrency } from "@skolara/utils";
-import {
-  CERTIFICATE_LABELS,
-  certificateKindSchema,
-  type CertificateKind,
-} from "@skolara/types";
+import { certificateKindSchema, type CertificateKind } from "@skolara/types";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
@@ -38,6 +35,7 @@ const STATUS_TONE = {
 } as const;
 
 export default function StudentDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { data: student } = useStudent(id);
@@ -86,21 +84,21 @@ export default function StudentDetailPage() {
             {student.user.firstName} {student.user.lastName}
           </h1>
           <p className="text-sm text-slate-500">
-            {student.admissionNumber} · {student.user.email}
+            {t("studentDetail.studentLine", {
+              admissionNumber: student.admissionNumber,
+              email: student.user.email,
+            })}
           </p>
         </Card>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle>Parents &amp; guardians</CardTitle>
+          <CardTitle>{t("studentDetail.parents")}</CardTitle>
         </CardHeader>
-        <p className="mb-4 text-sm text-slate-500">
-          Linked parents can see this student in the app and submit fee payments for
-          them. A parent linked to more than one student gets a child switcher.
-        </p>
+        <p className="mb-4 text-sm text-slate-500">{t("studentDetail.parentsBody")}</p>
 
-        {parents?.length === 0 && <EmptyState title="No parent linked yet" />}
+        {parents?.length === 0 && <EmptyState title={t("studentDetail.noParentLinked")} />}
 
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {parents?.map((parent) => (
@@ -119,7 +117,7 @@ export default function StudentDetailPage() {
                 disabled={unlinkParent.isPending}
                 onClick={() => unlinkParent.mutate(parent.id)}
               >
-                Unlink
+                {t("studentDetail.unlink")}
               </Button>
             </div>
           ))}
@@ -131,7 +129,7 @@ export default function StudentDetailPage() {
             onChange={(e) => setParentToLink(e.target.value)}
             className="max-w-xs"
           >
-            <option value="">Select a parent account...</option>
+            <option value="">{t("studentDetail.selectParentAccount")}</option>
             {linkableParents.map((parent) => (
               <option key={parent.id} value={parent.id}>
                 {parent.firstName} {parent.lastName} ({parent.email})
@@ -139,18 +137,18 @@ export default function StudentDetailPage() {
             ))}
           </Select>
           <Button type="submit" disabled={!parentToLink || linkParent.isPending}>
-            {linkParent.isPending ? "Linking..." : "Link parent"}
+            {linkParent.isPending ? t("studentDetail.linking") : t("studentDetail.linkParent")}
           </Button>
         </form>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Create invoice</CardTitle>
+          <CardTitle>{t("studentDetail.createInvoice")}</CardTitle>
         </CardHeader>
         <form onSubmit={handleSubmit} className="flex flex-wrap gap-3">
           <Input
-            placeholder="Term (e.g. Term 1 2026)"
+            placeholder={t("invoices.termHint")}
             required
             value={term}
             onChange={(e) => setTerm(e.target.value)}
@@ -158,7 +156,7 @@ export default function StudentDetailPage() {
           />
           <Input
             type="number"
-            placeholder="Amount due"
+            placeholder={t("invoices.amountDue")}
             required
             value={amountDue}
             onChange={(e) => setAmountDue(e.target.value)}
@@ -172,28 +170,30 @@ export default function StudentDetailPage() {
             className="max-w-[160px]"
           />
           <Button type="submit" disabled={createInvoice.isPending}>
-            {createInvoice.isPending ? "Creating..." : "Create invoice"}
+            {createInvoice.isPending ? t("studentDetail.creating") : t("studentDetail.create")}
           </Button>
         </form>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Invoices</CardTitle>
+          <CardTitle>{t("invoices.title")}</CardTitle>
         </CardHeader>
-        {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
-        {invoices?.length === 0 && <EmptyState title="No invoices yet" />}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
+        {invoices?.length === 0 && <EmptyState title={t("studentDetail.noInvoices")} />}
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {invoices?.map((invoice) => (
             <div key={invoice.id} className="flex items-center justify-between py-3">
               <div>
                 <p className="font-medium">{invoice.term}</p>
                 <p className="text-sm text-slate-500">
-                  {formatCurrency(Number(invoice.amountPaid))} of{" "}
-                  {formatCurrency(Number(invoice.amountDue))} paid
+                  {t("studentDetail.paidOfDue", {
+                    paid: formatCurrency(Number(invoice.amountPaid)),
+                    due: formatCurrency(Number(invoice.amountDue)),
+                  })}
                 </p>
               </div>
-              <Badge tone={STATUS_TONE[invoice.status]}>{invoice.status}</Badge>
+              <Badge tone={STATUS_TONE[invoice.status]}>{t(`invoiceStatus.${invoice.status}`)}</Badge>
             </div>
           ))}
         </div>
@@ -205,6 +205,7 @@ export default function StudentDetailPage() {
 }
 
 function CertificateIssuer({ studentId }: { studentId: string }) {
+  const { t } = useTranslation();
   const issue = useIssueCertificate();
   const [kind, setKind] = useState<CertificateKind>("ENROLMENT");
   const [remarks, setRemarks] = useState("");
@@ -225,19 +226,19 @@ function CertificateIssuer({ studentId }: { studentId: string }) {
       });
       setIssued({ url: result.url, serial: result.serial });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't issue that certificate");
+      setError(err instanceof Error ? err.message : t("studentDetail.couldNotIssue"));
     }
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Issue a certificate</CardTitle>
+        <CardTitle>{t("studentDetail.issueCertificate")}</CardTitle>
       </CardHeader>
       <form onSubmit={handleIssue} className="flex flex-col gap-3">
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-sm">
-            Type
+            {t("studentDetail.type")}
             <select
               value={kind}
               onChange={(e) => setKind(e.target.value as CertificateKind)}
@@ -245,14 +246,14 @@ function CertificateIssuer({ studentId }: { studentId: string }) {
             >
               {certificateKindSchema.options.map((option) => (
                 <option key={option} value={option}>
-                  {CERTIFICATE_LABELS[option]}
+                  {t(`certificateKind.${option}`)}
                 </option>
               ))}
             </select>
           </label>
           {kind === "LEAVING" && (
             <label className="flex flex-col gap-1 text-sm">
-              Leaving date
+              {t("studentDetail.leavingDate")}
               <Input
                 type="date"
                 value={leavingDate}
@@ -262,25 +263,25 @@ function CertificateIssuer({ studentId }: { studentId: string }) {
             </label>
           )}
           <Button type="submit" disabled={issue.isPending}>
-            {issue.isPending ? "Issuing..." : "Issue"}
+            {issue.isPending ? t("studentDetail.issuing") : t("studentDetail.issue")}
           </Button>
         </div>
         <Input
-          placeholder="Remarks (optional)"
+          placeholder={t("studentDetail.remarksOptional")}
           value={remarks}
           onChange={(e) => setRemarks(e.target.value)}
         />
         {error && <p className="text-sm text-rose-600">{error}</p>}
         {issued && (
           <p className="text-sm">
-            <span className="text-slate-500">Serial {issued.serial} — </span>
+            <span className="text-slate-500">{t("studentDetail.serial", { serial: issued.serial })}</span>
             <a
               href={issued.url}
               target="_blank"
               rel="noreferrer"
               className="text-brand-700 underline"
             >
-              Open certificate PDF
+              {t("studentDetail.openCertificate")}
             </a>
           </p>
         )}

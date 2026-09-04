@@ -3,10 +3,12 @@
 import { useApiClient } from "@skolara/api-client";
 import type { SchoolClass } from "@skolara/types";
 import { Card, CardHeader, CardTitle } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 
 export default function SelectClassPage() {
+  const { t } = useTranslation();
   const api = useApiClient();
   const { data: classes, isLoading } = useQuery<SchoolClass[]>({
     queryKey: ["classes"],
@@ -16,9 +18,9 @@ export default function SelectClassPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Gradebook — select a class</CardTitle>
+        <CardTitle>{t("gradebook.selectClass")}</CardTitle>
       </CardHeader>
-      {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
         {classes?.map((c) => (
           <Link
@@ -26,7 +28,11 @@ export default function SelectClassPage() {
             href={`/teacher/gradebook/${c.id}`}
             className="py-3 text-brand-700 hover:underline"
           >
-            {c.name} — {c.section} ({c.academicYear})
+            {t("gradebook.classLine", {
+              name: c.name,
+              section: c.section,
+              year: c.academicYear,
+            })}
           </Link>
         ))}
       </div>

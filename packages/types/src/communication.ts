@@ -10,12 +10,6 @@ import { z } from "zod";
 export const phoneChannelSchema = z.enum(["WHATSAPP", "SMS", "BOTH"]);
 export type PhoneChannel = z.infer<typeof phoneChannelSchema>;
 
-export const PHONE_CHANNEL_LABELS: Record<PhoneChannel, string> = {
-  WHATSAPP: "WhatsApp only",
-  SMS: "SMS only",
-  BOTH: "WhatsApp and SMS",
-};
-
 export const updateCommunicationSchema = z.object({
   phoneChannel: phoneChannelSchema,
 });

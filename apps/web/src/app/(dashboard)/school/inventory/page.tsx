@@ -297,7 +297,7 @@ export default function InventoryPage() {
           <label className="flex flex-col gap-1 text-sm">
             {t("inventory.assetTag")}
             <Input
-              placeholder="optional"
+              placeholder={t("common.optional")}
               value={assetTag}
               onChange={(e) => setAssetTag(e.target.value)}
               className="max-w-[140px]"
@@ -306,7 +306,7 @@ export default function InventoryPage() {
           <label className="flex flex-col gap-1 text-sm">
             {t("inventory.location")}
             <Input
-              placeholder="optional"
+              placeholder={t("common.optional")}
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               className="max-w-[160px]"
@@ -327,7 +327,7 @@ export default function InventoryPage() {
             <Input
               type="number"
               min={0}
-              placeholder="optional"
+              placeholder={t("common.optional")}
               value={cost}
               onChange={(e) => setCost(e.target.value)}
               className="max-w-[140px]"

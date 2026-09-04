@@ -6,10 +6,12 @@ import {
   useUpsertGrade,
 } from "@skolara/api-client";
 import { Button, Card, CardHeader, CardTitle, Input } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 export default function ClassGradebookPage() {
+  const { t } = useTranslation();
   const { classId } = useParams<{ classId: string }>();
   const [subject, setSubject] = useState("");
   const [term, setTerm] = useState("Term 1 2026");
@@ -59,23 +61,23 @@ export default function ClassGradebookPage() {
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Gradebook</CardTitle>
+          <CardTitle>{t("gradebook.title")}</CardTitle>
         </CardHeader>
         <div className="flex flex-wrap gap-3">
           <Input
-            placeholder="Subject (e.g. Mathematics)"
+            placeholder={t("gradebook.subjectHint")}
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             className="max-w-xs"
           />
           <Input
-            placeholder="Term"
+            placeholder={t("fields.term")}
             value={term}
             onChange={(e) => setTerm(e.target.value)}
             className="max-w-[180px]"
           />
           <Input
-            placeholder="Exam type"
+            placeholder={t("gradebook.examTypeHint")}
             value={examType}
             onChange={(e) => setExamType(e.target.value)}
             className="max-w-[160px]"
@@ -84,7 +86,7 @@ export default function ClassGradebookPage() {
       </Card>
 
       <Card>
-        {studentsLoading && <p className="text-sm text-slate-500">Loading roster...</p>}
+        {studentsLoading && <p className="text-sm text-slate-500">{t("gradebook.loadingRoster")}</p>}
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {students?.map((student) => {
             const existing = existingByStudent.get(student.id);
@@ -96,7 +98,7 @@ export default function ClassGradebookPage() {
                 </span>
                 <Input
                   type="number"
-                  placeholder="Marks"
+                  placeholder={t("gradebook.marks")}
                   className="w-24"
                   defaultValue={existing?.marksObtained}
                   onChange={(e) => setRow(student.id, "obtained", e.target.value)}
@@ -104,7 +106,7 @@ export default function ClassGradebookPage() {
                 <span className="text-slate-400">/</span>
                 <Input
                   type="number"
-                  placeholder="Max"
+                  placeholder={t("gradebook.max")}
                   className="w-24"
                   defaultValue={existing?.maxMarks ?? 100}
                   onChange={(e) => setRow(student.id, "max", e.target.value)}
@@ -114,7 +116,7 @@ export default function ClassGradebookPage() {
                   disabled={!subject || upsertGrade.isPending}
                   onClick={() => save(student.id)}
                 >
-                  Save
+                  {t("common.save")}
                 </Button>
               </div>
             );

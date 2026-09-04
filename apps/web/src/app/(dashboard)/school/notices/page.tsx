@@ -6,25 +6,29 @@ import {
   useNotices,
   useUpdateCommunication,
 } from "@skolara/api-client";
-import {
-  PHONE_CHANNEL_LABELS,
-  phoneChannelSchema,
-  type NoticeAudience,
-  type PhoneChannel,
-} from "@skolara/types";
+import { phoneChannelSchema, type NoticeAudience, type PhoneChannel } from "@skolara/types";
 import { Badge, Button, Card, CardHeader, CardTitle, Input } from "@skolara/ui";
+import { useTranslation, type MessageKey, type Translate } from "@skolara/i18n";
 import { useState } from "react";
 
 const audiences: NoticeAudience[] = ["ALL", "TEACHERS", "PARENTS", "STUDENTS"];
 
 /** Names the channels a publish will actually use, rather than assuming. */
-function publishLabel(channel: PhoneChannel | undefined): string {
-  if (channel === "SMS") return "Publish + notify by SMS";
-  if (channel === "BOTH") return "Publish + notify by WhatsApp and SMS";
-  return "Publish + notify via WhatsApp";
+function publishLabel(channel: PhoneChannel | undefined): MessageKey {
+  if (channel === "SMS") return "notices.publishSms";
+  if (channel === "BOTH") return "notices.publishBoth";
+  return "notices.publishWhatsApp";
+}
+
+/** The channel choices, named for whoever is reading them. */
+function channelLabel(channel: PhoneChannel, t: Translate): string {
+  if (channel === "SMS") return t("communication.smsOnly");
+  if (channel === "BOTH") return t("communication.both");
+  return t("communication.whatsappOnly");
 }
 
 export default function NoticesPage() {
+  const { t } = useTranslation();
   const { data: notices, isLoading } = useNotices();
   const { data: school } = useMySchool();
   const createNotice = useCreateNotice();
@@ -44,12 +48,9 @@ export default function NoticesPage() {
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>How alerts reach parents</CardTitle>
+          <CardTitle>{t("notices.alertChannel")}</CardTitle>
         </CardHeader>
-        <p className="text-sm text-slate-500">
-          Applies to notices, fee updates and absence alerts. Push notifications go to
-          everyone with the app either way.
-        </p>
+        <p className="text-sm text-slate-500">{t("notices.alertChannelBody")}</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {phoneChannelSchema.options.map((channel) => {
             const active = school?.phoneChannel === channel;
@@ -69,31 +70,31 @@ export default function NoticesPage() {
                     : "rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:border-slate-400 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300"
                 }
               >
-                {PHONE_CHANNEL_LABELS[channel]}
+                {channelLabel(channel, t)}
               </button>
             );
           })}
         </div>
         {school && school.phoneChannel !== "WHATSAPP" && (
           <p className="mt-2 text-xs text-amber-600 dark:text-amber-500">
-            SMS is charged per message by your provider. WhatsApp is not.
+            {t("notices.smsCharged")}
           </p>
         )}
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Broadcast a notice</CardTitle>
+          <CardTitle>{t("notices.broadcast")}</CardTitle>
         </CardHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <Input
-            placeholder="Title"
+            placeholder={t("fields.title")}
             required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
           <textarea
-            placeholder="Message"
+            placeholder={t("fields.message")}
             required
             value={body}
             onChange={(e) => setBody(e.target.value)}
@@ -107,27 +108,27 @@ export default function NoticesPage() {
           >
             {audiences.map((a) => (
               <option key={a} value={a}>
-                {a}
+                {t(`noticeAudience.${a}`)}
               </option>
             ))}
           </select>
           <Button type="submit" disabled={createNotice.isPending} className="self-start">
-            {createNotice.isPending ? "Sending..." : publishLabel(school?.phoneChannel)}
+            {createNotice.isPending ? t("notices.sending") : t(publishLabel(school?.phoneChannel))}
           </Button>
         </form>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent notices</CardTitle>
+          <CardTitle>{t("notices.recent")}</CardTitle>
         </CardHeader>
-        {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {notices?.map((notice) => (
             <div key={notice.id} className="py-3">
               <div className="flex items-center gap-2">
                 <p className="font-medium">{notice.title}</p>
-                <Badge tone="info">{notice.audience}</Badge>
+                <Badge tone="info">{t(`noticeAudience.${notice.audience}`)}</Badge>
               </div>
               <p className="text-sm text-slate-500">{notice.body}</p>
             </div>
