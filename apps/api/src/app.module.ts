@@ -22,6 +22,7 @@ import { ExamsModule } from "./exams/exams.module";
 import { GradesModule } from "./grades/grades.module";
 import { HealthModule } from "./health/health.module";
 import { HostelModule } from "./hostel/hostel.module";
+import { InventoryModule } from "./inventory/inventory.module";
 import { InvoicesModule } from "./invoices/invoices.module";
 import { LeaveModule } from "./leave/leave.module";
 import { LessonsModule } from "./lessons/lessons.module";
@@ -95,6 +96,7 @@ import { validateEnv } from "./env.validation";
     ExamsModule,
     LeaveModule,
     HostelModule,
+    InventoryModule,
     LessonsModule,
     LibraryModule,
     LiveClassesModule,

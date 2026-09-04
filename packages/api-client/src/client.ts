@@ -103,6 +103,12 @@ import type {
   HostelRoom,
   HostelSummary,
   UpsertHostelRoomInput,
+  AssetAssignment,
+  InventoryItem,
+  InventorySummary,
+  IssueAssetInput,
+  ReturnAssetInput,
+  UpsertInventoryItemInput,
   SubmitAssignmentInput,
   SubmitPaymentInput,
   SuggestedMatch,
@@ -344,6 +350,26 @@ export interface HostelRoomDetail extends HostelRoom {
 
 export interface HostelAllocationWithRoom extends HostelAllocation {
   room: { id: string; blockName: string; roomNumber: string; floor: number | null };
+}
+
+export interface InventoryItemWithAvailability
+  extends Omit<InventoryItem, "purchaseCostPkr"> {
+  purchaseCostPkr: number | null;
+  /** quantity minus what is out. */
+  available: number;
+  /** Available *and* in a condition that may go out again. */
+  issuable: boolean;
+}
+
+export interface AssetAssignmentDetail extends AssetAssignment {
+  item: { id: string; name: string; category: string; assetTag: string | null };
+  assignedToUser: { id: string; firstName: string; lastName: string; role: string } | null;
+  class: { id: string; name: string; section: string } | null;
+}
+
+export interface InventoryItemDetail extends InventoryItemWithAvailability {
+  out: AssetAssignmentDetail[];
+  history: AssetAssignmentDetail[];
 }
 
 export interface MeetingSlotDetail extends MeetingSlot {
@@ -860,6 +886,46 @@ export function createApiClient({
         }),
       update: (id: string, input: UpdateSupportTicketInput) =>
         request<SupportTicket>(`/support/tickets/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify(input),
+        }),
+    },
+    inventory: {
+      createItem: (input: UpsertInventoryItemInput) =>
+        request<InventoryItem>("/inventory/items", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      updateItem: (id: string, input: UpsertInventoryItemInput) =>
+        request<InventoryItem>(`/inventory/items/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      removeItem: (id: string) =>
+        request<void>(`/inventory/items/${id}`, { method: "DELETE" }),
+      items: (
+        filters: { category?: string; search?: string; onlyAvailable?: boolean } = {},
+      ) => {
+        const query = new URLSearchParams();
+        if (filters.category) query.set("category", filters.category);
+        if (filters.search) query.set("search", filters.search);
+        if (filters.onlyAvailable) query.set("onlyAvailable", "true");
+        const suffix = query.toString();
+        return request<InventoryItemWithAvailability[]>(
+          `/inventory/items${suffix ? `?${suffix}` : ""}`,
+        );
+      },
+      itemDetail: (id: string) => request<InventoryItemDetail>(`/inventory/items/${id}`),
+      summary: () => request<InventorySummary>("/inventory/summary"),
+      categories: () => request<string[]>("/inventory/categories"),
+      outstanding: () => request<AssetAssignmentDetail[]>("/inventory/outstanding"),
+      issue: (itemId: string, input: IssueAssetInput) =>
+        request<AssetAssignmentDetail>(`/inventory/items/${itemId}/assignments`, {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      returnAsset: (assignmentId: string, input: ReturnAssetInput) =>
+        request<AssetAssignmentDetail>(`/inventory/assignments/${assignmentId}/return`, {
           method: "PATCH",
           body: JSON.stringify(input),
         }),

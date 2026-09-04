@@ -105,6 +105,7 @@ export const en = {
     complaints: "Complaints",
     library: "Library",
     hostel: "Hostel",
+    inventory: "Inventory",
     transport: "Transport",
     payroll: "Payroll",
     branding: "Branding",

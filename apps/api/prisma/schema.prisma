@@ -125,6 +125,8 @@ model School {
   liveClasses         LiveClass[]
   hostelRooms         HostelRoom[]
   hostelAllocations   HostelAllocation[]
+  inventoryItems      InventoryItem[]
+  assetAssignments    AssetAssignment[]
   auditLogs           AuditLog[]
 
   @@index([schoolGroupId])
@@ -179,6 +181,7 @@ model User {
   authoredSyllabusTopics  SyllabusTopic[]        @relation("SyllabusAuthor")
   lessonPlans             LessonPlan[]           @relation("LessonPlanTeacher")
   hostedLiveClasses       LiveClass[]            @relation("LiveClassHost")
+  heldAssets              AssetAssignment[]      @relation("AssetHolder")
   auditLogs               AuditLog[]          @relation("AuditActor")
   classAssignments        ClassTeacher[]      @relation("ClassTeachers")
 
@@ -259,6 +262,7 @@ model SchoolClass {
   syllabusTopics     SyllabusTopic[]
   lessonPlans        LessonPlan[]
   liveClasses        LiveClass[]
+  assetAssignments   AssetAssignment[]
 
   @@unique([schoolId, name, section, academicYear])
   @@index([schoolId])
@@ -1261,4 +1265,79 @@ model HostelAllocation {
   @@index([schoolId])
   @@index([roomId])
   @@index([studentId])
+}
+
+enum AssetCondition {
+  NEW
+  GOOD
+  FAIR
+  POOR
+  DAMAGED
+  WRITTEN_OFF
+}
+
+// A thing the school owns, held in some number of identical units.
+//
+// One table covers both halves of "inventory": a projector is quantity 1, a
+// crate of chalk is quantity 50. What separates them is whether anything ever
+// comes back, and that is a property of the assignment, not of the item — so
+// modelling them separately would have duplicated everything for no gain.
+model InventoryItem {
+  id              String         @id @default(uuid())
+  schoolId        String
+  school          School         @relation(fields: [schoolId], references: [id])
+  name            String
+  category        String
+  // A physical label, where there is one. Null for anything bulk, and nulls
+  // are distinct in Postgres, so untagged items never collide.
+  assetTag        String?
+  location        String?
+  quantity        Int
+  // Denormalised on purpose: it is what makes issuing an item a single
+  // conditional UPDATE the database can arbitrate, rather than a read of the
+  // assignment rows followed by a write that another request has invalidated.
+  // A CHECK constraint in the migration keeps it inside 0..quantity even if a
+  // future writer bypasses this service.
+  unitsOut        Int            @default(0)
+  condition       AssetCondition @default(GOOD)
+  purchasedOn     DateTime?
+  purchaseCostPkr Decimal?       @db.Decimal(12, 2)
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  assignments AssetAssignment[]
+
+  @@unique([schoolId, assetTag])
+  @@index([schoolId, category])
+}
+
+// Units of an item out with somebody. Exactly one of `assignedToUserId` and
+// `classId` is set — a projector is signed out either by a teacher or to a
+// room's class, and "both" describes nobody accountable.
+model AssetAssignment {
+  id                String          @id @default(uuid())
+  schoolId          String
+  school            School          @relation(fields: [schoolId], references: [id])
+  itemId            String
+  item              InventoryItem   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  assignedToUserId  String?
+  // Restrict, not SetNull: blanking the holder would violate the one-holder
+  // CHECK in the migration and make the delete fail unactionably.
+  assignedToUser    User?           @relation("AssetHolder", fields: [assignedToUserId], references: [id], onDelete: Restrict)
+  classId           String?
+  class             SchoolClass?    @relation(fields: [classId], references: [id], onDelete: Restrict)
+  units             Int
+  assignedAt        DateTime        @default(now())
+  dueBackOn         DateTime?
+  // Null means still out. Consumables simply never get one.
+  returnedAt        DateTime?
+  // Recorded on return, not on issue: the point of asking is to notice a
+  // projector coming back broken.
+  returnedCondition AssetCondition?
+  notes             String?
+
+  @@index([schoolId])
+  @@index([itemId, returnedAt])
+  @@index([assignedToUserId])
 }

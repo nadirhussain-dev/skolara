@@ -108,6 +108,7 @@ export const ur: Messages = {
     complaints: "شکایات",
     library: "لائبریری",
     hostel: "ہاسٹل",
+    inventory: "انوینٹری",
     transport: "ٹرانسپورٹ",
     payroll: "تنخواہیں",
     branding: "برانڈنگ",

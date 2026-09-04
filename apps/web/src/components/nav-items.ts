@@ -211,6 +211,12 @@ export const NAV_ITEMS: NavItem[] = [
     groupKey: "nav.operations",
   },
   {
+    href: "/school/inventory",
+    labelKey: "nav.inventory",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.operations",
+  },
+  {
     href: "/school/transport",
     labelKey: "nav.transport",
     roles: ["SCHOOL_ADMIN"],

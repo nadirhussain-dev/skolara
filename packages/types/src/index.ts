@@ -13,6 +13,7 @@ export * from "./quizzes";
 export * from "./lessons";
 export * from "./live-classes";
 export * from "./hostel";
+export * from "./inventory";
 export * from "./messaging";
 export * from "./complaints";
 export * from "./bank-statement";
