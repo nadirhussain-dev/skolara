@@ -121,7 +121,7 @@ export class PaymentsService {
     const parentPhone = submission.submittedByUser.phone;
     const notify = async (body: string) => {
       await Promise.all([
-        this.notifications.sendWhatsApp(parentPhone, body),
+        this.notifications.sendPhoneAlert(schoolId, parentPhone, body),
         this.notifications.sendPush([submission.submittedByUser.id], {
           title: `Payment ${submission.referenceId}`,
           body,

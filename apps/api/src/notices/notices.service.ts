@@ -101,11 +101,10 @@ export class NoticesService {
     const recipients = await this.resolveRecipients(notice);
 
     await Promise.all([
-      ...recipients.map((recipient) =>
-        this.notifications.sendWhatsApp(
-          recipient.phone,
-          `📢 New notice from your school: ${notice.title}`,
-        ),
+      this.notifications.sendPhoneAlerts(
+        notice.schoolId,
+        recipients.map((recipient) => recipient.phone),
+        `📢 New notice from your school: ${notice.title}`,
       ),
       this.notifications.sendPush(
         recipients.map((recipient) => recipient.id),
@@ -119,8 +118,8 @@ export class NoticesService {
   }
 
   /**
-   * Everyone the notice is addressed to. Push goes to all of them; WhatsApp
-   * only reaches the subset with a phone number on file.
+   * Everyone the notice is addressed to. Push goes to all of them; the phone
+   * channel only reaches the subset with a number on file.
    */
   private async resolveRecipients(notice: {
     schoolId: string;

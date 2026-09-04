@@ -42,6 +42,15 @@ enum AttendanceStatus {
   EXCUSED
 }
 
+/// Which phone channel a school's alerts go out on. SMS is billed per
+/// message and WhatsApp effectively isn't, so BOTH is opt-in rather than the
+/// default.
+enum PhoneChannel {
+  WHATSAPP
+  SMS
+  BOTH
+}
+
 enum InvoiceStatus {
   UNPAID
   PARTIALLY_PAID
@@ -87,6 +96,7 @@ model School {
   trialEndsAt         DateTime?
   logoUrl             String?
   primaryColor        String?
+  phoneChannel        PhoneChannel        @default(WHATSAPP)
   schoolGroupId       String?
   schoolGroup         SchoolGroup?        @relation(fields: [schoolGroupId], references: [id])
   createdAt           DateTime            @default(now())

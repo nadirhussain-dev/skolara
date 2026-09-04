@@ -54,7 +54,7 @@ describe("PaymentsService", () => {
     $executeRaw: jest.Mock;
     $transaction: jest.Mock;
   };
-  let notifications: { sendWhatsApp: jest.Mock; sendPush: jest.Mock };
+  let notifications: { sendPhoneAlert: jest.Mock; sendPush: jest.Mock };
   let documents: { renderAndStore: jest.Mock };
   let service: PaymentsService;
 
@@ -94,7 +94,7 @@ describe("PaymentsService", () => {
         typeof arg === "function" ? arg(prisma) : Promise.all(arg),
       ),
     };
-    notifications = { sendWhatsApp: jest.fn(), sendPush: jest.fn() };
+    notifications = { sendPhoneAlert: jest.fn(), sendPush: jest.fn() };
     documents = { renderAndStore: jest.fn().mockResolvedValue({ url: "https://x/receipt.pdf" }) };
     service = new PaymentsService(
       prisma as unknown as PrismaService,
@@ -302,10 +302,13 @@ describe("PaymentsService", () => {
       expect(prisma.$executeRaw).toHaveBeenCalledTimes(1);
     });
 
-    it("tells the parent on both channels it has", async () => {
+    it("tells the parent on the phone channel and by push", async () => {
       await service.review(SCHOOL, SUBMISSION, ADMIN, { status: "VERIFIED" });
 
-      expect(notifications.sendWhatsApp).toHaveBeenCalledWith(
+      // Routed through the school's chosen phone channel rather than
+      // hard-coded to WhatsApp.
+      expect(notifications.sendPhoneAlert).toHaveBeenCalledWith(
+        SCHOOL,
         "+923001234567",
         expect.stringContaining("verified"),
       );
@@ -333,7 +336,8 @@ describe("PaymentsService", () => {
           rejectionReason: "SCREENSHOT_UNCLEAR",
         }),
       });
-      expect(notifications.sendWhatsApp).toHaveBeenCalledWith(
+      expect(notifications.sendPhoneAlert).toHaveBeenCalledWith(
+        SCHOOL,
         "+923001234567",
         expect.stringContaining("SCREENSHOT_UNCLEAR"),
       );
@@ -364,7 +368,8 @@ describe("PaymentsService", () => {
           }),
         }),
       );
-      expect(notifications.sendWhatsApp).toHaveBeenCalledWith(
+      expect(notifications.sendPhoneAlert).toHaveBeenCalledWith(
+        SCHOOL,
         "+923001234567",
         expect.stringContaining("Send the bank slip"),
       );
@@ -381,7 +386,11 @@ describe("PaymentsService", () => {
           reviewNote: "Send the bank slip",
         }),
       ).resolves.toBeDefined();
-      expect(notifications.sendWhatsApp).toHaveBeenCalledWith(null, expect.any(String));
+      expect(notifications.sendPhoneAlert).toHaveBeenCalledWith(
+        SCHOOL,
+        null,
+        expect.any(String),
+      );
     });
   });
 });

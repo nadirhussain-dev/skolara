@@ -25,6 +25,7 @@ export * from "./transport";
 export * from "./payroll";
 export * from "./analytics";
 export * from "./branding";
+export * from "./communication";
 export * from "./school-group";
 export * from "./api-keys";
 export * from "./payment-gateway";

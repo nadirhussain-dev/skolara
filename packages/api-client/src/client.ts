@@ -126,6 +126,7 @@ import type {
   AddSupportCommentInput,
   UpdateSupportTicketInput,
   UpdateBrandingInput,
+  UpdateCommunicationInput,
   TimetableEntry,
   UpdateComplaintStatusInput,
   UploadPurpose,
@@ -613,6 +614,11 @@ export function createApiClient({
       mine: () => request<School>("/schools/me"),
       updateBranding: (id: string, input: UpdateBrandingInput) =>
         request<School>(`/schools/${id}/branding`, {
+          method: "PATCH",
+          body: JSON.stringify(input),
+        }),
+      updateCommunication: (id: string, input: UpdateCommunicationInput) =>
+        request<School>(`/schools/${id}/communication`, {
           method: "PATCH",
           body: JSON.stringify(input),
         }),

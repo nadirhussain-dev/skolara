@@ -7,7 +7,10 @@ import { ConsolePushProvider } from "./providers/console-push.provider";
 import { ConsoleWhatsAppProvider } from "./providers/console-whatsapp.provider";
 import { ExpoPushProvider } from "./providers/expo-push.provider";
 import { MetaCloudWhatsAppProvider } from "./providers/meta-cloud-whatsapp.provider";
+import { ConsoleSmsProvider } from "./providers/console-sms.provider";
 import { ResendEmailProvider } from "./providers/resend-email.provider";
+import { TwilioSmsProvider } from "./providers/twilio-sms.provider";
+import { SMS_PROVIDER } from "./sms-provider.interface";
 import { PUSH_PROVIDER } from "./push-provider.interface";
 import { WHATSAPP_PROVIDER } from "./whatsapp-provider.interface";
 
@@ -50,6 +53,19 @@ import { WHATSAPP_PROVIDER } from "./whatsapp-provider.interface";
         return new ExpoPushProvider({
           accessToken: config.get<string>("EXPO_ACCESS_TOKEN"),
         });
+      },
+      inject: [ConfigService],
+    },
+    {
+      provide: SMS_PROVIDER,
+      useFactory: (config: ConfigService) => {
+        const accountSid = config.get<string>("TWILIO_ACCOUNT_SID");
+        const authToken = config.get<string>("TWILIO_AUTH_TOKEN");
+        const from = config.get<string>("TWILIO_FROM_NUMBER");
+        if (accountSid && authToken && from) {
+          return new TwilioSmsProvider({ accountSid, authToken, from });
+        }
+        return new ConsoleSmsProvider();
       },
       inject: [ConfigService],
     },
