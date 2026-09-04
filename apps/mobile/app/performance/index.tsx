@@ -2,6 +2,7 @@ import { useMyChildren, useStudentPerformance } from "@skolara/api-client";
 import type { SubjectPerformance } from "@skolara/types";
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useTranslation, type Translate } from "@skolara/i18n";
 import { colors, radius, spacing, typography } from "@/lib/theme";
 import { Card, Chip, EmptyState, LoadingLine, Screen, SectionLabel } from "@/lib/ui";
 
@@ -15,17 +16,29 @@ import { Card, Chip, EmptyState, LoadingLine, Screen, SectionLabel } from "@/lib
  */
 
 /** Direction of the last assessment against the one before it. */
-function trend(subject: SubjectPerformance): { label: string; tone: string } | null {
+function trend(
+  subject: SubjectPerformance,
+  t: Translate,
+): { label: string; tone: string } | null {
   const { points } = subject;
   if (points.length < 2) return null;
   const delta = points[points.length - 1].percentage - points[points.length - 2].percentage;
-  if (Math.abs(delta) < 1) return { label: "→ steady", tone: colors.slate[500] };
+  if (Math.abs(delta) < 1) {
+    return { label: t("mobileProgress.steady"), tone: colors.slate[500] };
+  }
   return delta > 0
-    ? { label: `↑ ${Math.round(delta)} pts`, tone: colors.brand[700] }
-    : { label: `↓ ${Math.round(Math.abs(delta))} pts`, tone: colors.accent[700] };
+    ? {
+        label: t("mobileProgress.up", { points: Math.round(delta) }),
+        tone: colors.brand[700],
+      }
+    : {
+        label: t("mobileProgress.down", { points: Math.round(Math.abs(delta)) }),
+        tone: colors.accent[700],
+      };
 }
 
 export default function PerformanceScreen() {
+  const { t } = useTranslation();
   const { data: children } = useMyChildren();
   const [studentId, setStudentId] = useState<string>();
   const activeStudentId = studentId ?? children?.[0]?.id;
@@ -49,41 +62,51 @@ export default function PerformanceScreen() {
           </View>
         )}
 
-        {isLoading && <LoadingLine label="Loading results..." />}
+        {isLoading && <LoadingLine label={t("common.loading")} />}
 
         {performance && performance.overallAverage !== null && (
           <Card>
-            <Text style={styles.heroLabel}>Overall average</Text>
+            <Text style={styles.heroLabel}>{t("mobilePerformance.overallAverage")}</Text>
             {/* Proportional figures, not tabular — this is a display number,
                 not a column of them. */}
             <Text style={styles.hero}>{performance.overallAverage}%</Text>
             <Text style={styles.meta}>
-              Across {performance.subjects.length} subject
-              {performance.subjects.length === 1 ? "" : "s"} ·{" "}
-              {performance.subjects.reduce((sum, subject) => sum + subject.points.length, 0)}{" "}
-              assessments
+              {t(
+                performance.subjects.length === 1
+                  ? "mobileProgress.acrossOne"
+                  : "mobileProgress.acrossMany",
+                {
+                  subjects: performance.subjects.length,
+                  assessments: performance.subjects.reduce(
+                    (sum, subject) => sum + subject.points.length,
+                    0,
+                  ),
+                },
+              )}
             </Text>
           </Card>
         )}
 
         {performance && performance.subjects.length > 0 && (
           <>
-            <SectionLabel>By subject</SectionLabel>
+            <SectionLabel>{t("mobilePerformance.bySubject")}</SectionLabel>
             {/* Identity never rests on colour alone — the two marks are named
                 once, above the bars they explain. */}
             <View style={styles.legend}>
               <View style={styles.legendItem}>
                 <View style={[styles.legendSwatch, { backgroundColor: colors.brand[700] }]} />
-                <Text style={styles.meta}>{activeChild?.user.firstName ?? "Student"}</Text>
+                <Text style={styles.meta}>
+                  {activeChild?.user.firstName ?? t("mobilePerformance.studentFallback")}
+                </Text>
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.legendTick, { backgroundColor: colors.slate[500] }]} />
-                <Text style={styles.meta}>Class average</Text>
+                <Text style={styles.meta}>{t("mobilePerformance.classAverage")}</Text>
               </View>
             </View>
 
             {performance.subjects.map((subject) => {
-              const direction = trend(subject);
+              const direction = trend(subject, t);
               return (
                 <Card key={subject.subject}>
                   <View style={styles.header}>
@@ -103,8 +126,15 @@ export default function PerformanceScreen() {
                   <View style={styles.footer}>
                     <Text style={styles.meta}>
                       {subject.classAverage === null
-                        ? `${subject.points.length} assessment${subject.points.length === 1 ? "" : "s"}`
-                        : `Class ${subject.classAverage}%`}
+                        ? t(
+                            subject.points.length === 1
+                              ? "mobileProgress.assessmentOne"
+                              : "mobileProgress.assessmentMany",
+                            { count: subject.points.length },
+                          )
+                        : t("mobileProgress.classPercent", {
+                            percent: subject.classAverage,
+                          })}
                     </Text>
                     {direction && (
                       <Text style={[styles.meta, { color: direction.tone }]}>
@@ -116,7 +146,7 @@ export default function PerformanceScreen() {
               );
             })}
 
-            <SectionLabel>Every assessment</SectionLabel>
+            <SectionLabel>{t("mobilePerformance.everyAssessment")}</SectionLabel>
             {/* The table twin: each plotted value readable as a number, not
                 only as a bar length. */}
             {performance.subjects.map((subject) =>
@@ -126,7 +156,10 @@ export default function PerformanceScreen() {
                   style={styles.row}
                 >
                   <Text style={styles.rowLabel} numberOfLines={1}>
-                    {subject.subject} · {point.examType}
+                    {t("mobileProgress.rowLabel", {
+                      subject: subject.subject,
+                      examType: point.examType,
+                    })}
                   </Text>
                   <Text style={styles.rowValue}>{point.percentage}%</Text>
                 </View>
@@ -137,8 +170,8 @@ export default function PerformanceScreen() {
 
         {!isLoading && performance && performance.subjects.length === 0 && (
           <EmptyState
-            title="No results yet"
-            description="Once exams or quizzes are marked, progress shows up here."
+            title={t("mobilePerformance.none")}
+            description={t("mobilePerformance.noneBody")}
           />
         )}
       </ScrollView>

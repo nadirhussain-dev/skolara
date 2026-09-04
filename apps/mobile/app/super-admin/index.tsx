@@ -18,6 +18,7 @@ import {
 import { LanguageToggle } from "@/lib/language-toggle";
 import { unregisterPushToken } from "@/lib/push";
 import { colors, spacing, typography, type Tone } from "@/lib/theme";
+import { intlLocale } from "@/lib/intl";
 import { Button, Card, EmptyState, LoadingLine, Pill, Screen, SectionLabel } from "@/lib/ui";
 
 const STATUS_TONE: Record<SubscriptionStatus, Tone> = {
@@ -36,7 +37,7 @@ const STATUS_TONE: Record<SubscriptionStatus, Tone> = {
  * abbreviations rather than an English "M" bolted onto Urdu digits.
  */
 function compactPkr(amount: number, locale: Locale): string {
-  return new Intl.NumberFormat(locale === "ur" ? "ur-PK" : "en-GB", {
+  return new Intl.NumberFormat(intlLocale(locale), {
     style: "currency",
     currency: "PKR",
     notation: "compact",

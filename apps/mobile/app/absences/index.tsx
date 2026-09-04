@@ -5,8 +5,10 @@ import {
   useRequestAbsence,
 } from "@skolara/api-client";
 import { MAX_ABSENCE_REQUEST_DAYS, type LeaveStatus } from "@skolara/types";
+import { useTranslation, type Locale, type MessageKey } from "@skolara/i18n";
 import { useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { intlLocale } from "@/lib/intl";
 import { colors, spacing, typography, type Tone } from "@/lib/theme";
 import {
   Button,
@@ -27,23 +29,29 @@ const STATUS_TONE: Record<LeaveStatus, Tone> = {
   CANCELLED: "neutral",
 };
 
-const STATUS_LABEL: Record<LeaveStatus, string> = {
-  PENDING: "awaiting the school",
-  APPROVED: "excused",
-  REJECTED: "declined",
-  CANCELLED: "withdrawn",
+/**
+ * Said from the family's side, not the office's. "Excused" is what a parent
+ * wants to read, where the admin queue calls the same state "approved".
+ */
+const STATUS_LABEL: Record<LeaveStatus, MessageKey> = {
+  PENDING: "mobileAbsences.statusPending",
+  APPROVED: "mobileAbsences.statusApproved",
+  REJECTED: "mobileAbsences.statusRejected",
+  CANCELLED: "mobileAbsences.statusCancelled",
 };
 
 /** YYYY-MM-DD, which is what a plain text field can be validated against. */
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-function formatRange(start: string | Date, end: string | Date): string {
-  const from = new Date(start).toLocaleDateString("en-GB");
-  const to = new Date(end).toLocaleDateString("en-GB");
+function formatRange(start: string | Date, end: string | Date, locale: Locale): string {
+  const tag = intlLocale(locale);
+  const from = new Date(start).toLocaleDateString(tag);
+  const to = new Date(end).toLocaleDateString(tag);
   return from === to ? from : `${from} – ${to}`;
 }
 
 export default function AbsencesScreen() {
+  const { t, locale } = useTranslation();
   const { data: children } = useMyChildren();
   const { data: requests, isLoading } = useMyAbsenceRequests();
   const requestAbsence = useRequestAbsence();
@@ -61,11 +69,11 @@ export default function AbsencesScreen() {
   async function submit() {
     if (!activeStudentId) return;
     if (!ISO_DATE.test(startDate) || !ISO_DATE.test(endDate || startDate)) {
-      Alert.alert("Check the dates", "Use the format YYYY-MM-DD.");
+      Alert.alert(t("mobileAbsences.checkDates"), t("mobileAbsences.checkDatesBody"));
       return;
     }
     if (reason.trim().length < 3) {
-      Alert.alert("Add a reason", "The school needs to know why before it can excuse the day.");
+      Alert.alert(t("mobileAbsences.addReason"), t("mobileAbsences.addReasonBody"));
       return;
     }
 
@@ -81,13 +89,13 @@ export default function AbsencesScreen() {
       setStartDate("");
       setEndDate("");
       setReason("");
-      Alert.alert("Sent", "The school office will let you know.");
+      Alert.alert(t("mobileAbsences.sent"), t("mobileAbsences.sentBody"));
     } catch (error) {
       // The API is specific about overlaps and over-long ranges, so pass on
       // what it said rather than a generic failure.
       Alert.alert(
-        "Couldn't send that",
-        error instanceof Error ? error.message : "Please try again.",
+        t("mobileAbsences.couldNotSend"),
+        error instanceof Error ? error.message : t("mobileAbsences.tryAgain"),
       );
     }
   }
@@ -96,10 +104,8 @@ export default function AbsencesScreen() {
     <Screen>
       <ScrollView contentContainerStyle={styles.container}>
         <Card>
-          <SectionLabel>Tell the school about an absence</SectionLabel>
-          <Text style={styles.intro}>
-            Once the school approves it, the day is recorded as excused rather than absent.
-          </Text>
+          <SectionLabel>{t("mobileAbsences.tellSchool")}</SectionLabel>
+          <Text style={styles.intro}>{t("mobileAbsences.intro")}</Text>
 
           {(children?.length ?? 0) > 1 && (
             <View style={styles.chipRow}>
@@ -114,51 +120,58 @@ export default function AbsencesScreen() {
             </View>
           )}
 
-          <SectionLabel>First day away</SectionLabel>
+          <SectionLabel>{t("mobileAbsences.firstDay")}</SectionLabel>
           <Input
             placeholder="2026-09-07"
             value={startDate}
             onChangeText={setStartDate}
             autoCapitalize="none"
           />
-          <SectionLabel>Last day away (leave blank for one day)</SectionLabel>
+          <SectionLabel>{t("mobileAbsences.lastDay")}</SectionLabel>
           <Input
             placeholder="2026-09-09"
             value={endDate}
             onChangeText={setEndDate}
             autoCapitalize="none"
           />
-          <SectionLabel>Reason</SectionLabel>
-          <Input placeholder="Chickenpox" value={reason} onChangeText={setReason} multiline />
+          <SectionLabel>{t("fields.reason")}</SectionLabel>
+          <Input
+            placeholder={t("mobileAbsences.reasonHint")}
+            value={reason}
+            onChangeText={setReason}
+            multiline
+          />
 
           <Button
-            title="Send to the school"
+            title={t("mobileAbsences.send")}
             onPress={submit}
             loading={requestAbsence.isPending}
             style={styles.submit}
           />
           <Text style={styles.hint}>
-            One request can cover up to {MAX_ABSENCE_REQUEST_DAYS} days. For anything longer,
-            speak to the office.
+            {t("mobileAbsences.hint", { days: MAX_ABSENCE_REQUEST_DAYS })}
           </Text>
         </Card>
 
-        <SectionLabel>Your requests</SectionLabel>
+        <SectionLabel>{t("mobileAbsences.yourRequests")}</SectionLabel>
         {isLoading && <LoadingLine />}
         {!isLoading && requests?.length === 0 && (
           <EmptyState
-            title="Nothing sent yet."
-            description="Absences you report here show up for the school office straight away."
+            title={t("mobileAbsences.none")}
+            description={t("mobileAbsences.noneBody")}
           />
         )}
         {requests?.map((request) => (
           <Card key={request.id} style={styles.request}>
             <View style={styles.requestHead}>
               <Text style={styles.requestName}>{request.student.user.firstName}</Text>
-              <Pill label={STATUS_LABEL[request.status]} tone={STATUS_TONE[request.status]} />
+              <Pill
+                label={t(STATUS_LABEL[request.status])}
+                tone={STATUS_TONE[request.status]}
+              />
             </View>
             <Text style={styles.requestDates}>
-              {formatRange(request.startDate, request.endDate)}
+              {formatRange(request.startDate, request.endDate, locale)}
             </Text>
             <Text style={styles.reason}>{request.reason}</Text>
             {request.reviewNote ? (
@@ -166,7 +179,7 @@ export default function AbsencesScreen() {
             ) : null}
             {request.status === "PENDING" && (
               <Button
-                title="Withdraw"
+                title={t("meetings.withdraw")}
                 variant="ghost"
                 onPress={() => cancelRequest.mutate(request.id)}
               />

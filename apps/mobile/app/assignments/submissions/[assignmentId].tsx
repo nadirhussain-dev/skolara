@@ -2,11 +2,13 @@ import { useAssignmentSubmissions, useGradeAssignment } from "@skolara/api-clien
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "@skolara/i18n";
 import { colors, spacing, typography } from "@/lib/theme";
 import { Button, Card, EmptyState, Input, LoadingLine, Screen } from "@/lib/ui";
 
 export default function AssignmentSubmissionsScreen() {
   const { assignmentId } = useLocalSearchParams<{ assignmentId: string }>();
+  const { t } = useTranslation();
   const { data: submissions, isLoading } = useAssignmentSubmissions(assignmentId);
   const gradeAssignment = useGradeAssignment();
   const [grades, setGrades] = useState<Record<string, string>>({});
@@ -19,7 +21,7 @@ export default function AssignmentSubmissionsScreen() {
 
   return (
     <Screen>
-      {isLoading && <LoadingLine label="Loading submissions..." />}
+      {isLoading && <LoadingLine label={t("common.loading")} />}
       <FlatList
         data={submissions}
         keyExtractor={(item) => item.id}
@@ -29,20 +31,26 @@ export default function AssignmentSubmissionsScreen() {
             <Text style={styles.name}>
               {item.student.user.firstName} {item.student.user.lastName}
             </Text>
-            <Text style={styles.link}>View submission: {item.fileUrl}</Text>
+            <Text style={styles.link}>
+              {t("mobileAssignments.viewSubmission", { url: item.fileUrl })}
+            </Text>
             {item.note && <Text style={styles.note}>{item.note}</Text>}
             <View style={styles.gradeRow}>
               <Input
-                placeholder={item.grade ?? "Grade"}
+                placeholder={item.grade ?? t("assignments.grade")}
                 value={grades[item.id] ?? ""}
                 onChangeText={(v) => setGrades((prev) => ({ ...prev, [item.id]: v }))}
                 style={{ flex: 1 }}
               />
-              <Button title="Save" onPress={() => submitGrade(item.id)} style={styles.saveButton} />
+              <Button
+                title={t("common.save")}
+                onPress={() => submitGrade(item.id)}
+                style={styles.saveButton}
+              />
             </View>
           </Card>
         )}
-        ListEmptyComponent={!isLoading ? <EmptyState title="No submissions yet" /> : null}
+        ListEmptyComponent={!isLoading ? <EmptyState title={t("assignments.noSubmissions")} /> : null}
       />
     </Screen>
   );

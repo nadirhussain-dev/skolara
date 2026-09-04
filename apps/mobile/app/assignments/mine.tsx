@@ -8,11 +8,14 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { useMemo, useState } from "react";
 import { Alert, FlatList, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "@skolara/i18n";
 import { colors, spacing, typography } from "@/lib/theme";
+import { intlLocale } from "@/lib/intl";
 import { assetToUploadable } from "@/lib/upload";
 import { Button, Card, Chip, EmptyState, Pill, Screen } from "@/lib/ui";
 
 export default function MyAssignmentsScreen() {
+  const { t, locale } = useTranslation();
   const { data: children } = useMyChildren();
   const [studentId, setStudentId] = useState<string>();
   const child = children?.find((c) => c.id === studentId);
@@ -47,11 +50,11 @@ export default function MyAssignmentsScreen() {
         studentId,
         input: { fileUrl: uploaded.url },
       });
-      Alert.alert("Submitted", "Your work has been submitted.");
+      Alert.alert(t("mobileFamilyWork.submittedTitle"), t("mobileFamilyWork.submittedBody"));
     } catch (error) {
       Alert.alert(
-        "Couldn't submit",
-        error instanceof Error ? error.message : "Please try again.",
+        t("mobileFamilyWork.couldNotSubmit"),
+        error instanceof Error ? error.message : t("mobileFamilyWork.tryAgain"),
       );
     }
   }
@@ -80,20 +83,32 @@ export default function MyAssignmentsScreen() {
               <Text style={styles.title}>
                 {item.title} ({item.subject})
               </Text>
-              <Text style={styles.due}>Due {new Date(item.dueDate).toLocaleDateString()}</Text>
+              <Text style={styles.due}>
+                {t("mobileFamilyWork.dueOn", {
+                  date: new Date(item.dueDate).toLocaleDateString(intlLocale(locale)),
+                })}
+              </Text>
               {submission ? (
                 <Pill
-                  label={submission.grade ? `Submitted · Grade ${submission.grade}` : "Submitted"}
+                  label={
+                    submission.grade
+                      ? t("mobileFamilyWork.submittedWithGrade", { grade: submission.grade })
+                      : t("mobileFamilyWork.submitted")
+                  }
                   tone="success"
                 />
               ) : (
-                <Button title="Submit work" variant="secondary" onPress={() => submit(item.id)} />
+                <Button
+                  title={t("mobileFamilyWork.submitWork")}
+                  variant="secondary"
+                  onPress={() => submit(item.id)}
+                />
               )}
             </Card>
           );
         }}
         ListEmptyComponent={
-          studentId ? <EmptyState title="No assignments for this class yet" /> : null
+          studentId ? <EmptyState title={t("mobileFamilyWork.noAssignmentsForClass")} /> : null
         }
       />
     </Screen>
