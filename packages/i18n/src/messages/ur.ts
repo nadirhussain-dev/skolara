@@ -80,6 +80,7 @@ export const ur: Messages = {
     schools: "اسکول",
     schoolGroups: "اسکول گروپس",
     analytics: "تجزیات",
+    infrastructure: "انفراسٹرکچر",
     students: "طلبہ",
     teachers: "اساتذہ",
     classes: "جماعتیں",

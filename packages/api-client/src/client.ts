@@ -115,6 +115,7 @@ import type {
   RoleTemplate,
   TEMPLATABLE_ROLES,
   UpsertRoleTemplateInput,
+  HealthDetail,
   SubmitAssignmentInput,
   SubmitPaymentInput,
   SuggestedMatch,
@@ -912,6 +913,10 @@ export function createApiClient({
           method: "PATCH",
           body: JSON.stringify(input),
         }),
+    },
+    health: {
+      /** Guarded — the two probes a load balancer uses stay unauthenticated. */
+      detail: () => request<HealthDetail>("/health/detail"),
     },
     roleTemplates: {
       catalogue: () => request<CapabilityCatalogue>("/role-templates/catalogue"),

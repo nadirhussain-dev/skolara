@@ -34,6 +34,12 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["SUPER_ADMIN"],
     groupKey: "nav.platform",
   },
+  {
+    href: "/super-admin/health",
+    labelKey: "nav.infrastructure",
+    roles: ["SUPER_ADMIN"],
+    groupKey: "nav.platform",
+  },
 
   {
     href: "/school/analytics",

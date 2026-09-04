@@ -77,6 +77,7 @@ export const en = {
     schools: "Schools",
     schoolGroups: "School groups",
     analytics: "Analytics",
+    infrastructure: "Infrastructure",
     students: "Students",
     teachers: "Teachers",
     classes: "Classes",
