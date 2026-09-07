@@ -8,6 +8,7 @@ import {
 import { useLocalSearchParams, router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "@skolara/i18n";
 import { colors, radius, spacing, typography } from "@/lib/theme";
 import { Button, Card, LoadingLine, Pill, Screen, SectionLabel } from "@/lib/ui";
 
@@ -23,6 +24,7 @@ function clock(seconds: number): string {
 }
 
 export default function SitQuizScreen() {
+  const { t } = useTranslation();
   const { quizId } = useLocalSearchParams<{ quizId: string }>();
 
   const start = useStartQuizAttempt();
@@ -53,7 +55,7 @@ export default function SitQuizScreen() {
       })
       .catch((error: unknown) => {
         if (!active) return;
-        setFailed(error instanceof Error ? error.message : "Couldn't open that quiz");
+        setFailed(error instanceof Error ? error.message : t("mobileQuizzes.couldNotOpen"));
       });
     return () => {
       active = false;
@@ -88,8 +90,10 @@ export default function SitQuizScreen() {
         .mutateAsync({ attemptId: paper.id, input: { questionId, selectedIndex: index } })
         .catch((error: unknown) => {
           Alert.alert(
-            "That answer didn't save",
-            error instanceof Error ? error.message : "Check your connection and tap it again.",
+            t("mobileQuizzes.answerDidNotSave"),
+            error instanceof Error
+              ? error.message
+              : t("mobileQuizzes.answerDidNotSaveBody"),
           );
         });
     }
@@ -101,8 +105,8 @@ export default function SitQuizScreen() {
       setResult(await submit.mutateAsync(paper.id));
     } catch (error) {
       Alert.alert(
-        "Couldn't submit",
-        error instanceof Error ? error.message : "Please try again.",
+        t("mobileQuizzes.couldNotSubmit"),
+        error instanceof Error ? error.message : t("mobileQuizzes.tryAgain"),
       );
     }
   }
@@ -111,9 +115,9 @@ export default function SitQuizScreen() {
     return (
       <Screen>
         <Card>
-          <Text style={styles.title}>Can&apos;t open this quiz</Text>
+          <Text style={styles.title}>{t("mobileQuizPaper.cantOpen")}</Text>
           <Text style={styles.meta}>{failed}</Text>
-          <Button title="Back" variant="secondary" onPress={() => router.back()} />
+          <Button title={t("mobileQuizPaper.back")} variant="secondary" onPress={() => router.back()} />
         </Card>
       </Screen>
     );
@@ -126,21 +130,24 @@ export default function SitQuizScreen() {
           <Card>
             <View style={styles.header}>
               <Text style={styles.title}>
-                {result.status === "EXPIRED" ? "Time ran out" : "Submitted"}
+                {result.status === "EXPIRED"
+                  ? t("mobileQuizzes.timeRanOut")
+                  : t("mobileQuizzes.submitted")}
               </Text>
               <Pill
-                label={`${result.score ?? 0} / ${result.maxScore ?? 0}`}
+                label={t("mobileQuizzes.scoreOf", {
+                  score: result.score ?? 0,
+                  total: result.maxScore ?? 0,
+                })}
                 tone={result.status === "EXPIRED" ? "danger" : "success"}
               />
             </View>
             {result.status === "EXPIRED" && (
-              <Text style={styles.meta}>
-                Marked on the answers that reached us before the deadline.
-              </Text>
+              <Text style={styles.meta}>{t("mobileQuizPaper.markedOnWhatArrived")}</Text>
             )}
           </Card>
 
-          <SectionLabel>Your answers</SectionLabel>
+          <SectionLabel>{t("mobileQuizzes.yourAnswers")}</SectionLabel>
           {result.questions.map((question, index) => (
             <Card key={question.id}>
               <Text style={styles.prompt}>
@@ -165,13 +172,16 @@ export default function SitQuizScreen() {
               })}
               <Text style={styles.meta}>
                 {question.selectedIndex === null
-                  ? "Not answered"
-                  : `${question.marksAwarded} of ${question.marks} marks`}
+                  ? t("mobileQuizzes.notAnswered")
+                  : t("mobileQuizPaper.marksAwarded", {
+                      awarded: question.marksAwarded,
+                      total: question.marks,
+                    })}
               </Text>
             </Card>
           ))}
 
-          <Button title="Done" onPress={() => router.back()} />
+          <Button title={t("mobileQuizzes.done")} onPress={() => router.back()} />
         </ScrollView>
       </Screen>
     );
@@ -180,7 +190,7 @@ export default function SitQuizScreen() {
   if (!paper) {
     return (
       <Screen>
-        <LoadingLine label="Opening the paper..." />
+        <LoadingLine label={t("mobileQuizzes.openingPaper")} />
       </Screen>
     );
   }
@@ -195,14 +205,18 @@ export default function SitQuizScreen() {
             <Text style={styles.title}>{paper.quiz.title}</Text>
             {remaining !== null && (
               <Pill
-                label={outOfTime ? "Time up" : clock(remaining)}
+                label={outOfTime ? t("mobileQuizzes.timeUp") : clock(remaining)}
                 tone={outOfTime ? "danger" : remaining < 60 ? "warning" : "brand"}
               />
             )}
           </View>
           <Text style={styles.meta}>
-            {paper.quiz.subject} · {answeredCount} of {paper.questions.length} answered ·{" "}
-            {totalMarks} marks
+            {t("mobileQuizPaper.paperMeta", {
+              subject: paper.quiz.subject,
+              answered: answeredCount,
+              questions: paper.questions.length,
+              marks: totalMarks,
+            })}
           </Text>
           {paper.quiz.instructions ? (
             <Text style={styles.meta}>{paper.quiz.instructions}</Text>
@@ -215,7 +229,12 @@ export default function SitQuizScreen() {
               {index + 1}. {question.prompt}
               <Text style={styles.meta}>
                 {"  "}
-                {Number(question.marks)} mark{Number(question.marks) === 1 ? "" : "s"}
+                {t(
+                  Number(question.marks) === 1
+                    ? "mobileQuizPaper.markSingular"
+                    : "mobileQuizPaper.markPlural",
+                  { count: Number(question.marks) },
+                )}
               </Text>
             </Text>
             {question.options.map((option, optionIndex) => {
@@ -237,15 +256,20 @@ export default function SitQuizScreen() {
         ))}
 
         <Button
-          title={outOfTime ? "Time up — see your score" : "Submit"}
+          title={
+            outOfTime ? t("mobileQuizzes.timeUpSubmit") : t("mobileQuizzes.submit")
+          }
           loading={submit.isPending}
           onPress={handleSubmit}
         />
         {answeredCount < paper.questions.length && !outOfTime && (
           <Text style={styles.meta}>
-            {paper.questions.length - answeredCount} question
-            {paper.questions.length - answeredCount === 1 ? "" : "s"} unanswered — they&apos;ll
-            score nothing.
+            {t(
+              paper.questions.length - answeredCount === 1
+                ? "mobileQuizPaper.unansweredOne"
+                : "mobileQuizPaper.unansweredMany",
+              { count: paper.questions.length - answeredCount },
+            )}
           </Text>
         )}
       </ScrollView>

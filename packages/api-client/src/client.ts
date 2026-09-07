@@ -65,7 +65,10 @@ import type {
   PlatformAnalytics,
   RankListEntry,
   RegisterDeviceInput,
+  AbsenceRequest,
+  RequestAbsenceInput,
   RequestLeaveInput,
+  ReviewAbsenceInput,
   ReviewLeaveInput,
   RegisterSchoolInput,
   RegisterSchoolResponse,
@@ -126,6 +129,7 @@ import type {
   AddSupportCommentInput,
   UpdateSupportTicketInput,
   UpdateBrandingInput,
+  UpdateCommunicationInput,
   TimetableEntry,
   UpdateComplaintStatusInput,
   UploadPurpose,
@@ -412,6 +416,22 @@ export interface LeaveRequestWithRequester extends LeaveRequest {
   requesterUser: { id: string; firstName: string; lastName: string; role: string };
 }
 
+/** An absence request as every screen reads it: with the child on it. */
+export interface AbsenceRequestWithStudent extends AbsenceRequest {
+  student: {
+    id: string;
+    admissionNumber: string;
+    user: { firstName: string; lastName: string };
+    class: { id: string; name: string; section: string } | null;
+  };
+  raisedByUser: { id: string; firstName: string; lastName: string; role: string };
+}
+
+/** Approving rewrites registers, so the API reports how many it changed. */
+export interface ReviewedAbsenceRequest extends AbsenceRequestWithStudent {
+  excusedRecords: number;
+}
+
 export interface GeneratedReportCard {
   studentId: string;
   studentName: string;
@@ -613,6 +633,11 @@ export function createApiClient({
       mine: () => request<School>("/schools/me"),
       updateBranding: (id: string, input: UpdateBrandingInput) =>
         request<School>(`/schools/${id}/branding`, {
+          method: "PATCH",
+          body: JSON.stringify(input),
+        }),
+      updateCommunication: (id: string, input: UpdateCommunicationInput) =>
+        request<School>(`/schools/${id}/communication`, {
           method: "PATCH",
           body: JSON.stringify(input),
         }),
@@ -1162,6 +1187,23 @@ export function createApiClient({
         }),
       cancel: (id: string) =>
         request<LeaveRequest>(`/leave/${id}/cancel`, { method: "PATCH" }),
+    },
+    absences: {
+      request: (input: RequestAbsenceInput) =>
+        request<AbsenceRequestWithStudent>("/absences", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      mine: () => request<AbsenceRequestWithStudent[]>("/absences/mine"),
+      list: (status?: LeaveStatus) =>
+        request<AbsenceRequestWithStudent[]>(`/absences${status ? `?status=${status}` : ""}`),
+      review: (id: string, input: ReviewAbsenceInput) =>
+        request<ReviewedAbsenceRequest>(`/absences/${id}/review`, {
+          method: "PATCH",
+          body: JSON.stringify(input),
+        }),
+      cancel: (id: string) =>
+        request<AbsenceRequest>(`/absences/${id}/cancel`, { method: "PATCH" }),
     },
     reports: {
       platformRevenueCsv: () => requestText("/reports/platform-revenue.csv"),

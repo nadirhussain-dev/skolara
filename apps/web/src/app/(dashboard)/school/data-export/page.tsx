@@ -9,12 +9,14 @@ import {
   PageHeader,
   Select,
 } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { datedFilename, saveCsv, saveJson } from "@/lib/download";
 
 export default function DataExportPage() {
   const api = useApiClient();
+  const { t } = useTranslation();
   const { data: tableList } = useQuery({
     queryKey: ["export", "tables"],
     queryFn: () => api.exports.tables(),
@@ -31,7 +33,7 @@ export default function DataExportPage() {
       const json = await api.exports.schoolJson();
       saveJson(json, `skolara-export-${new Date().toISOString().slice(0, 10)}.json`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't build that export");
+      setError(err instanceof Error ? err.message : t("dataExport.couldNotBuild"));
     } finally {
       setBusy(null);
     }
@@ -44,7 +46,7 @@ export default function DataExportPage() {
     try {
       saveCsv(await api.exports.tableCsv(table), datedFilename(table));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't build that export");
+      setError(err instanceof Error ? err.message : t("dataExport.couldNotBuild"));
     } finally {
       setBusy(null);
     }
@@ -53,27 +55,23 @@ export default function DataExportPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Export your data"
-        description="Everything this school has in Skolara, in a form you can take elsewhere. No approval needed and no notice period."
+        title={t("dataExport.title")}
+        description={t("dataExport.description")}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Full export</CardTitle>
+          <CardTitle>{t("dataExport.fullExport")}</CardTitle>
         </CardHeader>
-        <p className="mb-3 text-sm text-slate-500">
-          One JSON file containing every record: people, classes, attendance, fees, payments,
-          marks, messages, complaints, timetable, library, transport, hostel and inventory. It
-          carries a manifest with a row count per table so you can check nothing is missing.
-        </p>
+        <p className="mb-3 text-sm text-slate-500">{t("dataExport.fullExportBody")}</p>
         <Button onClick={downloadBundle} disabled={busy !== null}>
-          {busy === "bundle" ? "Building…" : "Download full export (JSON)"}
+          {busy === "bundle" ? t("dataExport.building") : t("dataExport.downloadJson")}
         </Button>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>One table as a spreadsheet</CardTitle>
+          <CardTitle>{t("dataExport.oneTable")}</CardTitle>
         </CardHeader>
         <div className="flex flex-wrap items-end gap-3">
           <Select
@@ -81,7 +79,7 @@ export default function DataExportPage() {
             onChange={(e) => setTable(e.target.value)}
             className="max-w-xs"
           >
-            <option value="">Select a table</option>
+            <option value="">{t("dataExport.selectTable")}</option>
             {tableList?.tables.map((name) => (
               <option key={name} value={name}>
                 {name.replace(/_/g, " ")}
@@ -89,38 +87,35 @@ export default function DataExportPage() {
             ))}
           </Select>
           <Button variant="secondary" onClick={downloadTable} disabled={!table || busy !== null}>
-            {busy === "csv" ? "Building…" : "Download CSV"}
+            {busy === "csv" ? t("dataExport.building") : t("dataExport.downloadCsv")}
           </Button>
         </div>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>What isn&apos;t in it</CardTitle>
+          <CardTitle>{t("dataExport.whatIsntIn")}</CardTitle>
         </CardHeader>
         {/* Stated plainly rather than buried: a school comparing platforms on
             portability deserves to know the edges before it relies on this. */}
         <ul className="flex flex-col gap-2 text-sm text-slate-500">
           <li>
             <span className="font-medium text-slate-700 dark:text-slate-200">
-              Uploaded files are links, not copies.
+              {t("dataExport.filesAreLinksTitle")}
             </span>{" "}
-            Payment screenshots, homework, study materials and generated PDFs are referenced by
-            URL. Download them before the account closes.
+            {t("dataExport.filesAreLinksBody")}
           </li>
           <li>
             <span className="font-medium text-slate-700 dark:text-slate-200">
-              Credentials are excluded by design.
+              {t("dataExport.credentialsTitle")}
             </span>{" "}
-            Password hashes, session tokens, API key secrets and push tokens are not exportable —
-            they are worth stealing and worth nothing to you.
+            {t("dataExport.credentialsBody")}
           </li>
           <li>
             <span className="font-medium text-slate-700 dark:text-slate-200">
-              Operational logs are separate.
+              {t("dataExport.logsTitle")}
             </span>{" "}
-            The audit trail has its own screen and would otherwise dominate the file. Bus location
-            history is not kept beyond live tracking.
+            {t("dataExport.logsBody")}
           </li>
         </ul>
       </Card>

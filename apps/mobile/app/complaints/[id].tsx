@@ -3,6 +3,7 @@ import type { ComplaintStatus } from "@skolara/types";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "@skolara/i18n";
 import { colors, spacing, typography, type Tone } from "@/lib/theme";
 import { Button, Card, Input, LoadingLine, Pill, Screen } from "@/lib/ui";
 
@@ -14,6 +15,7 @@ const STATUS_TONE: Record<ComplaintStatus, Tone> = {
 
 export default function ComplaintDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useTranslation();
   const { data: complaint, isLoading } = useComplaint(id);
   const addComment = useAddComplaintComment();
   const [comment, setComment] = useState("");
@@ -24,14 +26,17 @@ export default function ComplaintDetailScreen() {
     setComment("");
   }
 
-  if (isLoading || !complaint) return <LoadingLine label="Loading complaint..." />;
+  if (isLoading || !complaint) return <LoadingLine label={t("common.loading")} />;
 
   return (
     <Screen>
       <Card>
         <View style={styles.headerRow}>
           <Text style={styles.subject}>{complaint.subject}</Text>
-          <Pill label={complaint.status.replace("_", " ")} tone={STATUS_TONE[complaint.status]} />
+          <Pill
+            label={t(`complaintStatus.${complaint.status}`)}
+            tone={STATUS_TONE[complaint.status]}
+          />
         </View>
         <Text style={styles.body}>{complaint.body}</Text>
       </Card>
@@ -50,12 +55,12 @@ export default function ComplaintDetailScreen() {
 
       <View style={styles.replyRow}>
         <Input
-          placeholder="Add a comment"
+          placeholder={t("mobileComplaints.addComment")}
           value={comment}
           onChangeText={setComment}
           style={{ flex: 1 }}
         />
-        <Button title="Send" onPress={submitComment} style={styles.sendButton} />
+        <Button title={t("support.send")} onPress={submitComment} style={styles.sendButton} />
       </View>
     </Screen>
   );

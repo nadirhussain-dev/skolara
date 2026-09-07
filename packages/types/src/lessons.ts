@@ -7,12 +7,6 @@ export const syllabusTopicStatusSchema = z.enum([
 ]);
 export type SyllabusTopicStatus = z.infer<typeof syllabusTopicStatusSchema>;
 
-export const SYLLABUS_STATUS_LABELS: Record<SyllabusTopicStatus, string> = {
-  NOT_STARTED: "Not started",
-  IN_PROGRESS: "In progress",
-  COMPLETED: "Covered",
-};
-
 export const syllabusTopicSchema = z.object({
   id: z.string().uuid(),
   schoolId: z.string().uuid(),

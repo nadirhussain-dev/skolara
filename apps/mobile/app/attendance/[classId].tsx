@@ -103,7 +103,7 @@ export default function MarkAttendanceScreen() {
 
   return (
     <Screen>
-      {isLoading && <LoadingLine label="Loading roster..." />}
+      {isLoading && <LoadingLine label={t("gradebook.loadingRoster")} />}
 
       {pending > 0 && (
         <Card style={styles.pendingCard}>

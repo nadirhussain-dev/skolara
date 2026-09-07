@@ -3,6 +3,7 @@ import type { ComplaintStatus } from "@skolara/types";
 import { Link } from "expo-router";
 import { useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text } from "react-native";
+import { useTranslation } from "@skolara/i18n";
 import { spacing, typography, type Tone } from "@/lib/theme";
 import { Button, Card, EmptyState, Input, LoadingLine, Pill, Screen, SectionLabel } from "@/lib/ui";
 
@@ -13,6 +14,7 @@ const STATUS_TONE: Record<ComplaintStatus, Tone> = {
 };
 
 export default function ComplaintsScreen() {
+  const { t } = useTranslation();
   const { data: complaints, isLoading } = useMyComplaints();
   const createComplaint = useCreateComplaint();
   const [subject, setSubject] = useState("");
@@ -28,16 +30,16 @@ export default function ComplaintsScreen() {
   return (
     <Screen>
       <Card>
-        <SectionLabel>Raise a complaint</SectionLabel>
-        <Input placeholder="Subject" value={subject} onChangeText={setSubject} />
+        <SectionLabel>{t("mobileComplaints.raise")}</SectionLabel>
+        <Input placeholder={t("fields.subject")} value={subject} onChangeText={setSubject} />
         <Input
-          placeholder="Describe the issue"
+          placeholder={t("mobileComplaints.describe")}
           value={body}
           onChangeText={setBody}
           multiline
         />
         <Button
-          title="Submit complaint"
+          title={t("mobileComplaints.submit")}
           onPress={submit}
           loading={createComplaint.isPending}
         />
@@ -53,12 +55,12 @@ export default function ComplaintsScreen() {
             <Pressable>
               <Card style={styles.row}>
                 <Text style={styles.subject}>{item.subject}</Text>
-                <Pill label={item.status.replace("_", " ")} tone={STATUS_TONE[item.status]} />
+                <Pill label={t(`complaintStatus.${item.status}`)} tone={STATUS_TONE[item.status]} />
               </Card>
             </Pressable>
           </Link>
         )}
-        ListEmptyComponent={!isLoading ? <EmptyState title="No complaints yet" /> : null}
+        ListEmptyComponent={!isLoading ? <EmptyState title={t("mobileComplaints.none")} /> : null}
       />
     </Screen>
   );

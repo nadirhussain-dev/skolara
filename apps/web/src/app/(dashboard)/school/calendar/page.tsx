@@ -18,8 +18,10 @@ import {
   PageHeader,
   Textarea,
 } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { intlLocale } from "@/lib/intl";
 
 const CATEGORIES: CalendarEventCategory[] = [
   "HOLIDAY",
@@ -41,11 +43,8 @@ const CATEGORY_TONE: Record<CalendarEventCategory, "success" | "warning" | "info
   OTHER: "neutral",
 };
 
-function label(category: CalendarEventCategory) {
-  return category.replace("_", " ").toLowerCase();
-}
-
 export default function CalendarPage() {
+  const { t, locale } = useTranslation();
   const api = useApiClient();
   const { data: events, isLoading } = useCalendarEvents();
   const createEvent = useCreateCalendarEvent();
@@ -80,25 +79,25 @@ export default function CalendarPage() {
       setTitle("");
       setDescription("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't save that event");
+      setError(err instanceof Error ? err.message : t("calendar.couldNotSave"));
     }
   }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Calendar"
-        description="Term dates, holidays and events. Class events only reach that class."
+        title={t("calendar.title")}
+        description={t("calendar.description")}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Add an event</CardTitle>
+          <CardTitle>{t("calendar.addEvent")}</CardTitle>
         </CardHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-3">
             <Input
-              placeholder="Title"
+              placeholder={t("fields.title")}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
@@ -110,7 +109,7 @@ export default function CalendarPage() {
             >
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>
-                  {label(c)}
+                  {t(`eventCategory.${c}`)}
                 </option>
               ))}
             </select>
@@ -119,7 +118,7 @@ export default function CalendarPage() {
               onChange={(e) => setClassId(e.target.value)}
               className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
             >
-              <option value="">Whole school</option>
+              <option value="">{t("calendar.wholeSchool")}</option>
               {classes?.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name} {c.section}
@@ -130,7 +129,7 @@ export default function CalendarPage() {
 
           <div className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-xs text-slate-500">
-              Starts
+              {t("calendar.starts")}
               <Input
                 type={allDay ? "date" : "datetime-local"}
                 value={startsAt}
@@ -139,7 +138,7 @@ export default function CalendarPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-xs text-slate-500">
-              Ends
+              {t("calendar.ends")}
               <Input
                 type={allDay ? "date" : "datetime-local"}
                 value={endsAt}
@@ -153,12 +152,12 @@ export default function CalendarPage() {
                 onChange={(e) => setAllDay(e.target.checked)}
                 className="h-4 w-4 rounded border-slate-300"
               />
-              All day
+              {t("calendar.allDay")}
             </label>
           </div>
 
           <Textarea
-            placeholder="Description (optional)"
+            placeholder={t("calendar.descriptionOptional")}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
@@ -168,7 +167,7 @@ export default function CalendarPage() {
 
           <div>
             <Button type="submit" disabled={createEvent.isPending}>
-              {createEvent.isPending ? "Saving…" : "Add event"}
+              {createEvent.isPending ? t("calendar.saving") : t("calendar.add")}
             </Button>
           </div>
         </form>
@@ -176,11 +175,11 @@ export default function CalendarPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Upcoming</CardTitle>
+          <CardTitle>{t("calendar.upcoming")}</CardTitle>
         </CardHeader>
-        {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {!isLoading && events?.length === 0 && (
-          <EmptyState title="Nothing on the calendar yet." />
+          <EmptyState title={t("calendar.nothingOnCalendar")} />
         )}
         <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {events?.map((event) => (
@@ -188,24 +187,26 @@ export default function CalendarPage() {
               <div>
                 <p className="font-medium">{event.title}</p>
                 <p className="text-sm text-slate-500">
-                  {new Date(event.startsAt).toLocaleDateString()}
-                  {event.endsAt && new Date(event.endsAt).toDateString() !== new Date(event.startsAt).toDateString()
-                    ? ` – ${new Date(event.endsAt).toLocaleDateString()}`
+                  {new Date(event.startsAt).toLocaleDateString(intlLocale(locale))}
+                  {event.endsAt &&
+                  new Date(event.endsAt).toDateString() !==
+                    new Date(event.startsAt).toDateString()
+                    ? ` – ${new Date(event.endsAt).toLocaleDateString(intlLocale(locale))}`
                     : ""}
-                  {event.classId ? "" : " · whole school"}
+                  {event.classId ? "" : t("calendar.wholeSchoolSuffix")}
                 </p>
                 {event.description && (
                   <p className="mt-1 text-sm text-slate-500">{event.description}</p>
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Badge tone={CATEGORY_TONE[event.category]}>{label(event.category)}</Badge>
+                <Badge tone={CATEGORY_TONE[event.category]}>{t(`eventCategory.${event.category}`)}</Badge>
                 <Button
                   variant="ghost"
                   onClick={() => deleteEvent.mutate(event.id)}
-                  aria-label={`Remove ${event.title}`}
+                  aria-label={t("calendar.removeEvent", { title: event.title })}
                 >
-                  Remove
+                  {t("common.remove")}
                 </Button>
               </div>
             </li>

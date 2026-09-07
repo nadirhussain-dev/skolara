@@ -1,0 +1,227 @@
+# Ships what CI has verified: the API as a container image, the schema via
+# `prisma migrate deploy`, and the web app to Vercel.
+#
+# Ordering is the whole point of this file. Migrations run before the new API
+# image is released and the web app goes last, so at no moment is a build
+# calling an API that hasn't shipped, or an API reading a schema that hasn't
+# been applied. That ordering only holds if each migration is backward-
+# compatible with the API version still running when it lands — add a column
+# and backfill in one release, start requiring it in the next. A migration
+# that drops or renames something the live API still reads will take the site
+# down between the migrate and release steps regardless of what this file does.
+#
+# Rolling back: images are tagged with their commit SHA, so re-running the
+# release step against an earlier tag restores an earlier API without a
+# rebuild. Database migrations do not roll back — that is why the environment
+# gate below exists.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One deploy at a time. Emphatically not `cancel-in-progress`: cancelling a
+# run midway through `migrate deploy` leaves the schema in a state no one has
+# described. A queued deploy waits instead.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}/api
+
+jobs:
+  # Nothing is built or applied until the required configuration is present.
+  # Without this the first real deploy fails halfway — image pushed, schema
+  # not migrated — which is the one state that needs a human to untangle.
+  preflight:
+    name: Required configuration present
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check deployment secrets
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.PRODUCTION_DIRECT_URL }}
+          DEPLOY_HOOK_URL: ${{ secrets.API_DEPLOY_HOOK_URL }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          missing=()
+          for name in DATABASE_URL DIRECT_URL DEPLOY_HOOK_URL \
+                      VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+            [ -n "${!name}" ] || missing+=("$name")
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Deployment is not configured. Missing repository secrets:"
+            printf '::error::  - %s\n' "${missing[@]}"
+            echo "::error::See docs/DEPLOYMENT.md for what each one is and where to get it."
+            exit 1
+          fi
+          echo "All deployment secrets are set."
+
+  # The same checks CI runs, by reference rather than by restatement — so a
+  # commit can never be deployed on a looser definition of green than the one
+  # its pull request had to pass.
+  verify:
+    name: Verify
+    needs: preflight
+    uses: ./.github/workflows/ci.yml
+
+  # Push first. Publishing an image changes nothing that is serving traffic,
+  # so if this fails the deploy has cost nothing.
+  image:
+    name: Publish API image
+    needs: verify
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: tag
+        run: echo "value=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      # Tagged with the commit as well as `latest`: `latest` is what the host
+      # pulls, and the SHA tag is what a rollback names. A registry holding
+      # only `latest` can't roll back to anything.
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.tag.outputs.value }}
+            ${{ env.IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Gated on the `production` environment. Configure required reviewers on it
+  # in repository settings — this is the step that changes a live database and
+  # the only one in the file that cannot be undone by re-running an earlier
+  # version.
+  migrate:
+    name: Apply migrations
+    needs: image
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.PRODUCTION_DIRECT_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @skolara/api exec prisma generate
+
+      # Shows what is about to be applied before applying it, so the run log
+      # records which migrations this deploy was responsible for. `migrate
+      # status` exits non-zero on a failed or drifted history, which is worth
+      # discovering before rather than during.
+      - name: Migration status before
+        run: pnpm --filter @skolara/api exec prisma migrate status
+
+      # `deploy`, never `dev`: it applies pending migrations and nothing else.
+      # `prisma migrate dev` would offer to reset the database.
+      - name: Apply pending migrations
+        run: pnpm --filter @skolara/api exec prisma migrate deploy
+
+  # Tells the host to pull the image published above. A deploy hook is used
+  # rather than a provider-specific action so this works on Render, Railway,
+  # Fly, Coolify, Dokku or anything else that exposes one; the URL is the only
+  # thing that changes.
+  release:
+    name: Release API
+    needs: [image, migrate]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Trigger the deploy hook
+        env:
+          HOOK: ${{ secrets.API_DEPLOY_HOOK_URL }}
+        run: |
+          echo "Releasing ${IMAGE}:${{ needs.image.outputs.tag }}"
+          status=$(curl --silent --show-error --fail-with-body \
+                        --retry 3 --retry-connrefused --max-time 60 \
+                        --output /tmp/hook-response \
+                        --write-out '%{http_code}' \
+                        -X POST "$HOOK")
+          echo "Host responded $status"
+          cat /tmp/hook-response
+
+      # A hook that returns 200 means the host accepted the request, not that
+      # the new image is serving. Poll the unauthenticated liveness probe until
+      # it answers, so a container that crashes on boot fails the deploy rather
+      # than passing it.
+      - name: Wait for the API to come back
+        env:
+          HEALTH_URL: ${{ secrets.PRODUCTION_API_HEALTH_URL }}
+        run: |
+          if [ -z "$HEALTH_URL" ]; then
+            echo "::warning::PRODUCTION_API_HEALTH_URL is not set — released without confirming the API came back up."
+            exit 0
+          fi
+          for attempt in $(seq 1 40); do
+            if curl --silent --fail --max-time 10 "$HEALTH_URL" > /dev/null; then
+              echo "API healthy after ${attempt} attempt(s)."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::API did not become healthy within 10 minutes of the release."
+          exit 1
+
+  # Last, so the browser bundle is never newer than the API it calls.
+  #
+  # `NEXT_PUBLIC_API_URL` is inlined at build time and so belongs in the
+  # Vercel project's own environment variables, not here — `vercel pull`
+  # fetches it below. Setting it in this workflow would have no effect on the
+  # bundle.
+  web:
+    name: Deploy web
+    needs: release
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm install --global vercel@latest
+
+      - name: Pull project settings
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      # Built here rather than on Vercel's builders so the deploy uploads a
+      # finished bundle: a build that fails does so in this log, next to the
+      # commit that caused it.
+      - name: Build
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

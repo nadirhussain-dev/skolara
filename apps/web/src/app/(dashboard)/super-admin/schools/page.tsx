@@ -8,6 +8,7 @@ import {
 } from "@skolara/api-client";
 import type { SubscriptionPlan } from "@skolara/types";
 import { Badge, Button, Card, CardHeader, CardTitle, Input } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useState } from "react";
 
 const planOptions: SubscriptionPlan[] = [
@@ -27,6 +28,7 @@ const statusTone = {
 } as const;
 
 export default function SchoolsPage() {
+  const { t } = useTranslation();
   const { data: schools, isLoading } = useSchools();
   const createSchool = useCreateSchool();
   const approveSchool = useApproveSchool();
@@ -62,18 +64,18 @@ export default function SchoolsPage() {
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Register a new school</CardTitle>
+          <CardTitle>{t("schoolsAdmin.registerSchool")}</CardTitle>
         </CardHeader>
         <form onSubmit={handleSubmit} className="flex flex-wrap gap-3">
           <Input
-            placeholder="School name"
+            placeholder={t("schoolsAdmin.schoolName")}
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="max-w-xs"
           />
           <Input
-            placeholder="subdomain"
+            placeholder={t("schoolsAdmin.subdomainHint")}
             required
             value={subdomain}
             onChange={(e) => setSubdomain(e.target.value)}
@@ -86,19 +88,19 @@ export default function SchoolsPage() {
           >
             {planOptions.map((p) => (
               <option key={p} value={p}>
-                {p}
+                {t(`plans.${p}`)}
               </option>
             ))}
           </select>
           <Input
-            placeholder="Admin first name"
+            placeholder={t("schoolsAdmin.adminFirstName")}
             required
             value={adminFirstName}
             onChange={(e) => setAdminFirstName(e.target.value)}
             className="max-w-[160px]"
           />
           <Input
-            placeholder="Admin last name"
+            placeholder={t("schoolsAdmin.adminLastName")}
             required
             value={adminLastName}
             onChange={(e) => setAdminLastName(e.target.value)}
@@ -106,7 +108,7 @@ export default function SchoolsPage() {
           />
           <Input
             type="email"
-            placeholder="Admin email"
+            placeholder={t("schoolsAdmin.adminEmail")}
             required
             value={adminEmail}
             onChange={(e) => setAdminEmail(e.target.value)}
@@ -114,23 +116,23 @@ export default function SchoolsPage() {
           />
           <Input
             type="password"
-            placeholder="Admin password"
+            placeholder={t("schoolsAdmin.adminPassword")}
             required
             value={adminPassword}
             onChange={(e) => setAdminPassword(e.target.value)}
             className="max-w-[180px]"
           />
           <Button type="submit" disabled={createSchool.isPending}>
-            {createSchool.isPending ? "Creating..." : "Create school"}
+            {createSchool.isPending ? t("schoolsAdmin.creating") : t("schoolsAdmin.create")}
           </Button>
         </form>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Schools</CardTitle>
+          <CardTitle>{t("schoolsAdmin.schools")}</CardTitle>
         </CardHeader>
-        {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {schools?.map((school) => (
             <div
@@ -140,12 +142,15 @@ export default function SchoolsPage() {
               <div>
                 <p className="font-medium">{school.name}</p>
                 <p className="text-sm text-slate-500">
-                  {school.subdomain}.skolara.app · {school.plan}
+                  {t("schoolsAdmin.schoolLine", {
+                    subdomain: school.subdomain,
+                    plan: t(`plans.${school.plan}`),
+                  })}
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <Badge tone={statusTone[school.subscriptionStatus]}>
-                  {school.subscriptionStatus}
+                  {t(`subscriptionStatus.${school.subscriptionStatus}`)}
                 </Badge>
                 {school.subscriptionStatus === "PENDING" && (
                   <>
@@ -154,14 +159,14 @@ export default function SchoolsPage() {
                       onClick={() => approveSchool.mutate(school.id)}
                       disabled={approveSchool.isPending}
                     >
-                      Approve
+                      {t("schoolsAdmin.approve")}
                     </Button>
                     <Button
                       variant="ghost"
                       onClick={() => rejectSchool.mutate(school.id)}
                       disabled={rejectSchool.isPending}
                     >
-                      Reject
+                      {t("schoolsAdmin.reject")}
                     </Button>
                   </>
                 )}

@@ -42,6 +42,15 @@ enum AttendanceStatus {
   EXCUSED
 }
 
+/// Which phone channel a school's alerts go out on. SMS is billed per
+/// message and WhatsApp effectively isn't, so BOTH is opt-in rather than the
+/// default.
+enum PhoneChannel {
+  WHATSAPP
+  SMS
+  BOTH
+}
+
 enum InvoiceStatus {
   UNPAID
   PARTIALLY_PAID
@@ -87,6 +96,7 @@ model School {
   trialEndsAt         DateTime?
   logoUrl             String?
   primaryColor        String?
+  phoneChannel        PhoneChannel        @default(WHATSAPP)
   schoolGroupId       String?
   schoolGroup         SchoolGroup?        @relation(fields: [schoolGroupId], references: [id])
   createdAt           DateTime            @default(now())
@@ -115,6 +125,7 @@ model School {
   timetableEntries    TimetableEntry[]
   calendarEvents      CalendarEvent[]
   leaveRequests       LeaveRequest[]
+  absenceRequests     AbsenceRequest[]
   meetingSlots        MeetingSlot[]
   supportTickets      SupportTicket[]
   studyMaterials      StudyMaterial[]
@@ -176,6 +187,8 @@ model User {
   authoredCalendarEvents  CalendarEvent[]     @relation("CalendarEventAuthor")
   leaveRequests           LeaveRequest[]      @relation("LeaveRequester")
   reviewedLeaveRequests   LeaveRequest[]      @relation("LeaveReviewer")
+  raisedAbsenceRequests   AbsenceRequest[]    @relation("AbsenceRaiser")
+  reviewedAbsenceRequests AbsenceRequest[]    @relation("AbsenceReviewer")
   offeredMeetingSlots     MeetingSlot[]       @relation("MeetingTeacher")
   bookedMeetingSlots      MeetingSlot[]       @relation("MeetingParent")
   raisedSupportTickets    SupportTicket[]        @relation("SupportRaiser")
@@ -297,6 +310,7 @@ model StudentProfile {
   meetingSlots       MeetingSlot[]
   quizAttempts       QuizAttempt[]
   hostelAllocations  HostelAllocation[]
+  absenceRequests    AbsenceRequest[]
 
   @@unique([schoolId, admissionNumber])
   @@index([schoolId])
@@ -859,6 +873,37 @@ enum LeaveStatus {
 
 // A staff member asking for time off. Requester is a User rather than a
 // TeacherProfile because school admins take leave too.
+/// A family telling the school in advance that a child will be away.
+///
+/// Deliberately not a LeaveRequest: staff leave draws down an annual
+/// allowance and is about entitlement, while a pupil's absence has no
+/// allowance and exists to change what the register says.
+model AbsenceRequest {
+  id               String      @id @default(uuid())
+  schoolId         String
+  school           School      @relation(fields: [schoolId], references: [id])
+  studentId        String
+  student          StudentProfile @relation(fields: [studentId], references: [id])
+  /// The parent or the student themselves.
+  raisedByUserId   String
+  raisedByUser     User        @relation("AbsenceRaiser", fields: [raisedByUserId], references: [id])
+  startDate        DateTime
+  endDate          DateTime
+  /// Required, unlike staff leave: the school is being asked to excuse a
+  /// child, and "no reason given" is not something to approve.
+  reason           String
+  status           LeaveStatus @default(PENDING)
+  reviewedByUserId String?
+  reviewedByUser   User?       @relation("AbsenceReviewer", fields: [reviewedByUserId], references: [id])
+  reviewedAt       DateTime?
+  reviewNote       String?
+  createdAt        DateTime    @default(now())
+
+  @@index([schoolId, status])
+  @@index([studentId, status])
+  @@index([raisedByUserId])
+}
+
 model LeaveRequest {
   id               String      @id @default(uuid())
   schoolId         String

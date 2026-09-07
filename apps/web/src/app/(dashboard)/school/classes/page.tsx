@@ -11,12 +11,14 @@ import {
   Input,
   PageHeader,
 } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 
 export default function ClassesPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const api = useApiClient();
   const queryClient = useQueryClient();
   const { data: classes, isLoading } = useQuery<SchoolClass[]>({
@@ -51,46 +53,46 @@ export default function ClassesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Classes" description="Set up sections and academic years." />
+      <PageHeader title={t("classes.title")} description={t("classes.description")} />
       <Card>
         <CardHeader>
-          <CardTitle>Create a class</CardTitle>
+          <CardTitle>{t("classes.createClass")}</CardTitle>
         </CardHeader>
         <form onSubmit={handleSubmit} className="flex flex-wrap gap-3">
           <Input
-            placeholder="Name (e.g. Grade 6)"
+            placeholder={t("classes.nameHint")}
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="max-w-[180px]"
           />
           <Input
-            placeholder="Section (e.g. A)"
+            placeholder={t("classes.sectionHint")}
             required
             value={section}
             onChange={(e) => setSection(e.target.value)}
             className="max-w-[120px]"
           />
           <Input
-            placeholder="Academic year"
+            placeholder={t("fields.academicYear")}
             required
             value={academicYear}
             onChange={(e) => setAcademicYear(e.target.value)}
             className="max-w-[160px]"
           />
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Creating..." : "Create class"}
+            {isSubmitting ? t("classes.creating") : t("classes.create")}
           </Button>
         </form>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Classes</CardTitle>
+          <CardTitle>{t("classes.title")}</CardTitle>
         </CardHeader>
-        {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {classes?.length === 0 && (
-          <EmptyState title="No classes yet" description="Create your first class above." />
+          <EmptyState title={t("classes.noClasses")} description={t("classes.noClassesBody")} />
         )}
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {classes?.map((c) => (

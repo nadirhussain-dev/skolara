@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Called by deploy.yml, so "verified" means precisely what it means here and
+  # there is only one place to change it.
+  workflow_call:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -102,3 +105,25 @@ jobs:
       # that disagree — because the seed would fail against a wrong shape.
       - name: Seed through the generated client
         run: pnpm --filter @skolara/api exec prisma db seed
+
+  api-image:
+    name: API image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Built but not pushed. The image is what actually gets deployed, so a
+      # Dockerfile that no longer builds — a moved output path, a dependency
+      # that needs a system library — should fail on the pull request that
+      # broke it and not on the first attempt to ship. Caching keeps the
+      # common case to the final layers.
+      - name: Build the API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

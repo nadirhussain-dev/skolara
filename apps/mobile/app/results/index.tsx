@@ -1,10 +1,12 @@
 import { useMyChildren, useStudentGrades } from "@skolara/api-client";
 import { useState } from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "@skolara/i18n";
 import { colors, spacing, typography } from "@/lib/theme";
 import { Card, Chip, EmptyState, LoadingLine, Screen } from "@/lib/ui";
 
 export default function ResultsScreen() {
+  const { t } = useTranslation();
   const { data: children } = useMyChildren();
   const [studentId, setStudentId] = useState<string>();
   const { data: grades, isLoading } = useStudentGrades(studentId);
@@ -22,7 +24,7 @@ export default function ResultsScreen() {
         ))}
       </View>
 
-      {isLoading && <LoadingLine label="Loading results..." />}
+      {isLoading && <LoadingLine label={t("common.loading")} />}
       <FlatList
         data={grades}
         keyExtractor={(item) => item.id}
@@ -30,16 +32,19 @@ export default function ResultsScreen() {
         renderItem={({ item }) => (
           <Card>
             <Text style={styles.subject}>
-              {item.subject} · {item.examType}
+              {t("results.subjectLine", { subject: item.subject, examType: item.examType })}
             </Text>
             <Text style={styles.term}>{item.term}</Text>
             <Text style={styles.score}>
-              {Number(item.marksObtained)} / {Number(item.maxMarks)}
+              {t("results.score", {
+                obtained: Number(item.marksObtained),
+                max: Number(item.maxMarks),
+              })}
             </Text>
             {item.comments && <Text style={styles.comments}>{item.comments}</Text>}
           </Card>
         )}
-        ListEmptyComponent={studentId && !isLoading ? <EmptyState title="No results yet" /> : null}
+        ListEmptyComponent={studentId && !isLoading ? <EmptyState title={t("results.noResults")} /> : null}
       />
     </Screen>
   );

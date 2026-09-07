@@ -2,23 +2,38 @@ import { useMyChildren, useStudentQuizAttempts, useStudentQuizzes } from "@skola
 import { router } from "expo-router";
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useTranslation, type Locale, type Translate } from "@skolara/i18n";
 import { useSession } from "@/lib/session";
+import { intlLocale } from "@/lib/intl";
 import { colors, spacing, typography } from "@/lib/theme";
 import { Button, Card, Chip, EmptyState, LoadingLine, Pill, Screen, SectionLabel } from "@/lib/ui";
 
-function windowLabel(quiz: { opensAt: Date | null; closesAt: Date | null }): string | null {
+const WINDOW_FORMAT = {
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+} as const;
+
+function windowLabel(
+  quiz: { opensAt: Date | null; closesAt: Date | null },
+  locale: Locale,
+  t: Translate,
+): string | null {
+  const tag = intlLocale(locale);
   const closes = quiz.closesAt ? new Date(quiz.closesAt) : null;
   const opens = quiz.opensAt ? new Date(quiz.opensAt) : null;
   if (closes && closes > new Date()) {
-    return `Closes ${closes.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`;
+    return t("mobileQuizzes.closesAt", { date: closes.toLocaleString(tag, WINDOW_FORMAT) });
   }
   if (opens && opens > new Date()) {
-    return `Opens ${opens.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`;
+    return t("mobileQuizzes.opensAt", { date: opens.toLocaleString(tag, WINDOW_FORMAT) });
   }
   return null;
 }
 
 export default function QuizzesScreen() {
+  const { t, locale } = useTranslation();
   const { role } = useSession();
   // Only a student can sit a paper. A parent sees the same list read-only —
   // the API refuses an attempt started by anyone but the student themselves.
@@ -50,11 +65,11 @@ export default function QuizzesScreen() {
           </View>
         )}
 
-        {isLoading && <LoadingLine label="Loading quizzes..." />}
+        {isLoading && <LoadingLine label={t("common.loading")} />}
 
         {available.length > 0 && (
           <>
-            <SectionLabel>To sit</SectionLabel>
+            <SectionLabel>{t("mobileQuizzes.toSit")}</SectionLabel>
             {available.map((quiz) => (
               <Card key={quiz.id}>
                 <View style={styles.header}>
@@ -62,23 +77,37 @@ export default function QuizzesScreen() {
                   <Pill label={quiz.subject} tone="brand" />
                 </View>
                 <Text style={styles.meta}>
-                  {quiz._count.questions} questions · {quiz.totalMarks} marks ·{" "}
-                  {quiz.timeLimitMinutes ? `${quiz.timeLimitMinutes} min` : "untimed"}
+                  {t("mobileQuizzes.quizMeta", {
+                    questions: quiz._count.questions,
+                    marks: quiz.totalMarks,
+                    timing: quiz.timeLimitMinutes
+                      ? t("mobileQuizzes.timedMinutes", { minutes: quiz.timeLimitMinutes })
+                      : t("mobileQuizzes.untimed"),
+                  })}
                 </Text>
                 {quiz.instructions ? <Text style={styles.meta}>{quiz.instructions}</Text> : null}
-                {windowLabel(quiz) ? <Text style={styles.meta}>{windowLabel(quiz)}</Text> : null}
+                {windowLabel(quiz, locale, t) ? (
+                  <Text style={styles.meta}>{windowLabel(quiz, locale, t)}</Text>
+                ) : null}
                 {quiz.maxAttempts > 1 && (
                   <Text style={styles.meta}>
-                    Attempt {quiz.attempts.length + 1} of {quiz.maxAttempts}
+                    {t("mobileQuizzes.attemptOf", {
+                      number: quiz.attempts.length + 1,
+                      total: quiz.maxAttempts,
+                    })}
                   </Text>
                 )}
                 {canSit ? (
                   <Button
-                    title={quiz.attempts.some((a) => a.status === "IN_PROGRESS") ? "Continue" : "Start"}
+                    title={
+                      quiz.attempts.some((a) => a.status === "IN_PROGRESS")
+                        ? t("mobileQuizzes.continueAttempt")
+                        : t("mobileQuizzes.start")
+                    }
                     onPress={() => router.push(`/quizzes/${quiz.id}`)}
                   />
                 ) : (
-                  <Text style={styles.meta}>Your child can sit this from their own login.</Text>
+                  <Text style={styles.meta}>{t("mobileQuizzes.parentReadOnly")}</Text>
                 )}
               </Card>
             ))}
@@ -87,7 +116,7 @@ export default function QuizzesScreen() {
 
         {rest.length > 0 && (
           <>
-            <SectionLabel>Done and closed</SectionLabel>
+            <SectionLabel>{t("mobileQuizzes.doneAndClosed")}</SectionLabel>
             {rest.map((quiz) => {
               const best = quiz.attempts.reduce<number | null>(
                 (top, attempt) =>
@@ -99,9 +128,20 @@ export default function QuizzesScreen() {
                   <View style={styles.header}>
                     <Text style={styles.title}>{quiz.title}</Text>
                     {best === null ? (
-                      <Pill label={quiz.isOpen ? "Not sat" : "Closed"} tone="neutral" />
+                      <Pill
+                        label={
+                          quiz.isOpen ? t("mobileQuizzes.notSat") : t("mobileQuizzes.closed")
+                        }
+                        tone="neutral"
+                      />
                     ) : (
-                      <Pill label={`${best} / ${quiz.totalMarks}`} tone="success" />
+                      <Pill
+                        label={t("mobileQuizzes.scoreOf", {
+                          score: best,
+                          total: quiz.totalMarks,
+                        })}
+                        tone="success"
+                      />
                     )}
                   </View>
                   <Text style={styles.meta}>{quiz.subject}</Text>
@@ -113,14 +153,14 @@ export default function QuizzesScreen() {
 
         {!isLoading && (quizzes?.length ?? 0) === 0 && (
           <EmptyState
-            title="No quizzes yet"
-            description="Quizzes your teachers set will show up here."
+            title={t("mobileQuizzes.none")}
+            description={t("mobileQuizzes.noneBody")}
           />
         )}
 
         {(attempts?.length ?? 0) > 0 && (
           <>
-            <SectionLabel>Past attempts</SectionLabel>
+            <SectionLabel>{t("mobileQuizzes.pastAttempts")}</SectionLabel>
             {attempts?.map((attempt) => (
               <Card key={attempt.id}>
                 <View style={styles.header}>
@@ -128,19 +168,24 @@ export default function QuizzesScreen() {
                   <Pill
                     label={
                       attempt.score === null
-                        ? attempt.status
-                        : `${Number(attempt.score)} / ${Number(attempt.maxScore)}`
+                        ? t(`quizzes.attempt${attempt.status === "IN_PROGRESS" ? "InProgress" : attempt.status === "EXPIRED" ? "Expired" : "Submitted"}`)
+                        : t("mobileQuizzes.scoreOf", {
+                            score: Number(attempt.score),
+                            total: Number(attempt.maxScore),
+                          })
                     }
                     tone={attempt.status === "EXPIRED" ? "danger" : "success"}
                   />
                 </View>
                 <Text style={styles.meta}>
-                  {attempt.quiz.subject} ·{" "}
-                  {new Date(attempt.startedAt).toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "short",
+                  {t("mobileQuizzes.attemptMeta", {
+                    subject: attempt.quiz.subject,
+                    date: new Date(attempt.startedAt).toLocaleDateString(intlLocale(locale), {
+                      day: "numeric",
+                      month: "short",
+                    }),
                   })}
-                  {attempt.status === "EXPIRED" ? " · ran out of time" : ""}
+                  {attempt.status === "EXPIRED" ? t("mobileQuizzes.ranOutOfTime") : ""}
                 </Text>
               </Card>
             ))}

@@ -1,20 +1,12 @@
 "use client";
 
 import { useMyTimetable, usePeriods } from "@skolara/api-client";
-import { TEACHING_DAYS, type DayOfWeek } from "@skolara/types";
+import { TEACHING_DAYS } from "@skolara/types";
+import { useTranslation } from "@skolara/i18n";
 import { Card, CardHeader, CardTitle, EmptyState, PageHeader } from "@skolara/ui";
 
-const DAY_LABEL: Record<DayOfWeek, string> = {
-  MONDAY: "Monday",
-  TUESDAY: "Tuesday",
-  WEDNESDAY: "Wednesday",
-  THURSDAY: "Thursday",
-  FRIDAY: "Friday",
-  SATURDAY: "Saturday",
-  SUNDAY: "Sunday",
-};
-
 export default function TeacherTimetablePage() {
+  const { t } = useTranslation();
   const { data: entries, isLoading } = useMyTimetable();
   const { data: periods } = usePeriods();
 
@@ -22,32 +14,35 @@ export default function TeacherTimetablePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="My timetable" description="Every lesson you teach this week." />
+      <PageHeader
+        title={t("timetable.myTimetable")}
+        description={t("timetable.myTimetableDescription")}
+      />
 
-      {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
 
       {!isLoading && !hasLessons && (
-        <EmptyState title="No lessons scheduled yet — your school admin builds the timetable." />
+        <EmptyState title={t("timetable.noLessonsScheduled")} />
       )}
 
       {hasLessons && periods && (
         <Card>
           <CardHeader>
-            <CardTitle>Weekly schedule</CardTitle>
+            <CardTitle>{t("timetable.weeklySchedule")}</CardTitle>
           </CardHeader>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] border-collapse text-sm">
               <thead>
                 <tr>
                   <th className="border-b border-slate-200 p-2 text-left font-medium text-slate-500 dark:border-slate-800">
-                    Period
+                    {t("timetable.period")}
                   </th>
                   {TEACHING_DAYS.map((day) => (
                     <th
                       key={day}
                       className="border-b border-slate-200 p-2 text-left font-medium text-slate-500 dark:border-slate-800"
                     >
-                      {DAY_LABEL[day].slice(0, 3)}
+                      {t(`days.short.${day}`)}
                     </th>
                   ))}
                 </tr>

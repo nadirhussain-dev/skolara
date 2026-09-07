@@ -1,5 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CreateSchoolInput, UpdateBrandingInput } from "@skolara/types";
+import type {
+  CreateSchoolInput,
+  UpdateBrandingInput,
+  UpdateCommunicationInput,
+} from "@skolara/types";
 import { useApiClient } from "../context";
 
 export const schoolsQueryKey = ["schools"] as const;
@@ -18,6 +22,19 @@ export function useUpdateBranding() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateBrandingInput }) =>
       api.schools.updateBranding(id, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schools", "me"] });
+      queryClient.invalidateQueries({ queryKey: schoolsQueryKey });
+    },
+  });
+}
+
+export function useUpdateCommunication() {
+  const api = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateCommunicationInput }) =>
+      api.schools.updateCommunication(id, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["schools", "me"] });
       queryClient.invalidateQueries({ queryKey: schoolsQueryKey });

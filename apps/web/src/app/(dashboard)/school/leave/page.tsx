@@ -1,7 +1,7 @@
 "use client";
 
 import { useLeaveRequests, useReviewLeave } from "@skolara/api-client";
-import { LEAVE_KIND_LABELS, type LeaveStatus } from "@skolara/types";
+import type { LeaveStatus, RoleType } from "@skolara/types";
 import {
   Badge,
   Button,
@@ -12,7 +12,9 @@ import {
   Input,
   PageHeader,
 } from "@skolara/ui";
+import { useTranslation, type Locale } from "@skolara/i18n";
 import { useState } from "react";
+import { intlLocale } from "@/lib/intl";
 
 const STATUS_TONE: Record<LeaveStatus, "warning" | "success" | "danger" | "neutral"> = {
   PENDING: "warning",
@@ -23,13 +25,15 @@ const STATUS_TONE: Record<LeaveStatus, "warning" | "success" | "danger" | "neutr
 
 const FILTERS: (LeaveStatus | "ALL")[] = ["PENDING", "APPROVED", "REJECTED", "ALL"];
 
-function dateRange(start: string | Date, end: string | Date): string {
-  const from = new Date(start).toLocaleDateString("en-GB");
-  const to = new Date(end).toLocaleDateString("en-GB");
+function dateRange(start: string | Date, end: string | Date, locale: Locale): string {
+  const tag = intlLocale(locale);
+  const from = new Date(start).toLocaleDateString(tag);
+  const to = new Date(end).toLocaleDateString(tag);
   return from === to ? from : `${from} – ${to}`;
 }
 
 export default function LeavePage() {
+  const { t, locale } = useTranslation();
   const [filter, setFilter] = useState<LeaveStatus | "ALL">("PENDING");
   const { data: requests, isLoading } = useLeaveRequests(
     filter === "ALL" ? undefined : filter,
@@ -45,7 +49,7 @@ export default function LeavePage() {
     try {
       await review.mutateAsync({ id, input: { status: "APPROVED" } });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't approve that request");
+      setError(err instanceof Error ? err.message : t("leave.couldNotApprove"));
     }
   }
 
@@ -56,20 +60,20 @@ export default function LeavePage() {
       setDecliningId(null);
       setNote("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't decline that request");
+      setError(err instanceof Error ? err.message : t("leave.couldNotDecline"));
     }
   }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Staff leave"
-        description="Approve or decline time-off requests. Oldest first."
+        title={t("leave.title")}
+        description={t("leave.description")}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Requests</CardTitle>
+          <CardTitle>{t("leave.requests")}</CardTitle>
         </CardHeader>
 
         <div className="mb-4 flex flex-wrap gap-2">
@@ -84,14 +88,14 @@ export default function LeavePage() {
                   : "border-slate-200 text-slate-600 hover:border-slate-300 dark:border-slate-800 dark:text-slate-400"
               }`}
             >
-              {option === "ALL" ? "All" : option.charAt(0) + option.slice(1).toLowerCase()}
+              {option === "ALL" ? t("common.all") : t(`leaveStatus.${option}`)}
             </button>
           ))}
         </div>
 
-        {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {!isLoading && requests?.length === 0 && (
-          <EmptyState title="Nothing to review." />
+          <EmptyState title={t("leave.nothingToReview")} />
         )}
         {error && <p className="mb-3 text-sm text-rose-600">{error}</p>}
 
@@ -103,12 +107,14 @@ export default function LeavePage() {
                   <p className="font-medium">
                     {request.requesterUser.firstName} {request.requesterUser.lastName}{" "}
                     <span className="text-slate-400">
-                      ({request.requesterUser.role.replace("_", " ").toLowerCase()})
+                      ({t(`roles.${request.requesterUser.role as RoleType}`)})
                     </span>
                   </p>
                   <p className="text-sm text-slate-500">
-                    {LEAVE_KIND_LABELS[request.kind]} ·{" "}
-                    {dateRange(request.startDate, request.endDate)}
+                    {t("leave.requestSummary", {
+                      kind: t(`leaveKind.${request.kind}`),
+                      dates: dateRange(request.startDate, request.endDate, locale),
+                    })}
                   </p>
                   {request.reason && (
                     <p className="mt-1 text-sm text-slate-500">{request.reason}</p>
@@ -119,7 +125,7 @@ export default function LeavePage() {
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
-                  <Badge tone={STATUS_TONE[request.status]}>{request.status}</Badge>
+                  <Badge tone={STATUS_TONE[request.status]}>{t(`leaveStatus.${request.status}`)}</Badge>
                   {request.status === "PENDING" && decliningId !== request.id && (
                     <>
                       <Button
@@ -127,7 +133,7 @@ export default function LeavePage() {
                         disabled={review.isPending}
                         onClick={() => approve(request.id)}
                       >
-                        Approve
+                        {t("leave.approve")}
                       </Button>
                       <Button
                         variant="secondary"
@@ -136,7 +142,7 @@ export default function LeavePage() {
                           setNote("");
                         }}
                       >
-                        Decline
+                        {t("leave.decline")}
                       </Button>
                     </>
                   )}
@@ -146,11 +152,11 @@ export default function LeavePage() {
               {decliningId === request.id && (
                 <div className="flex flex-wrap items-end gap-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
                   <label className="flex flex-1 flex-col gap-1 text-sm">
-                    Reason for declining — the requester sees this
+                    {t("leave.declineReasonLabel")}
                     <Input
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
-                      placeholder="e.g. Exams that week"
+                      placeholder={t("leave.declineReasonHint")}
                       autoFocus
                     />
                   </label>
@@ -159,10 +165,10 @@ export default function LeavePage() {
                     disabled={!note.trim() || review.isPending}
                     onClick={() => decline(request.id)}
                   >
-                    Send decline
+                    {t("leave.sendDecline")}
                   </Button>
                   <Button variant="ghost" onClick={() => setDecliningId(null)}>
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                 </div>
               )}

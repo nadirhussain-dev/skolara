@@ -1,6 +1,7 @@
 "use client";
 
 import type { SubjectPerformance } from "@skolara/types";
+import { useTranslation } from "@skolara/i18n";
 import { useId, useState } from "react";
 
 /**
@@ -59,6 +60,7 @@ export function SubjectPerformanceChart({
   subject: SubjectPerformance;
   studentLabel: string;
 }) {
+  const { t } = useTranslation();
   const titleId = useId();
   const [active, setActive] = useState<number | null>(null);
   const { points } = subject;
@@ -131,7 +133,12 @@ export function SubjectPerformanceChart({
         onPointerLeave={() => setActive(null)}
       >
         <title id={titleId}>
-          {`${subject.subject}: ${studentLabel} averaged ${subject.average}% over ${count} assessment${count === 1 ? "" : "s"}.`}
+          {t(count === 1 ? "performance.chartSummary" : "performance.chartSummaryPlural", {
+            subject: subject.subject,
+            student: studentLabel,
+            average: subject.average,
+            count,
+          })}
         </title>
 
         {/* Solid hairline grid, one step off the surface. */}
@@ -262,7 +269,11 @@ export function SubjectPerformanceChart({
               height={PLOT_HEIGHT}
               fill="transparent"
               tabIndex={0}
-              aria-label={`${point.term} ${point.examType}: ${point.percentage}%`}
+              aria-label={t("performance.pointLabel", {
+                term: point.term,
+                examType: point.examType,
+                percentage: point.percentage,
+              })}
               onPointerEnter={() => setActive(index)}
               onFocus={() => setActive(index)}
               onBlur={() => setActive(null)}
@@ -291,6 +302,7 @@ export function SubjectPerformanceChart({
  * drawn. One legend for the whole grid — every facet shares the encoding.
  */
 export function PerformanceLegend({ studentLabel }: { studentLabel: string }) {
+  const { t } = useTranslation();
   return (
     <ul className="flex flex-wrap items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
       <li className="flex items-center gap-1.5">
@@ -299,7 +311,7 @@ export function PerformanceLegend({ studentLabel }: { studentLabel: string }) {
       </li>
       <li className="flex items-center gap-1.5">
         <span className="inline-block h-0.5 w-4 bg-slate-500" />
-        Class average
+        {t("performance.classAverage")}
       </li>
     </ul>
   );

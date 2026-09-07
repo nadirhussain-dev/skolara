@@ -2,11 +2,14 @@
 
 import { useConfirmBankStatementMatch, useImportBankStatement, useSuggestedMatches } from "@skolara/api-client";
 import { Button, Card, CardHeader, CardTitle, EmptyState, PageHeader, Textarea } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { formatCurrency } from "@skolara/utils";
 import { useState } from "react";
+import { intlLocale } from "@/lib/intl";
 
 export default function BankStatementPage() {
   const { data: matches, isLoading } = useSuggestedMatches();
+  const { t, locale } = useTranslation();
   const importStatement = useImportBankStatement();
   const confirmMatch = useConfirmBankStatementMatch();
 
@@ -16,7 +19,7 @@ export default function BankStatementPage() {
   async function handleImport(e: React.FormEvent) {
     e.preventDefault();
     const result = await importStatement.mutateAsync({ csvContent });
-    setImportMessage(`Imported ${result.imported} line(s).`);
+    setImportMessage(t("bankStatement.imported", { count: result.imported }));
     setCsvContent("");
     setTimeout(() => setImportMessage(""), 4000);
   }
@@ -24,12 +27,12 @@ export default function BankStatementPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Bank statement"
-        description="Import statements and reconcile pending payments."
+        title={t("bankStatement.title")}
+        description={t("bankStatement.description")}
       />
       <Card>
         <CardHeader>
-          <CardTitle>Import bank statement</CardTitle>
+          <CardTitle>{t("bankStatement.importCard")}</CardTitle>
         </CardHeader>
         <form onSubmit={handleImport} className="flex flex-col gap-3">
           <Textarea
@@ -41,7 +44,7 @@ export default function BankStatementPage() {
           />
           <div>
             <Button type="submit" disabled={importStatement.isPending}>
-              {importStatement.isPending ? "Importing..." : "Import CSV"}
+              {importStatement.isPending ? t("bankStatement.importing") : t("bankStatement.importCsv")}
             </Button>
           </div>
           {importMessage && <p className="text-sm text-emerald-600">{importMessage}</p>}
@@ -50,13 +53,13 @@ export default function BankStatementPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Suggested matches</CardTitle>
+          <CardTitle>{t("bankStatement.suggestedMatches")}</CardTitle>
         </CardHeader>
-        {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {matches?.length === 0 && (
           <EmptyState
-            title="No suggested matches"
-            description="Import a statement to see matches against pending payments."
+            title={t("bankStatement.noMatches")}
+            description={t("bankStatement.noMatchesBody")}
           />
         )}
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
@@ -68,9 +71,14 @@ export default function BankStatementPage() {
               <div>
                 <p className="font-medium">{match.bankStatementLine.description}</p>
                 <p className="text-sm text-slate-500">
-                  {new Date(match.bankStatementLine.transactionDate).toLocaleDateString()} ·{" "}
-                  {formatCurrency(Number(match.bankStatementLine.amount))} vs. claimed{" "}
-                  {formatCurrency(Number(match.amountClaimed))} · {match.referenceId}
+                  {t("bankStatement.matchSummary", {
+                    date: new Date(
+                      match.bankStatementLine.transactionDate,
+                    ).toLocaleDateString(intlLocale(locale)),
+                    amount: formatCurrency(Number(match.bankStatementLine.amount)),
+                    claimed: formatCurrency(Number(match.amountClaimed)),
+                    reference: match.referenceId,
+                  })}
                 </p>
               </div>
               <Button
@@ -83,7 +91,7 @@ export default function BankStatementPage() {
                 }
                 disabled={confirmMatch.isPending}
               >
-                Confirm match
+                {t("bankStatement.confirmMatch")}
               </Button>
             </div>
           ))}

@@ -39,6 +39,7 @@ export * from "./hooks/use-audit";
 export * from "./hooks/use-school-attendance";
 export * from "./hooks/use-signup";
 export * from "./hooks/use-certificates";
+export * from "./hooks/use-absences";
 export * from "./hooks/use-leave";
 export * from "./hooks/use-meetings";
 export * from "./hooks/use-support";

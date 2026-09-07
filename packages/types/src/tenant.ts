@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { phoneChannelSchema } from "./communication";
 
 export const subscriptionPlanSchema = z.enum([
   "BASIC",
@@ -30,6 +31,7 @@ export const schoolSchema = z.object({
   trialEndsAt: z.coerce.date().nullable(),
   logoUrl: z.string().url().nullable(),
   primaryColor: z.string().nullable(),
+  phoneChannel: phoneChannelSchema,
   createdAt: z.coerce.date(),
 });
 export type School = z.infer<typeof schoolSchema>;

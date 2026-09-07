@@ -26,7 +26,9 @@ export default function LoginScreen() {
     await setStoredRefreshToken(result.refreshToken);
     // Needs the access token in place first — the register call is authenticated.
     await registerPushToken();
-    if (result.user.role === "TEACHER") {
+    if (result.user.role === "SUPER_ADMIN") {
+      router.replace("/super-admin");
+    } else if (result.user.role === "TEACHER") {
       router.replace("/teacher-dashboard");
     } else {
       router.replace("/dashboard");

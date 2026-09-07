@@ -21,17 +21,12 @@ import {
   PageHeader,
   Select,
 } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
-const ROLE_LABELS: Record<TemplatableRole, string> = {
-  SCHOOL_ADMIN: "School admin",
-  TEACHER: "Teacher",
-  PARENT: "Parent",
-  STUDENT: "Student",
-};
-
 export default function RoleTemplatesPage() {
+  const { t } = useTranslation();
   const api = useApiClient();
   const { data: catalogue } = useCapabilityCatalogue();
   const { data: templates } = useRoleTemplates();
@@ -109,7 +104,7 @@ export default function RoleTemplatesPage() {
       else await create.mutateAsync(input);
       startNew();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't save that template");
+      setError(err instanceof Error ? err.message : t("roleTemplates.couldNotSave"));
     }
   }
 
@@ -132,31 +127,35 @@ export default function RoleTemplatesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Roles & permissions"
-        description="Narrow what someone can reach, without inventing a new role. An accountant is a school admin who only sees fees."
+        title={t("roleTemplates.title")}
+        description={t("roleTemplates.description")}
       />
 
       <Card>
         {/* Said up front, because the mental model matters more than the UI:
             a template subtracts, it never adds. */}
         <p className="text-sm text-slate-500">
-          A template <span className="font-medium text-slate-700 dark:text-slate-200">removes</span>{" "}
-          access from an account. It can never grant something the person&apos;s role doesn&apos;t
-          already have, so the worst a mistake here does is lock somebody out — and anyone holding
-          a template can&apos;t reach this page, which is why you can&apos;t put one on your own
-          account.
+          {t("roleTemplates.subtractsOnlyBefore")}{" "}
+          <span className="font-medium text-slate-700 dark:text-slate-200">
+            {t("roleTemplates.subtractsOnlyWord")}
+          </span>{" "}
+          {t("roleTemplates.subtractsOnlyAfter")}
         </p>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>{editing ? `Editing “${editing.name}”` : "New template"}</CardTitle>
+          <CardTitle>
+            {editing
+              ? t("roleTemplates.editing", { name: editing.name })
+              : t("roleTemplates.newTemplate")}
+          </CardTitle>
         </CardHeader>
 
         <form onSubmit={handleSave} className="flex flex-col gap-4">
           <div className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              Name
+              {t("fields.name")}
               <Input
                 required
                 value={name}
@@ -165,7 +164,7 @@ export default function RoleTemplatesPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              Based on
+              {t("roleTemplates.basedOn")}
               <Select
                 value={baseRole}
                 onChange={(e) => setBaseRole(e.target.value as TemplatableRole)}
@@ -174,20 +173,20 @@ export default function RoleTemplatesPage() {
               >
                 {catalogue?.templatableRoles.map((role) => (
                   <option key={role} value={role}>
-                    {ROLE_LABELS[role as TemplatableRole]}
+                    {t(`roles.${role as TemplatableRole}`)}
                   </option>
                 ))}
               </Select>
             </label>
             {!editing && (
               <label className="flex flex-col gap-1 text-sm">
-                Start from
+                {t("roleTemplates.startFrom")}
                 <Select
                   defaultValue=""
                   onChange={(e) => applyPreset(e.target.value)}
                   className="max-w-[220px]"
                 >
-                  <option value="">Blank</option>
+                  <option value="">{t("roleTemplates.blank")}</option>
                   {catalogue?.presets.map((preset) => (
                     <option key={preset.name} value={preset.name}>
                       {preset.name}
@@ -200,8 +199,12 @@ export default function RoleTemplatesPage() {
 
           {editing && editing._count.users > 0 && (
             <p className="text-sm text-slate-500">
-              {editing._count.users} {editing._count.users === 1 ? "person is" : "people are"} on
-              this template, so its base role is fixed until they&apos;re unassigned.
+              {t(
+                editing._count.users === 1
+                  ? "roleTemplates.baseRoleFixed"
+                  : "roleTemplates.baseRoleFixedPlural",
+                { count: editing._count.users },
+              )}
             </p>
           )}
 
@@ -224,7 +227,7 @@ export default function RoleTemplatesPage() {
                           type="button"
                           onClick={() => toggleResource(resource, !(canRead && canWrite))}
                           className="truncate text-left text-sm hover:underline"
-                          title="Toggle both"
+                          title={t("roleTemplates.toggleBoth")}
                         >
                           {resource.replace(/-/g, " ")}
                         </button>
@@ -235,7 +238,7 @@ export default function RoleTemplatesPage() {
                               checked={canRead}
                               onChange={() => toggle(`${resource}:read`)}
                             />
-                            view
+                            {t("roleTemplates.view")}
                           </label>
                           <label className="flex items-center gap-1">
                             <input
@@ -243,7 +246,7 @@ export default function RoleTemplatesPage() {
                               checked={canWrite}
                               onChange={() => toggle(`${resource}:write`)}
                             />
-                            change
+                            {t("roleTemplates.change")}
                           </label>
                         </div>
                       </div>
@@ -256,15 +259,18 @@ export default function RoleTemplatesPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" disabled={create.isPending || update.isPending}>
-              {editing ? "Save changes" : "Create template"}
+              {editing ? t("roleTemplates.saveChanges") : t("roleTemplates.createTemplate")}
             </Button>
             {editing && (
               <Button type="button" variant="ghost" onClick={startNew}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             )}
             <p className="text-sm text-slate-500">
-              {selectedCount} capabilit{selectedCount === 1 ? "y" : "ies"} selected
+              {t(
+                selectedCount === 1 ? "roleTemplates.selectedOne" : "roleTemplates.selectedMany",
+                { count: selectedCount },
+              )}
             </p>
           </div>
           {error && <p className="text-sm text-rose-600">{error}</p>}
@@ -273,13 +279,13 @@ export default function RoleTemplatesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Templates</CardTitle>
+          <CardTitle>{t("roleTemplates.templates")}</CardTitle>
         </CardHeader>
         {templates?.length === 0 && (
           <EmptyState
             icon="🔑"
-            title="No templates yet."
-            description="Build one above, or start from a preset."
+            title={t("roleTemplates.noTemplates")}
+            description={t("roleTemplates.noTemplatesBody")}
           />
         )}
         <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
@@ -292,23 +298,27 @@ export default function RoleTemplatesPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-medium">{template.name}</p>
                   <Badge tone="neutral">
-                    {ROLE_LABELS[template.baseRole as TemplatableRole] ?? template.baseRole}
+                    {t(`roles.${template.baseRole as TemplatableRole}`)}
                   </Badge>
                   <Badge tone={template._count.users > 0 ? "info" : "neutral"}>
-                    {template._count.users} assigned
+                    {t("roleTemplates.assignedCount", { count: template._count.users })}
                   </Badge>
                 </div>
                 <p className="mt-1 text-sm text-slate-500">
-                  {template.permissions.length} capabilit
-                  {template.permissions.length === 1 ? "y" : "ies"}
+                  {t(
+                    template.permissions.length === 1
+                      ? "roleTemplates.capabilityOne"
+                      : "roleTemplates.capabilityMany",
+                    { count: template.permissions.length },
+                  )}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <Button variant="secondary" onClick={() => startEdit(template.id)}>
-                  Edit
+                  {t("common.edit")}
                 </Button>
                 <Button variant="ghost" onClick={() => remove.mutate(template.id)}>
-                  Delete
+                  {t("common.delete")}
                 </Button>
               </div>
             </li>
@@ -316,14 +326,14 @@ export default function RoleTemplatesPage() {
         </ul>
         {(templates?.length ?? 0) > 0 && (
           <p className="mt-3 text-sm text-slate-400">
-            Deleting a template returns whoever held it to their unrestricted role.
+            {t("roleTemplates.deletingReturns")}
           </p>
         )}
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Who has one</CardTitle>
+          <CardTitle>{t("roleTemplates.whoHasOne")}</CardTitle>
         </CardHeader>
         <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {assignable.map((user) => {
@@ -335,7 +345,10 @@ export default function RoleTemplatesPage() {
                     {user.firstName} {user.lastName}
                   </p>
                   <p className="mt-1 text-sm text-slate-500">
-                    {user.email} · {ROLE_LABELS[user.role as TemplatableRole] ?? user.role}
+                    {t("roleTemplates.userLine", {
+                      email: user.email,
+                      role: t(`roles.${user.role}`),
+                    })}
                   </p>
                 </div>
                 <Select
@@ -350,7 +363,9 @@ export default function RoleTemplatesPage() {
                   }
                 >
                   <option value="">
-                    {options.length === 0 ? "No template for this role" : "Unrestricted"}
+                    {options.length === 0
+                      ? t("roleTemplates.noTemplateForRole")
+                      : t("roleTemplates.unrestricted")}
                   </option>
                   {options.map((template) => (
                     <option key={template.id} value={template.id}>

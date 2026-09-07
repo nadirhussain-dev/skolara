@@ -3,6 +3,7 @@
 import { useAdmitStudent, useApiClient, useStudentsByClass } from "@skolara/api-client";
 import type { SchoolClass } from "@skolara/types";
 import { Button, Card, CardHeader, CardTitle, EmptyState, Input, PageHeader, Select } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
@@ -11,6 +12,7 @@ import { useAuth } from "@/lib/auth-context";
 export default function StudentsPage() {
   const { user } = useAuth();
   const api = useApiClient();
+  const { t } = useTranslation();
   const { data: classes } = useQuery<SchoolClass[]>({
     queryKey: ["classes"],
     queryFn: () => api.classes.list(),
@@ -52,21 +54,21 @@ export default function StudentsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Students" description="Admit new students and browse class rosters." />
+      <PageHeader title={t("students.title")} description={t("students.description")} />
       <Card>
         <CardHeader>
-          <CardTitle>Admit a student</CardTitle>
+          <CardTitle>{t("students.admitStudent")}</CardTitle>
         </CardHeader>
         <form onSubmit={handleSubmit} className="flex flex-wrap gap-3">
           <Input
-            placeholder="First name"
+            placeholder={t("fields.firstName")}
             required
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             className="max-w-[160px]"
           />
           <Input
-            placeholder="Last name"
+            placeholder={t("fields.lastName")}
             required
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
@@ -74,7 +76,7 @@ export default function StudentsPage() {
           />
           <Input
             type="email"
-            placeholder="Email"
+            placeholder={t("fields.email")}
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -82,14 +84,14 @@ export default function StudentsPage() {
           />
           <Input
             type="password"
-            placeholder="Temporary password"
+            placeholder={t("fields.temporaryPassword")}
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="max-w-[180px]"
           />
           <Input
-            placeholder="Admission number"
+            placeholder={t("fields.admissionNumber")}
             required
             value={admissionNumber}
             onChange={(e) => setAdmissionNumber(e.target.value)}
@@ -107,7 +109,7 @@ export default function StudentsPage() {
             value={admitClassId}
             onChange={(e) => setAdmitClassId(e.target.value)}
           >
-            <option value="">Select class</option>
+            <option value="">{t("fields.selectClass")}</option>
             {classes?.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} — {c.section}
@@ -115,21 +117,21 @@ export default function StudentsPage() {
             ))}
           </Select>
           <Button type="submit" disabled={admitStudent.isPending}>
-            {admitStudent.isPending ? "Admitting..." : "Admit student"}
+            {admitStudent.isPending ? t("students.admitting") : t("students.admit")}
           </Button>
         </form>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Roster</CardTitle>
+          <CardTitle>{t("students.roster")}</CardTitle>
         </CardHeader>
         <Select
           value={selectedClassId}
           onChange={(e) => setSelectedClassId(e.target.value)}
           className="mb-4 max-w-xs"
         >
-          <option value="">Select a class to view its roster</option>
+          <option value="">{t("students.selectClassForRoster")}</option>
           {classes?.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name} — {c.section}
@@ -137,9 +139,9 @@ export default function StudentsPage() {
           ))}
         </Select>
 
-        {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {selectedClassId && students?.length === 0 && (
-          <EmptyState title="No students in this class yet" />
+          <EmptyState title={t("students.noStudentsInClass")} />
         )}
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {students?.map((s) => (

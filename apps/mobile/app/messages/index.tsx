@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "expo-router";
 import { useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "@skolara/i18n";
 import { spacing, typography } from "@/lib/theme";
 import { Card, Chip, EmptyState, LoadingLine, Screen, SectionLabel } from "@/lib/ui";
 
@@ -13,6 +14,7 @@ interface TeacherOption {
 }
 
 export default function ThreadsScreen() {
+  const { t } = useTranslation();
   const { data: threads, isLoading } = useThreads();
   const { data: children } = useMyChildren();
   const api = useApiClient();
@@ -33,7 +35,7 @@ export default function ThreadsScreen() {
     <Screen>
       {children && children.length > 0 && (
         <Card>
-          <SectionLabel>Start a new conversation</SectionLabel>
+          <SectionLabel>{t("messaging.startConversation")}</SectionLabel>
           <View style={styles.chipRow}>
             {children.map((c) => (
               <Chip
@@ -58,7 +60,7 @@ export default function ThreadsScreen() {
         </Card>
       )}
 
-      {isLoading && <LoadingLine label="Loading conversations..." />}
+      {isLoading && <LoadingLine label={t("common.loading")} />}
       <FlatList
         data={threads}
         keyExtractor={(item) => item.id}
@@ -74,7 +76,7 @@ export default function ThreadsScreen() {
             </Pressable>
           </Link>
         )}
-        ListEmptyComponent={!isLoading ? <EmptyState title="No conversations yet" /> : null}
+        ListEmptyComponent={!isLoading ? <EmptyState title={t("messaging.noConversations")} /> : null}
       />
     </Screen>
   );

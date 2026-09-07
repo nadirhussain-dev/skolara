@@ -11,6 +11,7 @@ import {
   type RegisterSchoolInput,
   type SubscriptionStatus,
   type UpdateBrandingInput,
+  type UpdateCommunicationInput,
 } from "@skolara/types";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -118,6 +119,22 @@ export class SchoolsService {
         ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl } : {}),
         ...(input.primaryColor !== undefined ? { primaryColor: input.primaryColor } : {}),
       },
+    });
+  }
+
+  /**
+   * Which phone channel this school's alerts go out on.
+   *
+   * Deliberately not folded into `updateBranding`: branding sits behind the
+   * WHITE_LABEL entitlement, and how a school reaches its parents is not a
+   * paid extra — a school on the cheapest plan whose families don't use
+   * WhatsApp still has to be able to switch.
+   */
+  async updateCommunication(id: string, input: UpdateCommunicationInput) {
+    await this.findOne(id);
+    return this.prisma.school.update({
+      where: { id },
+      data: { phoneChannel: input.phoneChannel },
     });
   }
 

@@ -16,6 +16,7 @@ import {
   TR,
   Table,
 } from "@skolara/ui";
+import { useTranslation, type MessageKey } from "@skolara/i18n";
 import { useParams } from "next/navigation";
 
 const STATUS_TONE = {
@@ -24,12 +25,20 @@ const STATUS_TONE = {
   EXPIRED: "danger",
 } as const;
 
+/** Attempt states, named by the catalogue rather than lower-cased in place. */
+const STATUS_LABEL: Record<keyof typeof STATUS_TONE, MessageKey> = {
+  IN_PROGRESS: "quizzes.attemptInProgress",
+  SUBMITTED: "quizzes.attemptSubmitted",
+  EXPIRED: "quizzes.attemptExpired",
+};
+
 export default function QuizDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { t } = useTranslation();
   const { data: quiz, isLoading } = useQuiz(id);
   const { data: results } = useQuizResults(id);
 
-  if (isLoading || !quiz) return <p className="text-sm text-slate-500">Loading…</p>;
+  if (isLoading || !quiz) return <p className="text-sm text-slate-500">{t("common.loading")}</p>;
 
   const sat = results?.rows.filter((row) => row.bestScore !== null) ?? [];
   const average =
@@ -46,11 +55,11 @@ export default function QuizDetailPage() {
       />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Questions" value={quiz.questions.length} icon="❓" />
-        <StatCard label="Total marks" value={results?.maxScore ?? 0} icon="🎯" />
-        <StatCard label="Sat it" value={`${sat.length}/${results?.rows.length ?? 0}`} icon="✍️" />
+        <StatCard label={t("quizzes.questions")} value={quiz.questions.length} icon="❓" />
+        <StatCard label={t("quizzes.totalMarks")} value={results?.maxScore ?? 0} icon="🎯" />
+        <StatCard label={t("quizzes.satIt")} value={`${sat.length}/${results?.rows.length ?? 0}`} icon="✍️" />
         <StatCard
-          label="Class average"
+          label={t("quizzes.classAverage")}
           value={average === null ? "—" : `${average}%`}
           icon="📈"
         />
@@ -58,20 +67,20 @@ export default function QuizDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Results</CardTitle>
+          <CardTitle>{t("quizzes.results")}</CardTitle>
         </CardHeader>
         {results?.rows.length === 0 && (
-          <EmptyState title="No students in this class yet." />
+          <EmptyState title={t("quizzes.noStudentsInClass")} />
         )}
         {(results?.rows.length ?? 0) > 0 && (
           <Table>
             <THead>
               <TR>
-                <TH>Student</TH>
-                <TH>Attempts</TH>
-                <TH>Best score</TH>
+                <TH>{t("quizzes.student")}</TH>
+                <TH>{t("quizzes.attempts")}</TH>
+                <TH>{t("quizzes.bestScore")}</TH>
                 <TH>%</TH>
-                <TH>Status</TH>
+                <TH>{t("common.status")}</TH>
               </TR>
             </THead>
             <TBody>
@@ -93,10 +102,10 @@ export default function QuizDetailPage() {
                   <TD>
                     {row.lastStatus ? (
                       <Badge tone={STATUS_TONE[row.lastStatus]}>
-                        {row.lastStatus.toLowerCase().replace("_", " ")}
+                        {t(STATUS_LABEL[row.lastStatus])}
                       </Badge>
                     ) : (
-                      <Badge tone="neutral">not started</Badge>
+                      <Badge tone="neutral">{t("quizzes.notStarted")}</Badge>
                     )}
                   </TD>
                 </TR>
@@ -108,7 +117,7 @@ export default function QuizDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>The paper</CardTitle>
+          <CardTitle>{t("quizzes.thePaper")}</CardTitle>
         </CardHeader>
         <ol className="flex flex-col gap-4">
           {quiz.questions.map((question, index) => (
@@ -116,7 +125,9 @@ export default function QuizDetailPage() {
               <p className="font-medium">
                 {index + 1}. {question.prompt}
                 <span className="ml-2 text-sm font-normal text-slate-400">
-                  {Number(question.marks)} mark{Number(question.marks) === 1 ? "" : "s"}
+                  {t(Number(question.marks) === 1 ? "quizzes.markSingular" : "quizzes.markPlural", {
+                    count: Number(question.marks),
+                  })}
                 </span>
               </p>
               <ul className="mt-1 flex flex-col gap-1 pl-5 text-sm">

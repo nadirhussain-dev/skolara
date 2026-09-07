@@ -11,6 +11,7 @@ import {
   PageHeader,
   StatCard,
 } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useState } from "react";
 
 function todayIso(): string {
@@ -27,49 +28,50 @@ function formatRate(rate: number | null): string {
 
 export default function SchoolAttendancePage() {
   const [date, setDate] = useState(todayIso);
+  const { t } = useTranslation();
   const { data, isLoading } = useSchoolDayAttendance(date);
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Attendance"
-        description="School-wide register status for a single day."
+        title={t("attendance.title")}
+        description={t("schoolAttendance.description")}
       />
 
       <Card>
         <label className="flex max-w-[220px] flex-col gap-1 text-sm">
-          Date
+          {t("common.date")}
           <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </label>
       </Card>
 
-      {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
 
       {data && (
         <>
           <div className="grid gap-4 sm:grid-cols-3">
-            <StatCard label="Attendance rate" value={formatRate(data.attendanceRate)} />
+            <StatCard label={t("attendance.attendanceRate")} value={formatRate(data.attendanceRate)} />
             <StatCard
-              label="Present"
+              label={t("attendance.present")}
               value={`${data.presentCount} / ${data.totalCount}`}
             />
             <StatCard
-              label="Registers not taken"
+              label={t("attendance.registersNotTaken")}
               value={String(data.unmarkedClassCount)}
               hint={
                 data.unmarkedClassCount > 0
-                  ? "Chase these teachers before the day ends"
-                  : "Every class marked"
+                  ? t("schoolAttendance.chaseTeachers")
+                  : t("schoolAttendance.everyClassMarked")
               }
             />
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>By class</CardTitle>
+              <CardTitle>{t("schoolAttendance.byClass")}</CardTitle>
             </CardHeader>
 
-            {data.classes.length === 0 && <EmptyState title="No classes set up yet" />}
+            {data.classes.length === 0 && <EmptyState title={t("schoolAttendance.noClassesSetUp")} />}
 
             <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
               {data.classes.map((entry) => (
@@ -84,8 +86,11 @@ export default function SchoolAttendancePage() {
                     </p>
                     <p className="text-sm text-slate-500">
                       {entry.marked
-                        ? `${entry.presentCount} of ${entry.totalCount} present`
-                        : "Register not taken"}
+                        ? t("attendance.presentOfTotal", {
+                            present: entry.presentCount,
+                            total: entry.totalCount,
+                          })
+                        : t("attendance.registerNotTaken")}
                     </p>
                   </div>
                   {entry.marked ? (
@@ -93,7 +98,7 @@ export default function SchoolAttendancePage() {
                       {formatRate(entry.attendanceRate)}
                     </Badge>
                   ) : (
-                    <Badge tone="danger">Missing</Badge>
+                    <Badge tone="danger">{t("schoolAttendance.missing")}</Badge>
                   )}
                 </div>
               ))}

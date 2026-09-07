@@ -18,8 +18,10 @@ import {
   PageHeader,
   Select,
 } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { intlLocale } from "@/lib/intl";
 
 /** `datetime-local` gives a wall-clock string; the API wants an instant. */
 function toDate(local: string): Date {
@@ -28,6 +30,7 @@ function toDate(local: string): Date {
 
 export default function LiveClassesPage() {
   const api = useApiClient();
+  const { t, locale } = useTranslation();
   const { data: classes } = useQuery<SchoolClass[]>({
     queryKey: ["classes"],
     queryFn: () => api.classes.list(),
@@ -68,24 +71,26 @@ export default function LiveClassesPage() {
       setMeetingUrl("");
       setStartsAt("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't schedule that session");
+      setError(err instanceof Error ? err.message : t("liveClasses.couldNotSchedule"));
     }
   }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Live classes"
-        description={`Paste a Zoom, Meet or Teams link. Students get it ${LIVE_CLASS_JOIN_LEAD_MINUTES} minutes before the lesson and not before.`}
+        title={t("liveClasses.title")}
+        description={t("liveClasses.description", {
+          minutes: LIVE_CLASS_JOIN_LEAD_MINUTES,
+        })}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Schedule a session</CardTitle>
+          <CardTitle>{t("liveClasses.scheduleSession")}</CardTitle>
         </CardHeader>
         <div className="mb-3">
           <Select value={classId} onChange={(e) => setClassId(e.target.value)} className="max-w-xs">
-            <option value="">Select class</option>
+            <option value="">{t("fields.selectClass")}</option>
             {classes?.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} — {c.section}
@@ -96,7 +101,7 @@ export default function LiveClassesPage() {
         <form onSubmit={handleCreate} className="flex flex-col gap-3">
           <div className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              Subject
+              {t("fields.subject")}
               <Input
                 required
                 value={subject}
@@ -105,7 +110,7 @@ export default function LiveClassesPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              Title
+              {t("fields.title")}
               <Input
                 required
                 value={title}
@@ -114,7 +119,7 @@ export default function LiveClassesPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              Starts
+              {t("liveClasses.starts")}
               <Input
                 required
                 type="datetime-local"
@@ -124,7 +129,7 @@ export default function LiveClassesPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              Minutes
+              {t("liveClasses.minutes")}
               <Input
                 type="number"
                 min={5}
@@ -138,15 +143,15 @@ export default function LiveClassesPage() {
           <Input
             required
             type="url"
-            placeholder="https://meet.google.com/…"
+            placeholder={t("liveClasses.urlHint")}
             value={meetingUrl}
             onChange={(e) => setMeetingUrl(e.target.value)}
           />
           <div className="flex items-center gap-3">
             <Button type="submit" disabled={create.isPending || !classId}>
-              {create.isPending ? "Scheduling…" : "Schedule"}
+              {create.isPending ? t("liveClasses.scheduling") : t("liveClasses.schedule")}
             </Button>
-            {!classId && <p className="text-sm text-slate-500">Pick a class first.</p>}
+            {!classId && <p className="text-sm text-slate-500">{t("liveClasses.pickClassFirst")}</p>}
           </div>
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </form>
@@ -154,17 +159,17 @@ export default function LiveClassesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Scheduled sessions</CardTitle>
+          <CardTitle>{t("liveClasses.scheduledSessions")}</CardTitle>
         </CardHeader>
         <div className="mb-3">
           <Button variant="ghost" onClick={() => setIncludePast((current) => !current)}>
-            {includePast ? "Hide finished" : "Show finished"}
+            {includePast ? t("liveClasses.hideFinished") : t("liveClasses.showFinished")}
           </Button>
         </div>
-        {!classId && <p className="text-sm text-slate-500">Select a class to see its sessions.</p>}
-        {classId && isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+        {!classId && <p className="text-sm text-slate-500">{t("liveClasses.selectClassForSessions")}</p>}
+        {classId && isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {classId && !isLoading && sessions?.length === 0 && (
-          <EmptyState icon="🎥" title="Nothing scheduled." />
+          <EmptyState icon="🎥" title={t("liveClasses.nothingScheduled")} />
         )}
         <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {sessions?.map((session) => {
@@ -177,20 +182,23 @@ export default function LiveClassesPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium">{session.title}</p>
                     <Badge tone="neutral">{session.subject}</Badge>
-                    {finished && <Badge tone="neutral">Finished</Badge>}
+                    {finished && <Badge tone="neutral">{t("liveClasses.finished")}</Badge>}
                   </div>
                   <p className="mt-1 text-sm tabular-nums text-slate-500">
-                    {start.toLocaleString("en-GB", {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
+                    {t("liveClasses.sessionWhen", {
+                      start: start.toLocaleString(intlLocale(locale), {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }),
+                      end: end.toLocaleTimeString(intlLocale(locale), {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }),
+                      host: `${session.hostUser.firstName} ${session.hostUser.lastName}`,
                     })}
-                    {" – "}
-                    {end.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
-                    {" · "}
-                    {session.hostUser.firstName} {session.hostUser.lastName}
                   </p>
                   <a
                     href={session.meetingUrl}
@@ -206,7 +214,7 @@ export default function LiveClassesPage() {
                   className="shrink-0"
                   onClick={() => remove.mutate(session.id)}
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
               </li>
             );

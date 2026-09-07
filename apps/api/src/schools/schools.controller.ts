@@ -14,10 +14,12 @@ import {
   registerSchoolSchema,
   subscriptionStatusSchema,
   updateBrandingSchema,
+  updateCommunicationSchema,
   type CreateSchoolInput,
   type RegisterSchoolInput,
   type SubscriptionStatus,
   type UpdateBrandingInput,
+  type UpdateCommunicationInput,
 } from "@skolara/types";
 import { z } from "zod";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -106,5 +108,25 @@ export class SchoolsController {
       throw new ForbiddenException("Cannot act outside your own school");
     }
     return this.schoolsService.updateBranding(id, body);
+  }
+
+  /**
+   * Not behind an entitlement, unlike branding above: which channel a school's
+   * alerts go out on is how it reaches its parents at all, not a premium
+   * flourish. A school whose families don't use WhatsApp has to be able to
+   * switch on any plan.
+   */
+  @Patch(":id/communication")
+  @Roles("SUPER_ADMIN", "SCHOOL_ADMIN")
+  updateCommunication(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(updateCommunicationSchema))
+    body: UpdateCommunicationInput,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    if (user.role === "SCHOOL_ADMIN" && user.schoolId !== id) {
+      throw new ForbiddenException("Cannot act outside your own school");
+    }
+    return this.schoolsService.updateCommunication(id, body);
   }
 }

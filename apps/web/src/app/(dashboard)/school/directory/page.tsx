@@ -3,16 +3,13 @@
 import { useStaffDirectory } from "@skolara/api-client";
 import type { RoleType } from "@skolara/types";
 import { Badge, Card, CardHeader, CardTitle, EmptyState, Input, PageHeader } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useMemo, useState } from "react";
 
 const STAFF_ROLES: RoleType[] = ["SCHOOL_ADMIN", "TEACHER"];
 
-function humanise(role: string): string {
-  const lower = role.replace(/_/g, " ").toLowerCase();
-  return lower.charAt(0).toUpperCase() + lower.slice(1);
-}
-
 export default function DirectoryPage() {
+  const { t } = useTranslation();
   const [role, setRole] = useState<RoleType>("TEACHER");
   const { data: staff, isLoading } = useStaffDirectory();
   const [search, setSearch] = useState("");
@@ -33,13 +30,13 @@ export default function DirectoryPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Staff directory"
-        description="Call or email colleagues without leaving the dashboard."
+        title={t("directory.title")}
+        description={t("directory.description")}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Directory</CardTitle>
+          <CardTitle>{t("directory.cardTitle")}</CardTitle>
         </CardHeader>
 
         <div className="mb-4 flex flex-wrap items-end gap-3">
@@ -55,21 +52,23 @@ export default function DirectoryPage() {
                     : "border-slate-200 text-slate-600 hover:border-slate-300 dark:border-slate-800 dark:text-slate-400"
                 }`}
               >
-                {humanise(option)}
+                {t(`roles.${option}`)}
               </button>
             ))}
           </div>
           <Input
-            placeholder="Search by name or email"
+            placeholder={t("directory.searchHint")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="min-w-[220px]"
           />
         </div>
 
-        {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {!isLoading && filtered.length === 0 && (
-          <EmptyState title={search ? "Nobody matches that search." : "No staff in this role yet."} />
+          <EmptyState
+            title={search ? t("directory.noMatch") : t("directory.noStaffInRole")}
+          />
         )}
 
         <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
@@ -80,7 +79,7 @@ export default function DirectoryPage() {
                   {person.firstName} {person.lastName}
                   {!person.isActive && (
                     <Badge tone="neutral" className="ml-2">
-                      Inactive
+                      {t("accounts.inactive")}
                     </Badge>
                   )}
                 </p>
@@ -95,16 +94,16 @@ export default function DirectoryPage() {
                     href={`tel:${person.phone}`}
                     className="rounded-lg border border-slate-200 px-3 py-1.5 text-brand-700 transition hover:border-brand-300 dark:border-slate-800"
                   >
-                    Call {person.phone}
+                    {t("directory.callNumber", { phone: person.phone })}
                   </a>
                 ) : (
-                  <span className="text-slate-400">No phone on file</span>
+                  <span className="text-slate-400">{t("directory.noPhone")}</span>
                 )}
                 <a
                   href={`mailto:${person.email}`}
                   className="rounded-lg border border-slate-200 px-3 py-1.5 text-brand-700 transition hover:border-brand-300 dark:border-slate-800"
                 >
-                  Email
+                  {t("directory.emailAction")}
                 </a>
               </div>
             </li>

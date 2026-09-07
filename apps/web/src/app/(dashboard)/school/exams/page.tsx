@@ -8,11 +8,13 @@ import {
 } from "@skolara/api-client";
 import type { SchoolClass } from "@skolara/types";
 import { Button, Card, CardHeader, CardTitle, EmptyState, Input, Select } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 export default function ExamsPage() {
   const api = useApiClient();
+  const { t } = useTranslation();
   const { data: classes } = useQuery<SchoolClass[]>({
     queryKey: ["classes"],
     queryFn: () => api.classes.list(),
@@ -49,11 +51,11 @@ export default function ExamsPage() {
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Schedule an exam</CardTitle>
+          <CardTitle>{t("exams.scheduleExam")}</CardTitle>
         </CardHeader>
         <div className="mb-3">
           <Select value={classId} onChange={(e) => setClassId(e.target.value)} className="max-w-xs">
-            <option value="">Select class</option>
+            <option value="">{t("fields.selectClass")}</option>
             {classes?.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} — {c.section}
@@ -63,21 +65,21 @@ export default function ExamsPage() {
         </div>
         <form onSubmit={handleSubmit} className="flex flex-wrap gap-3">
           <Input
-            placeholder="Exam name (e.g. Midterm Exams)"
+            placeholder={t("exams.nameHint")}
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="max-w-xs"
           />
           <Input
-            placeholder="Term"
+            placeholder={t("fields.term")}
             required
             value={term}
             onChange={(e) => setTerm(e.target.value)}
             className="max-w-[160px]"
           />
           <Input
-            placeholder="Exam type (e.g. Midterm)"
+            placeholder={t("exams.typeHint")}
             required
             value={examType}
             onChange={(e) => setExamType(e.target.value)}
@@ -91,17 +93,17 @@ export default function ExamsPage() {
             className="max-w-[160px]"
           />
           <Button type="submit" disabled={!classId || createExam.isPending}>
-            {createExam.isPending ? "Scheduling..." : "Schedule exam"}
+            {createExam.isPending ? t("exams.scheduling") : t("exams.schedule")}
           </Button>
         </form>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Exams</CardTitle>
+          <CardTitle>{t("exams.title")}</CardTitle>
         </CardHeader>
-        {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
-        {classId && exams?.length === 0 && <EmptyState title="No exams scheduled yet" />}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
+        {classId && exams?.length === 0 && <EmptyState title={t("exams.noExams")} />}
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {exams?.map((exam) => (
             <button
@@ -121,9 +123,9 @@ export default function ExamsPage() {
       {selectedExamId && (
         <Card>
           <CardHeader>
-            <CardTitle>Rank list</CardTitle>
+            <CardTitle>{t("exams.rankList")}</CardTitle>
           </CardHeader>
-          {rankList?.length === 0 && <EmptyState title="No grades recorded for this exam yet" />}
+          {rankList?.length === 0 && <EmptyState title={t("exams.noGradesYet")} />}
           <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
             {rankList?.map((row) => (
               <div key={row.studentId} className="flex items-center justify-between py-3">
@@ -131,7 +133,11 @@ export default function ExamsPage() {
                   #{row.rank} {row.firstName} {row.lastName}
                 </span>
                 <span className="text-sm text-slate-500">
-                  {row.totalMarksObtained}/{row.totalMaxMarks} ({row.percentage.toFixed(1)}%)
+                  {t("exams.marksSummary", {
+                    obtained: row.totalMarksObtained,
+                    max: row.totalMaxMarks,
+                    percentage: row.percentage.toFixed(1),
+                  })}
                 </span>
               </div>
             ))}

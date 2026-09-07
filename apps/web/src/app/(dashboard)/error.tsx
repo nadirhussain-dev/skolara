@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslation } from "@skolara/i18n";
 import { Button, Card } from "@skolara/ui";
 import { useEffect } from "react";
 
@@ -10,6 +11,8 @@ export default function DashboardError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -20,13 +23,13 @@ export default function DashboardError({
         ⚠️
       </div>
       <h1 className="text-lg font-bold text-slate-900 dark:text-slate-50">
-        This page hit a snag
+        {t("shell.pageError")}
       </h1>
       <p className="mt-1 text-sm text-slate-500">
-        Something went wrong loading this section. Your other pages are unaffected.
+        {t("shell.pageErrorBody")}
       </p>
       <div className="mt-6 flex justify-center">
-        <Button onClick={reset}>Try again</Button>
+        <Button onClick={reset}>{t("common.retry")}</Button>
       </div>
     </Card>
   );

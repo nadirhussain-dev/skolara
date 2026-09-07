@@ -20,20 +20,11 @@ import {
   Input,
   PageHeader,
 } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useApiClient } from "@skolara/api-client";
 import type { SchoolClass } from "@skolara/types";
 import { useState } from "react";
-
-const DAY_LABEL: Record<DayOfWeek, string> = {
-  MONDAY: "Mon",
-  TUESDAY: "Tue",
-  WEDNESDAY: "Wed",
-  THURSDAY: "Thu",
-  FRIDAY: "Fri",
-  SATURDAY: "Sat",
-  SUNDAY: "Sun",
-};
 
 interface EditingSlot {
   dayOfWeek: DayOfWeek;
@@ -41,6 +32,7 @@ interface EditingSlot {
 }
 
 export default function TimetablePage() {
+  const { t } = useTranslation();
   const api = useApiClient();
   const { data: classes } = useQuery<SchoolClass[]>({
     queryKey: ["classes"],
@@ -111,25 +103,25 @@ export default function TimetablePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Timetable"
-        description="Build the weekly schedule. Clashes are refused, not warned about."
+        title={t("timetable.title")}
+        description={t("timetable.description")}
       />
 
       <PeriodEditor />
 
       <Card>
         <CardHeader>
-          <CardTitle>Weekly grid</CardTitle>
+          <CardTitle>{t("timetable.weeklyGrid")}</CardTitle>
         </CardHeader>
 
         <label className="flex max-w-xs flex-col gap-1 text-sm">
-          Class
+          {t("reportCards.class")}
           <select
             value={classId ?? ""}
             onChange={(e) => setClassId(e.target.value || undefined)}
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="">Select a class…</option>
+            <option value="">{t("timetable.selectAClass")}</option>
             {classes?.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} {c.section}
@@ -138,11 +130,11 @@ export default function TimetablePage() {
           </select>
         </label>
 
-        {periodsLoading && <p className="mt-4 text-sm text-slate-500">Loading…</p>}
+        {periodsLoading && <p className="mt-4 text-sm text-slate-500">{t("common.loading")}</p>}
 
         {!periodsLoading && periods?.length === 0 && (
           <div className="mt-4">
-            <EmptyState title="Add periods first — the grid is built from them." />
+            <EmptyState title={t("timetable.addPeriodsFirst")} />
           </div>
         )}
 
@@ -152,14 +144,14 @@ export default function TimetablePage() {
               <thead>
                 <tr>
                   <th className="border-b border-slate-200 p-2 text-left font-medium text-slate-500 dark:border-slate-800">
-                    Period
+                    {t("timetable.period")}
                   </th>
                   {TEACHING_DAYS.map((day) => (
                     <th
                       key={day}
                       className="border-b border-slate-200 p-2 text-left font-medium text-slate-500 dark:border-slate-800"
                     >
-                      {DAY_LABEL[day]}
+                      {t(`days.short.${day}`)}
                     </th>
                   ))}
                 </tr>
@@ -194,7 +186,7 @@ export default function TimetablePage() {
                                 </span>
                               </>
                             ) : (
-                              <span className="text-xs text-slate-400">+ Add</span>
+                              <span className="text-xs text-slate-400">{t("timetable.addSlot")}</span>
                             )}
                           </button>
                         </td>
@@ -213,14 +205,14 @@ export default function TimetablePage() {
           <CardHeader>
             <CardTitle>
               {selectedClass?.name} {selectedClass?.section} ·{" "}
-              {DAY_LABEL[editing.dayOfWeek]} ·{" "}
+              {t(`days.short.${editing.dayOfWeek}`)} ·{" "}
               {periods?.find((p) => p.id === editing.periodId)?.name}
             </CardTitle>
           </CardHeader>
           <form onSubmit={saveSlot} className="flex flex-col gap-3">
             <div className="flex flex-wrap gap-3">
               <Input
-                placeholder="Subject"
+                placeholder={t("fields.subject")}
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 required
@@ -231,7 +223,7 @@ export default function TimetablePage() {
                 required
                 className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
               >
-                <option value="">Teacher…</option>
+                <option value="">{t("timetable.teacherPlaceholder")}</option>
                 {teachers?.map((t) => (
                   <option key={t.userId} value={t.userId}>
                     {t.user.firstName} {t.user.lastName}
@@ -239,7 +231,7 @@ export default function TimetablePage() {
                 ))}
               </select>
               <Input
-                placeholder="Room (optional)"
+                placeholder={t("timetable.roomOptional")}
                 value={room}
                 onChange={(e) => setRoom(e.target.value)}
               />
@@ -255,15 +247,15 @@ export default function TimetablePage() {
 
             <div className="flex flex-wrap gap-2">
               <Button type="submit" disabled={upsertEntry.isPending}>
-                {upsertEntry.isPending ? "Saving…" : "Save lesson"}
+                {upsertEntry.isPending ? t("common.saving") : t("timetable.saveLesson")}
               </Button>
               {entryAt(editing.dayOfWeek, editing.periodId) && (
                 <Button type="button" variant="secondary" onClick={clearSlot}>
-                  Clear slot
+                  {t("timetable.clearSlot")}
                 </Button>
               )}
               <Button type="button" variant="ghost" onClick={() => setEditing(null)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             </div>
           </form>
@@ -274,6 +266,7 @@ export default function TimetablePage() {
 }
 
 function PeriodEditor() {
+  const { t } = useTranslation();
   const { data: periods } = usePeriods();
   const createPeriod = useCreatePeriod();
   const deletePeriod = useDeletePeriod();
@@ -298,25 +291,25 @@ function PeriodEditor() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>The school day</CardTitle>
+        <CardTitle>{t("timetable.schoolDay")}</CardTitle>
       </CardHeader>
       <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
         <Input
-          placeholder="Period name (e.g. Period 1)"
+          placeholder={t("timetable.periodNameHint")}
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
         />
         <label className="flex flex-col gap-1 text-xs text-slate-500">
-          Starts
+          {t("timetable.starts")}
           <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
         </label>
         <label className="flex flex-col gap-1 text-xs text-slate-500">
-          Ends
+          {t("timetable.ends")}
           <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
         </label>
         <Button type="submit" disabled={createPeriod.isPending}>
-          {createPeriod.isPending ? "Adding…" : "Add period"}
+          {createPeriod.isPending ? t("timetable.addingPeriod") : t("timetable.addPeriod")}
         </Button>
       </form>
 
@@ -334,7 +327,7 @@ function PeriodEditor() {
               <button
                 type="button"
                 onClick={() => deletePeriod.mutate(period.id)}
-                aria-label={`Remove ${period.name}`}
+                aria-label={t("timetable.removePeriod", { name: period.name })}
                 className="text-slate-400 transition hover:text-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
               >
                 ×

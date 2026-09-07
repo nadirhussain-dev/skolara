@@ -13,13 +13,13 @@ import { colors, radius, shadow, spacing, typography } from "@/lib/theme";
 import { Button } from "@/lib/ui";
 
 const links = [
-  { href: "/attendance", label: "Mark attendance", icon: "✅" },
-  { href: "/timetable", label: "My timetable", icon: "🗓️" },
-  { href: "/calendar", label: "School calendar", icon: "📅" },
-  { href: "/assignments", label: "Homework & assignments", icon: "📝" },
-  { href: "/leave", label: "Leave", icon: "🌴" },
-  { href: "/payroll", label: "My payslips", icon: "💰" },
-  { href: "/messages", label: "Messages", icon: "💬" },
+  { href: "/attendance", labelKey: "attendance.markAttendance", icon: "✅" },
+  { href: "/timetable", labelKey: "timetable.myTimetable", icon: "🗓️" },
+  { href: "/calendar", labelKey: "nav.calendar", icon: "📅" },
+  { href: "/assignments", labelKey: "dashboard.homework", icon: "📝" },
+  { href: "/leave", labelKey: "nav.leave", icon: "🌴" },
+  { href: "/payroll", labelKey: "dashboard.myPayslips", icon: "💰" },
+  { href: "/messages", labelKey: "dashboard.messages", icon: "💬" },
 ] as const;
 
 export default function TeacherDashboardScreen() {
@@ -44,7 +44,7 @@ export default function TeacherDashboardScreen() {
         <Link key={link.href} href={link.href} asChild>
           <Pressable style={styles.card}>
             <Text style={styles.icon}>{link.icon}</Text>
-            <Text style={styles.label}>{link.label}</Text>
+            <Text style={styles.label}>{t(link.labelKey)}</Text>
           </Pressable>
         </Link>
       ))}

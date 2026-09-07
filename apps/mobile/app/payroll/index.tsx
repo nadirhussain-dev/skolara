@@ -1,10 +1,12 @@
 import { useMyPayslips } from "@skolara/api-client";
 import { FlatList, StyleSheet, Text, View } from "react-native";
+import { useTranslation, type Locale } from "@skolara/i18n";
 import { colors, spacing, typography } from "@/lib/theme";
+import { intlLocale } from "@/lib/intl";
 import { Card, EmptyState, LoadingLine, Screen } from "@/lib/ui";
 
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-PK", {
+function formatCurrency(amount: number, locale: Locale) {
+  return new Intl.NumberFormat(intlLocale(locale), {
     style: "currency",
     currency: "PKR",
     maximumFractionDigits: 0,
@@ -12,11 +14,12 @@ function formatCurrency(amount: number) {
 }
 
 export default function MyPayslipsScreen() {
+  const { t, locale } = useTranslation();
   const { data: payslips, isLoading } = useMyPayslips();
 
   return (
     <Screen>
-      {isLoading && <LoadingLine label="Loading payslips..." />}
+      {isLoading && <LoadingLine label={t("common.loading")} />}
       <FlatList
         data={payslips}
         keyExtractor={(item) => item.id}
@@ -26,14 +29,16 @@ export default function MyPayslipsScreen() {
             <View>
               <Text style={styles.month}>{item.month}</Text>
               <Text style={styles.meta}>
-                Basic {formatCurrency(Number(item.basicSalary))} · Deductions{" "}
-                {formatCurrency(Number(item.deductions))}
+                {t("payroll.payslipSummary", {
+                  basic: formatCurrency(Number(item.basicSalary), locale),
+                  deductions: formatCurrency(Number(item.deductions), locale),
+                })}
               </Text>
             </View>
-            <Text style={styles.net}>{formatCurrency(Number(item.netPay))}</Text>
+            <Text style={styles.net}>{formatCurrency(Number(item.netPay), locale)}</Text>
           </Card>
         )}
-        ListEmptyComponent={!isLoading ? <EmptyState title="No payslips yet" /> : null}
+        ListEmptyComponent={!isLoading ? <EmptyState title={t("payroll.noPayslips")} /> : null}
       />
     </Screen>
   );

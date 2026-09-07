@@ -3,10 +3,12 @@ import type { SchoolClass } from "@skolara/types";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "expo-router";
 import { FlatList, Pressable, StyleSheet, Text } from "react-native";
+import { useTranslation } from "@skolara/i18n";
 import { spacing, typography } from "@/lib/theme";
 import { Card, EmptyState, LoadingLine, Screen } from "@/lib/ui";
 
 export default function SelectClassScreen() {
+  const { t } = useTranslation();
   const api = useApiClient();
   const { data: classes, isLoading } = useQuery<SchoolClass[]>({
     queryKey: ["classes"],
@@ -15,7 +17,7 @@ export default function SelectClassScreen() {
 
   return (
     <Screen>
-      {isLoading && <LoadingLine label="Loading classes..." />}
+      {isLoading && <LoadingLine label={t("common.loading")} />}
       <FlatList
         data={classes}
         keyExtractor={(item) => item.id}
@@ -31,7 +33,7 @@ export default function SelectClassScreen() {
             </Pressable>
           </Link>
         )}
-        ListEmptyComponent={!isLoading ? <EmptyState title="No classes assigned yet" /> : null}
+        ListEmptyComponent={!isLoading ? <EmptyState title={t("mobileLists.noClassesAssigned")} /> : null}
       />
     </Screen>
   );

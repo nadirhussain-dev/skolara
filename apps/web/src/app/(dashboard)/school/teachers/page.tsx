@@ -2,11 +2,13 @@
 
 import { useCreateTeacher, useTeachers } from "@skolara/api-client";
 import { Button, Card, CardHeader, CardTitle, EmptyState, Input, PageHeader } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 
 export default function TeachersPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const { data: teachers, isLoading } = useTeachers();
   const createTeacher = useCreateTeacher();
 
@@ -42,21 +44,21 @@ export default function TeachersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Teachers" description="Add teaching staff and manage their subjects." />
+      <PageHeader title={t("teachers.title")} description={t("teachers.description")} />
       <Card>
         <CardHeader>
-          <CardTitle>Add a teacher</CardTitle>
+          <CardTitle>{t("teachers.addTeacher")}</CardTitle>
         </CardHeader>
         <form onSubmit={handleSubmit} className="flex flex-wrap gap-3">
           <Input
-            placeholder="First name"
+            placeholder={t("fields.firstName")}
             required
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             className="max-w-[160px]"
           />
           <Input
-            placeholder="Last name"
+            placeholder={t("fields.lastName")}
             required
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
@@ -64,7 +66,7 @@ export default function TeachersPage() {
           />
           <Input
             type="email"
-            placeholder="Email"
+            placeholder={t("fields.email")}
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -72,38 +74,38 @@ export default function TeachersPage() {
           />
           <Input
             type="password"
-            placeholder="Temporary password"
+            placeholder={t("fields.temporaryPassword")}
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="max-w-[180px]"
           />
           <Input
-            placeholder="Employee number"
+            placeholder={t("fields.employeeNumber")}
             required
             value={employeeNumber}
             onChange={(e) => setEmployeeNumber(e.target.value)}
             className="max-w-[160px]"
           />
           <Input
-            placeholder="Subjects (comma separated)"
+            placeholder={t("teachers.subjectsHint")}
             value={subjects}
             onChange={(e) => setSubjects(e.target.value)}
             className="max-w-xs"
           />
           <Button type="submit" disabled={createTeacher.isPending}>
-            {createTeacher.isPending ? "Adding..." : "Add teacher"}
+            {createTeacher.isPending ? t("teachers.adding") : t("teachers.add")}
           </Button>
         </form>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Teachers</CardTitle>
+          <CardTitle>{t("teachers.title")}</CardTitle>
         </CardHeader>
-        {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {teachers?.length === 0 && (
-          <EmptyState title="No teachers yet" description="Add your first teacher above." />
+          <EmptyState title={t("teachers.noTeachers")} description={t("teachers.noTeachersBody")} />
         )}
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {teachers?.map((t) => (

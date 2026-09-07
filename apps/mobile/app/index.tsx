@@ -1,18 +1,20 @@
 import { router } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "@skolara/i18n";
 import { Button } from "@/lib/ui";
 import { colors, spacing, typography } from "@/lib/theme";
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       <View style={styles.mark}>
         <Text style={styles.markText}>S</Text>
       </View>
       <Text style={styles.title}>Skolara</Text>
-      <Text style={styles.subtitle}>Teacher &amp; parent app</Text>
+      <Text style={styles.subtitle}>{t("brand.tagline")}</Text>
       <Button
-        title="Sign in"
+        title={t("auth.signIn")}
         onPress={() => router.push("/(auth)/login")}
         style={styles.button}
       />

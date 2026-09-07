@@ -23,6 +23,7 @@ const links = [
   { href: "/performance", labelKey: "dashboard.performance", icon: "📈" },
   { href: "/transport", labelKey: "dashboard.busTracking", icon: "🚌" },
   { href: "/library", labelKey: "dashboard.library", icon: "📚" },
+  { href: "/absences", labelKey: "dashboard.reportAbsence", icon: "🤒" },
   { href: "/complaints", labelKey: "dashboard.complaints", icon: "🗣️" },
   { href: "/messages", labelKey: "dashboard.messages", icon: "💬" },
 ] as const;

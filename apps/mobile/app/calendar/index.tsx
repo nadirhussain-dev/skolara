@@ -2,7 +2,9 @@ import { useCalendarEvents } from "@skolara/api-client";
 import type { CalendarEvent, CalendarEventCategory } from "@skolara/types";
 import { useMemo } from "react";
 import { SectionList, StyleSheet, Text, View } from "react-native";
+import { useTranslation, type Locale } from "@skolara/i18n";
 import { colors, spacing, typography, type Tone } from "@/lib/theme";
+import { intlLocale } from "@/lib/intl";
 import { Card, EmptyState, LoadingLine, Pill, Screen } from "@/lib/ui";
 
 const CATEGORY_TONE: Record<CalendarEventCategory, Tone> = {
@@ -15,11 +17,12 @@ const CATEGORY_TONE: Record<CalendarEventCategory, Tone> = {
   OTHER: "neutral",
 };
 
-function monthKey(date: Date) {
-  return date.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+function monthKey(date: Date, locale: Locale) {
+  return date.toLocaleDateString(intlLocale(locale), { month: "long", year: "numeric" });
 }
 
 export default function CalendarScreen() {
+  const { t, locale } = useTranslation();
   // Only what's ahead — a parent opening this wants the next thing, not
   // last term's holidays.
   const from = useMemo(() => new Date().toISOString(), []);
@@ -28,16 +31,16 @@ export default function CalendarScreen() {
   const sections = useMemo(() => {
     const byMonth = new Map<string, CalendarEvent[]>();
     for (const event of events ?? []) {
-      const key = monthKey(new Date(event.startsAt));
+      const key = monthKey(new Date(event.startsAt), locale);
       byMonth.set(key, [...(byMonth.get(key) ?? []), event]);
     }
     return [...byMonth.entries()].map(([title, data]) => ({ title, data }));
-  }, [events]);
+  }, [events, locale]);
 
   if (isLoading) {
     return (
       <Screen>
-        <LoadingLine label="Loading calendar..." />
+        <LoadingLine label={t("common.loading")} />
       </Screen>
     );
   }
@@ -45,7 +48,7 @@ export default function CalendarScreen() {
   if (sections.length === 0) {
     return (
       <Screen>
-        <EmptyState title="Nothing coming up." />
+        <EmptyState title={t("mobileFamilyWork.nothingComingUp")} />
       </Screen>
     );
   }
@@ -67,7 +70,7 @@ export default function CalendarScreen() {
               <View style={styles.date}>
                 <Text style={styles.day}>{start.getDate()}</Text>
                 <Text style={styles.weekday}>
-                  {start.toLocaleDateString(undefined, { weekday: "short" })}
+                  {start.toLocaleDateString(intlLocale(locale), { weekday: "short" })}
                 </Text>
               </View>
               <View style={styles.detail}>
@@ -77,7 +80,7 @@ export default function CalendarScreen() {
                 ) : null}
               </View>
               <Pill
-                label={item.category.replace("_", " ").toLowerCase()}
+                label={t(`eventCategory.${item.category}`)}
                 tone={CATEGORY_TONE[item.category]}
               />
             </Card>

@@ -10,15 +10,6 @@ export const assetConditionSchema = z.enum([
 ]);
 export type AssetCondition = z.infer<typeof assetConditionSchema>;
 
-export const ASSET_CONDITION_LABELS: Record<AssetCondition, string> = {
-  NEW: "New",
-  GOOD: "Good",
-  FAIR: "Fair",
-  POOR: "Poor",
-  DAMAGED: "Damaged",
-  WRITTEN_OFF: "Written off",
-};
-
 export const inventoryItemSchema = z.object({
   id: z.string().uuid(),
   schoolId: z.string().uuid(),

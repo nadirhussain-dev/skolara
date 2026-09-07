@@ -20,6 +20,7 @@ import {
   Select,
   Textarea,
 } from "@skolara/ui";
+import { useTranslation, type MessageKey } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
@@ -35,6 +36,7 @@ const blankQuestion = (): DraftQuestion => ({
 
 export default function QuizzesPage() {
   const api = useApiClient();
+  const { t } = useTranslation();
   const { data: classes } = useQuery<SchoolClass[]>({
     queryKey: ["classes"],
     queryFn: () => api.classes.list(),
@@ -101,20 +103,20 @@ export default function QuizzesPage() {
       setInstructions("");
       setQuestions([blankQuestion()]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't create that quiz");
+      setError(err instanceof Error ? err.message : t("quizzes.couldNotCreate"));
     }
   }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Quizzes"
-        description="Multiple-choice papers, marked automatically the moment a student submits."
+        title={t("quizzes.title")}
+        description={t("quizzes.description")}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>New quiz</CardTitle>
+          <CardTitle>{t("quizzes.newQuiz")}</CardTitle>
         </CardHeader>
         <div className="mb-3">
           <Select
@@ -122,7 +124,7 @@ export default function QuizzesPage() {
             onChange={(e) => setClassId(e.target.value)}
             className="max-w-xs"
           >
-            <option value="">Select class</option>
+            <option value="">{t("fields.selectClass")}</option>
             {classes?.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} — {c.section}
@@ -134,7 +136,7 @@ export default function QuizzesPage() {
         <form onSubmit={handleCreate} className="flex flex-col gap-4">
           <div className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              Subject
+              {t("fields.subject")}
               <Input
                 required
                 value={subject}
@@ -143,7 +145,7 @@ export default function QuizzesPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              Title
+              {t("fields.title")}
               <Input
                 required
                 value={title}
@@ -152,19 +154,19 @@ export default function QuizzesPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              Time limit (min)
+              {t("quizzes.timeLimit")}
               <Input
                 type="number"
                 min={1}
                 max={480}
-                placeholder="none"
+                placeholder={t("quizzes.noTimeLimit")}
                 value={timeLimit}
                 onChange={(e) => setTimeLimit(e.target.value)}
                 className="max-w-[130px]"
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              Attempts
+              {t("quizzes.attempts")}
               <Input
                 type="number"
                 min={1}
@@ -175,9 +177,9 @@ export default function QuizzesPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              Gradebook term
+              {t("quizzes.gradebookTerm")}
               <Input
-                placeholder="leave blank to keep out"
+                placeholder={t("quizzes.gradebookTermHint")}
                 value={gradeTerm}
                 onChange={(e) => setGradeTerm(e.target.value)}
                 className="max-w-[220px]"
@@ -186,7 +188,7 @@ export default function QuizzesPage() {
           </div>
 
           <Textarea
-            placeholder="Instructions for the class (optional)"
+            placeholder={t("quizzes.instructionsHint")}
             rows={2}
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
@@ -202,12 +204,12 @@ export default function QuizzesPage() {
                   <span className="mt-2.5 text-sm text-slate-400">{questionIndex + 1}.</span>
                   <Input
                     required
-                    placeholder="Question"
+                    placeholder={t("quizzes.question")}
                     value={question.prompt}
                     onChange={(e) => updateQuestion(questionIndex, { prompt: e.target.value })}
                   />
                   <label className="flex shrink-0 flex-col gap-1 text-xs text-slate-500">
-                    Marks
+                    {t("quizzes.marks")}
                     <Input
                       type="number"
                       min={1}
@@ -230,7 +232,7 @@ export default function QuizzesPage() {
                         )
                       }
                     >
-                      Remove
+                      {t("common.remove")}
                     </Button>
                   )}
                 </div>
@@ -249,7 +251,7 @@ export default function QuizzesPage() {
                       />
                       <Input
                         required
-                        placeholder={`Option ${optionIndex + 1}`}
+                        placeholder={t("quizzes.optionNumbered", { number: optionIndex + 1 })}
                         value={option}
                         onChange={(e) => updateOption(questionIndex, optionIndex, e.target.value)}
                       />
@@ -283,7 +285,7 @@ export default function QuizzesPage() {
                         updateQuestion(questionIndex, { options: [...question.options, ""] })
                       }
                     >
-                      Add option
+                      {t("quizzes.addOption")}
                     </Button>
                   )}
                 </div>
@@ -297,28 +299,31 @@ export default function QuizzesPage() {
               variant="secondary"
               onClick={() => setQuestions((current) => [...current, blankQuestion()])}
             >
-              Add question
+              {t("quizzes.addQuestion")}
             </Button>
             <Button type="submit" disabled={create.isPending || !classId}>
-              {create.isPending ? "Saving…" : "Save as draft"}
+              {create.isPending ? t("common.saving") : t("quizzes.saveAsDraft")}
             </Button>
             <p className="text-sm text-slate-500">
-              {questions.length} question{questions.length === 1 ? "" : "s"} · {totalMarks} marks
+              {t(questions.length === 1 ? "quizzes.draftSummary" : "quizzes.draftSummaryPlural", {
+                questions: questions.length,
+                marks: totalMarks,
+              })}
             </p>
           </div>
-          {!classId && <p className="text-sm text-slate-500">Pick a class first.</p>}
+          {!classId && <p className="text-sm text-slate-500">{t("quizzes.pickClassFirst")}</p>}
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </form>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Quizzes for this class</CardTitle>
+          <CardTitle>{t("quizzes.forThisClass")}</CardTitle>
         </CardHeader>
-        {!classId && <p className="text-sm text-slate-500">Select a class to see its quizzes.</p>}
-        {classId && isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+        {!classId && <p className="text-sm text-slate-500">{t("quizzes.selectClassForQuizzes")}</p>}
+        {classId && isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {classId && !isLoading && quizzes?.length === 0 && (
-          <EmptyState icon="🧠" title="No quizzes yet." />
+          <EmptyState icon="🧠" title={t("quizzes.noQuizzes")} />
         )}
         <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {quizzes?.map((quiz) => (
@@ -333,26 +338,31 @@ export default function QuizzesPage() {
                   </Link>
                   <Badge tone="neutral">{quiz.subject}</Badge>
                   {quiz.publishedAt ? (
-                    <Badge tone="success">Published</Badge>
+                    <Badge tone="success">{t("quizzes.published")}</Badge>
                   ) : (
-                    <Badge tone="warning">Draft</Badge>
+                    <Badge tone="warning">{t("quizzes.draft")}</Badge>
                   )}
                 </div>
                 <p className="mt-1 text-sm text-slate-500">
-                  {quiz._count.questions} questions · {quiz._count.attempts} attempts
-                  {quiz.timeLimitMinutes ? ` · ${quiz.timeLimitMinutes} min` : " · untimed"}
-                  {quiz.gradeTerm ? ` · counts toward ${quiz.gradeTerm}` : ""}
+                  {t("quizzes.quizMeta", {
+                    questions: quiz._count.questions,
+                    attempts: quiz._count.attempts,
+                  })}
+                  {quiz.timeLimitMinutes
+                    ? t("quizzes.timedMinutes", { minutes: quiz.timeLimitMinutes })
+                    : t("quizzes.untimed")}
+                  {quiz.gradeTerm ? t("quizzes.countsToward", { term: quiz.gradeTerm }) : ""}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {!quiz.publishedAt && (
                   <Button variant="secondary" onClick={() => publish.mutate(quiz.id)}>
-                    Publish
+                    {t("quizzes.publish")}
                   </Button>
                 )}
                 {quiz._count.attempts === 0 && (
                   <Button variant="ghost" onClick={() => remove.mutate(quiz.id)}>
-                    Delete
+                    {t("common.delete")}
                   </Button>
                 )}
               </div>

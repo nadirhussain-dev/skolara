@@ -3,6 +3,7 @@
 import { useCreateUser, useSetUserActive, useUsers } from "@skolara/api-client";
 import type { RoleType } from "@skolara/types";
 import { Badge, Button, Card, CardHeader, CardTitle, EmptyState, Input, PageHeader, Select } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 
@@ -10,6 +11,7 @@ const VIEWABLE_ROLES: RoleType[] = ["PARENT", "TEACHER", "SCHOOL_ADMIN"];
 
 export default function UsersPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [roleFilter, setRoleFilter] = useState<RoleType>("PARENT");
   const { data: users, isLoading } = useUsers(roleFilter);
   const createUser = useCreateUser();
@@ -42,25 +44,22 @@ export default function UsersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Accounts" description="Invite parent accounts and manage staff access." />
+      <PageHeader title={t("accounts.title")} description={t("accounts.description")} />
       <Card>
         <CardHeader>
-          <CardTitle>Invite a parent account</CardTitle>
+          <CardTitle>{t("accounts.inviteParent")}</CardTitle>
         </CardHeader>
-        <p className="mb-3 text-sm text-slate-500">
-          Create a parent&apos;s login. Link them to a child from the student&apos;s admission
-          form or profile.
-        </p>
+        <p className="mb-3 text-sm text-slate-500">{t("accounts.inviteParentBody")}</p>
         <form onSubmit={handleSubmit} className="flex flex-wrap gap-3">
           <Input
-            placeholder="First name"
+            placeholder={t("fields.firstName")}
             required
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             className="max-w-[160px]"
           />
           <Input
-            placeholder="Last name"
+            placeholder={t("fields.lastName")}
             required
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
@@ -68,7 +67,7 @@ export default function UsersPage() {
           />
           <Input
             type="email"
-            placeholder="Email"
+            placeholder={t("fields.email")}
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -76,27 +75,27 @@ export default function UsersPage() {
           />
           <Input
             type="password"
-            placeholder="Temporary password"
+            placeholder={t("fields.temporaryPassword")}
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="max-w-[180px]"
           />
           <Input
-            placeholder="Phone (optional)"
+            placeholder={t("accounts.phoneOptional")}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             className="max-w-[160px]"
           />
           <Button type="submit" disabled={createUser.isPending}>
-            {createUser.isPending ? "Inviting..." : "Invite parent"}
+            {createUser.isPending ? t("accounts.inviting") : t("accounts.invite")}
           </Button>
         </form>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Accounts</CardTitle>
+          <CardTitle>{t("accounts.title")}</CardTitle>
         </CardHeader>
         <Select
           value={roleFilter}
@@ -105,13 +104,13 @@ export default function UsersPage() {
         >
           {VIEWABLE_ROLES.map((role) => (
             <option key={role} value={role}>
-              {role.replace("_", " ")}
+              {t(`roles.${role}`)}
             </option>
           ))}
         </Select>
 
-        {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
-        {users?.length === 0 && <EmptyState title="No accounts in this role yet" />}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
+        {users?.length === 0 && <EmptyState title={t("accounts.noAccountsInRole")} />}
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {users?.map((u) => (
             <div key={u.id} className="flex items-center justify-between py-3">
@@ -123,14 +122,14 @@ export default function UsersPage() {
               </div>
               <div className="flex items-center gap-3">
                 <Badge tone={u.isActive ? "success" : "neutral"}>
-                  {u.isActive ? "Active" : "Inactive"}
+                  {u.isActive ? t("accounts.active") : t("accounts.inactive")}
                 </Badge>
                 <Button
                   variant="ghost"
                   disabled={setActive.isPending}
                   onClick={() => setActive.mutate({ id: u.id, isActive: !u.isActive })}
                 >
-                  {u.isActive ? "Deactivate" : "Reactivate"}
+                  {u.isActive ? t("accounts.deactivate") : t("accounts.reactivate")}
                 </Button>
               </div>
             </div>

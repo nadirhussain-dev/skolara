@@ -24,7 +24,9 @@ import {
   PageHeader,
   Textarea,
 } from "@skolara/ui";
+import { useTranslation } from "@skolara/i18n";
 import { useState } from "react";
+import { intlLocale } from "@/lib/intl";
 import { useAuth } from "@/lib/auth-context";
 
 const STATUS_TONE: Record<SupportTicketStatus, "warning" | "info" | "success" | "neutral"> = {
@@ -42,12 +44,8 @@ const PRIORITY_TONE: Record<SupportTicketPriority, "neutral" | "info" | "warning
   URGENT: "danger",
 };
 
-function humanise(value: string): string {
-  const lower = value.replace(/_/g, " ").toLowerCase();
-  return lower.charAt(0).toUpperCase() + lower.slice(1);
-}
-
 export default function SupportPage() {
+  const { t, locale } = useTranslation();
   const { user } = useAuth();
   const isPlatform = user?.role === "SUPER_ADMIN";
 
@@ -57,11 +55,11 @@ export default function SupportPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Support"
+        title={t("support.title")}
         description={
           isPlatform
-            ? "Tickets from every school. Urgent first, then longest waiting."
-            : "Raise an issue with the Skolara team and track the reply."
+            ? t("support.descriptionPlatform")
+            : t("support.descriptionSchool")
         }
       />
 
@@ -69,11 +67,15 @@ export default function SupportPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Tickets</CardTitle>
+          <CardTitle>{t("support.tickets")}</CardTitle>
         </CardHeader>
-        {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+        {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
         {!isLoading && tickets?.length === 0 && (
-          <EmptyState title={isPlatform ? "No tickets open." : "You haven't raised any tickets."} />
+          <EmptyState
+            title={
+              isPlatform ? t("support.noTicketsPlatform") : t("support.noTicketsSchool")
+            }
+          />
         )}
         <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           {tickets?.map((ticket) => (
@@ -87,13 +89,15 @@ export default function SupportPage() {
                   <p className="font-medium">{ticket.subject}</p>
                   <p className="text-sm text-slate-500">
                     {isPlatform ? `${ticket.school.name} · ` : ""}
-                    {ticket.raisedByUser.firstName} {ticket.raisedByUser.lastName} ·{" "}
-                    {new Date(ticket.createdAt).toLocaleDateString("en-GB")}
+                    {t("support.ticketMeta", {
+                      author: `${ticket.raisedByUser.firstName} ${ticket.raisedByUser.lastName}`,
+                      date: new Date(ticket.createdAt).toLocaleDateString(intlLocale(locale)),
+                    })}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <Badge tone={PRIORITY_TONE[ticket.priority]}>{ticket.priority}</Badge>
-                  <Badge tone={STATUS_TONE[ticket.status]}>{humanise(ticket.status)}</Badge>
+                  <Badge tone={PRIORITY_TONE[ticket.priority]}>{t(`ticketPriority.${ticket.priority}`)}</Badge>
+                  <Badge tone={STATUS_TONE[ticket.status]}>{t(`ticketStatus.${ticket.status}`)}</Badge>
                 </div>
               </button>
               {openId === ticket.id && <TicketThread id={ticket.id} isPlatform={isPlatform} />}
@@ -106,6 +110,7 @@ export default function SupportPage() {
 }
 
 function RaiseTicket() {
+  const { t } = useTranslation();
   const create = useCreateSupportTicket();
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -120,19 +125,19 @@ function RaiseTicket() {
       setSubject("");
       setBody("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't raise that ticket");
+      setError(err instanceof Error ? err.message : t("support.couldNotRaise"));
     }
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Raise a ticket</CardTitle>
+        <CardTitle>{t("support.raiseTicket")}</CardTitle>
       </CardHeader>
       <form onSubmit={submit} className="flex flex-col gap-3">
         <div className="flex flex-wrap gap-3">
           <Input
-            placeholder="Subject"
+            placeholder={t("fields.subject")}
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             required
@@ -145,13 +150,13 @@ function RaiseTicket() {
           >
             {supportTicketPrioritySchema.options.map((option) => (
               <option key={option} value={option}>
-                {humanise(option)}
+                {t(`ticketPriority.${option}`)}
               </option>
             ))}
           </select>
         </div>
         <Textarea
-          placeholder="What's happening? Include anything we'd need to reproduce it."
+          placeholder={t("support.bodyHint")}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           rows={3}
@@ -161,7 +166,7 @@ function RaiseTicket() {
         {error && <p className="text-sm text-rose-600">{error}</p>}
         <div>
           <Button type="submit" disabled={create.isPending}>
-            {create.isPending ? "Sending…" : "Raise ticket"}
+            {create.isPending ? t("support.sending") : t("support.raise")}
           </Button>
         </div>
       </form>
@@ -170,6 +175,7 @@ function RaiseTicket() {
 }
 
 function TicketThread({ id, isPlatform }: { id: string; isPlatform: boolean }) {
+  const { t } = useTranslation();
   const { data: ticket } = useSupportTicket(id);
   const addComment = useAddSupportComment();
   const update = useUpdateSupportTicket();
@@ -177,7 +183,7 @@ function TicketThread({ id, isPlatform }: { id: string; isPlatform: boolean }) {
   const [reply, setReply] = useState("");
   const [internal, setInternal] = useState(false);
 
-  if (!ticket) return <p className="mt-3 text-sm text-slate-500">Loading…</p>;
+  if (!ticket) return <p className="mt-3 text-sm text-slate-500">{t("common.loading")}</p>;
 
   return (
     <div className="mt-3 flex flex-col gap-3 rounded-lg bg-slate-50 p-4 dark:bg-slate-900">
@@ -194,7 +200,7 @@ function TicketThread({ id, isPlatform }: { id: string; isPlatform: boolean }) {
         >
           <p className="mb-1 text-xs text-slate-500">
             {comment.authorUser.firstName} {comment.authorUser.lastName}
-            {comment.internal ? " · internal note" : ""}
+            {comment.internal ? t("support.internalNoteSuffix") : ""}
           </p>
           <p className="whitespace-pre-wrap">{comment.body}</p>
         </div>
@@ -203,7 +209,7 @@ function TicketThread({ id, isPlatform }: { id: string; isPlatform: boolean }) {
       {ticket.status !== "CLOSED" && (
         <div className="flex flex-col gap-2">
           <Textarea
-            placeholder="Reply…"
+            placeholder={t("support.replyHint")}
             value={reply}
             onChange={(e) => setReply(e.target.value)}
             rows={2}
@@ -217,7 +223,7 @@ function TicketThread({ id, isPlatform }: { id: string; isPlatform: boolean }) {
                 setInternal(false);
               }}
             >
-              Send
+              {t("support.send")}
             </Button>
             {isPlatform && (
               <>
@@ -228,7 +234,7 @@ function TicketThread({ id, isPlatform }: { id: string; isPlatform: boolean }) {
                     onChange={(e) => setInternal(e.target.checked)}
                     className="h-4 w-4 rounded border-slate-300"
                   />
-                  Internal note — the school never sees this
+                  {t("support.internalNoteLabel")}
                 </label>
                 <select
                   value={ticket.status}
@@ -242,7 +248,7 @@ function TicketThread({ id, isPlatform }: { id: string; isPlatform: boolean }) {
                 >
                   {supportTicketStatusSchema.options.map((option) => (
                     <option key={option} value={option}>
-                      {humanise(option)}
+                      {t(`ticketStatus.${option}`)}
                     </option>
                   ))}
                 </select>
