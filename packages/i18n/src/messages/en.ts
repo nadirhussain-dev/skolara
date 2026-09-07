@@ -188,6 +188,8 @@ export const en = {
     noMatchesBody: "Import a statement to see matches against pending payments.",
     matchSummary: "{date} · {amount} vs. claimed {claimed} · {reference}",
     confirmMatch: "Confirm match",
+    matchRefused:
+      "That transfer is already reconciled against a payment. Reload to see the current matches.",
   },
 
   schoolAttendance: {

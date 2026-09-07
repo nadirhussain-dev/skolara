@@ -186,6 +186,8 @@ export const ur: Messages = {
     noMatchesBody: "زیرِ التوا ادائیگیوں سے مماثلت دیکھنے کے لیے اسٹیٹمنٹ درآمد کریں۔",
     matchSummary: "{date} · {amount} بمقابلہ دعویٰ {claimed} · {reference}",
     confirmMatch: "مماثلت کی تصدیق کریں",
+    matchRefused:
+      "یہ ٹرانسفر پہلے ہی کسی ادائیگی سے ملا دیا گیا ہے۔ موجودہ مماثلتیں دیکھنے کے لیے صفحہ دوبارہ لوڈ کریں۔",
   },
 
   schoolAttendance: {

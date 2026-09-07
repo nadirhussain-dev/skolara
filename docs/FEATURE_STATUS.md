@@ -168,11 +168,11 @@ Not proposal features, but they gate everything above.
 
 | Metric | Value | Notes |
 |---|---|---|
-| Tests passing | 531 across the repo (503 API) | Up from 66. Targets what actually breaks — audit redaction, entitlement boundaries, class scoping, quiz grading and expiry, stock, bed and copy races, payment double-crediting, export field allowlists, template escalation |
-| Services untested | 20 of 52 | The money paths are covered now. What's left is mostly thin CRUD; `bank-statement`, `messaging` and `payment-gateway` are the three with logic worth covering next |
+| Tests passing | 547 across the repo (519 API) | Up from 66. Targets what actually breaks — audit redaction, entitlement boundaries, class scoping, quiz grading and expiry, stock, bed and copy races, payment double-crediting, bank-line double-spending, export field allowlists, template escalation |
+| Services untested | 19 of 52 | What's left is mostly thin CRUD; `messaging` and `payment-gateway` are the two with logic worth covering next |
 | Migrations | 28 (`001`–`028`) | CI applies all to a real Postgres and seeds through the generated client. 027 and 028 have only been applied by CI, never locally — no Docker on the machine they were written on |
 | Deploy workflows | 1 | Ships on every push to `main`, gated on a `production` environment. Never yet run |
-| i18n coverage | 1,208 keys | Both locales complete, parity and placeholder-preservation asserted by test. UI only — server-generated text is English |
+| i18n coverage | 1,209 keys | Both locales complete, parity and placeholder-preservation asserted by test. UI only — server-generated text is English |
 
 ---
 
@@ -198,9 +198,10 @@ Nothing here is a proposal row. All of those are built.
 2. **Translate what the server sends.** The most visible remaining gap, and the one a pilot
    school will notice first: a parent reading the app in Urdu gets English text messages. Needs
    a language column on `User`, then a pass over the WhatsApp, SMS, push and PDF paths.
-3. **Cover `bank-statement`, `messaging` and `payment-gateway`.** The three untested services
-   with real logic left in them. The money-path pass on day 6 found four concurrency bugs in
-   the three services it covered, which is the argument for doing these too.
+3. **Cover `messaging` and `payment-gateway`.** The two untested services with real logic left
+   in them. `bank-statement` is now covered, and doing it found two more reconciliation bugs —
+   which is the sixth and seventh found by writing tests for money code, and the argument for
+   finishing these two.
 4. **Validate hostel and inventory with a pilot school before investing further.** Both were
    built on day 5 against the recommendation in this file. Nothing in the gap analysis in
    `PROPOSAL.md` identifies either as a wedge, and that hasn't changed by their existing.

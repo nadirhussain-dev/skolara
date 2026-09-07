@@ -56,6 +56,9 @@ export default function BankStatementPage() {
           <CardTitle>{t("bankStatement.suggestedMatches")}</CardTitle>
         </CardHeader>
         {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
+        {confirmMatch.isError && (
+          <p className="text-sm text-rose-600">{t("bankStatement.matchRefused")}</p>
+        )}
         {matches?.length === 0 && (
           <EmptyState
             title={t("bankStatement.noMatches")}
