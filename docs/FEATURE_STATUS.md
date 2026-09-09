@@ -69,7 +69,7 @@ The daily operations surface. Deepest area, and the most complete.
 | Teacher & staff management | ✅ | |
 | Fee invoices, partial payments, running balance | ✅ | |
 | Payment verification queue | ✅ | The MVP's core loop — was broken end to end until the audit-gap branch; screenshots pointed at the parent's own phone |
-| Bank statement CSV import with suggested matches | ✅ | |
+| Bank statement CSV import with suggested matches | ✅ | Quoted amounts parsed as one field, so `"1,000.00"` is a thousand rupees; an unquoted one is refused rather than read as 1. Unreadable rows are reported per line instead of silently dropped |
 | AI defaulter-risk flagging | ✅ | |
 | Payroll & payslip generation | ✅ | |
 | School-wide attendance oversight | ✅ | |
@@ -168,7 +168,7 @@ Not proposal features, but they gate everything above.
 
 | Metric | Value | Notes |
 |---|---|---|
-| Tests passing | 547 across the repo (519 API) | Up from 66. Targets what actually breaks — audit redaction, entitlement boundaries, class scoping, quiz grading and expiry, stock, bed and copy races, payment double-crediting, bank-line double-spending, export field allowlists, template escalation |
+| Tests passing | 560 across the repo (532 API) | Up from 66. Targets what actually breaks — audit redaction, entitlement boundaries, class scoping, quiz grading and expiry, stock, bed and copy races, payment double-crediting, bank-line double-spending, statement amount parsing, export field allowlists, template escalation |
 | Services untested | 19 of 52 | What's left is mostly thin CRUD; `messaging` and `payment-gateway` are the two with logic worth covering next |
 | Migrations | 28 (`001`–`028`) | CI applies all to a real Postgres and seeds through the generated client. 027 and 028 have only been applied by CI, never locally — no Docker on the machine they were written on |
 | Deploy workflows | 1 | Ships on every push to `main`, gated on a `production` environment. Never yet run |

@@ -3,6 +3,7 @@
 import { useConfirmBankStatementMatch, useImportBankStatement, useSuggestedMatches } from "@skolara/api-client";
 import { Button, Card, CardHeader, CardTitle, EmptyState, PageHeader, Textarea } from "@skolara/ui";
 import { useTranslation } from "@skolara/i18n";
+import type { BankStatementImportResult } from "@skolara/types";
 import { formatCurrency } from "@skolara/utils";
 import { useState } from "react";
 import { intlLocale } from "@/lib/intl";
@@ -14,14 +15,13 @@ export default function BankStatementPage() {
   const confirmMatch = useConfirmBankStatementMatch();
 
   const [csvContent, setCsvContent] = useState("");
-  const [importMessage, setImportMessage] = useState("");
+  const [report, setReport] = useState<BankStatementImportResult | null>(null);
 
   async function handleImport(e: React.FormEvent) {
     e.preventDefault();
     const result = await importStatement.mutateAsync({ csvContent });
-    setImportMessage(t("bankStatement.imported", { count: result.imported }));
+    setReport(result);
     setCsvContent("");
-    setTimeout(() => setImportMessage(""), 4000);
   }
 
   return (
@@ -47,8 +47,53 @@ export default function BankStatementPage() {
               {importStatement.isPending ? t("bankStatement.importing") : t("bankStatement.importCsv")}
             </Button>
           </div>
-          {importMessage && <p className="text-sm text-emerald-600">{importMessage}</p>}
         </form>
+
+        {report && (
+          <div className="mt-4 flex flex-col gap-3">
+            <p
+              className={
+                report.skipped > 0
+                  ? "text-sm text-amber-600"
+                  : "text-sm text-emerald-600"
+              }
+            >
+              {report.skipped > 0
+                ? t("bankStatement.importedWithSkipped", {
+                    count: report.imported,
+                    skipped: report.skipped,
+                  })
+                : t("bankStatement.imported", { count: report.imported })}
+            </p>
+
+            {report.rejections.length > 0 && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-950/30">
+                <p className="text-sm font-medium">{t("bankStatement.skippedRowsTitle")}</p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                  {t("bankStatement.skippedRowsBody")}
+                </p>
+                <ul className="mt-2 flex flex-col gap-1">
+                  {report.rejections.map((rejection) => (
+                    <li key={rejection.line} className="text-xs">
+                      <span className="font-mono text-slate-500">
+                        {t("bankStatement.lineNumber", { line: rejection.line })}
+                      </span>{" "}
+                      {t(`bankStatement.rejection.${rejection.reason}`)}{" "}
+                      <span className="font-mono text-slate-400">{rejection.content}</span>
+                    </li>
+                  ))}
+                </ul>
+                {report.skipped > report.rejections.length && (
+                  <p className="mt-2 text-xs text-slate-500">
+                    {t("bankStatement.andMoreSkipped", {
+                      count: report.skipped - report.rejections.length,
+                    })}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </Card>
 
       <Card>

@@ -183,6 +183,19 @@ export const en = {
     importing: "Importing...",
     importCsv: "Import CSV",
     imported: "Imported {count} line(s).",
+    importedWithSkipped: "Imported {count} line(s). Skipped {skipped}.",
+    lineNumber: "Line {line}",
+    skippedRowsTitle: "Rows that couldn't be read",
+    skippedRowsBody:
+      "These rows were not imported. Fix them in the file and import again — the rows that did import are already saved.",
+    andMoreSkipped: "...and {count} more.",
+    rejection: {
+      MALFORMED: "Needs three columns: date, amount, description.",
+      BAD_DATE: "The first column isn't a date.",
+      BAD_AMOUNT: "The second column isn't an amount.",
+      AMBIGUOUS_AMOUNT:
+        "The amount is split by a comma. Put it in quotes, like \"1,000.00\", or remove the comma.",
+    },
     suggestedMatches: "Suggested matches",
     noMatches: "No suggested matches",
     noMatchesBody: "Import a statement to see matches against pending payments.",

@@ -181,6 +181,19 @@ export const ur: Messages = {
     importing: "درآمد ہو رہی ہے...",
     importCsv: "CSV درآمد کریں",
     imported: "{count} سطریں درآمد ہوئیں۔",
+    importedWithSkipped: "{count} سطریں درآمد ہوئیں۔ {skipped} چھوڑ دی گئیں۔",
+    lineNumber: "سطر {line}",
+    skippedRowsTitle: "جو سطریں پڑھی نہیں جا سکیں",
+    skippedRowsBody:
+      "یہ سطریں درآمد نہیں ہوئیں۔ فائل میں انہیں درست کر کے دوبارہ درآمد کریں — جو سطریں درآمد ہو چکی ہیں وہ محفوظ ہیں۔",
+    andMoreSkipped: "...اور {count} مزید۔",
+    rejection: {
+      MALFORMED: "تین کالم ضروری ہیں: تاریخ، رقم، تفصیل۔",
+      BAD_DATE: "پہلا کالم تاریخ نہیں ہے۔",
+      BAD_AMOUNT: "دوسرا کالم رقم نہیں ہے۔",
+      AMBIGUOUS_AMOUNT:
+        "رقم کوما سے تقسیم ہو گئی ہے۔ اسے واوین میں لکھیں، جیسے \"1,000.00\"، یا کوما ہٹا دیں۔",
+    },
     suggestedMatches: "تجویز کردہ مماثلتیں",
     noMatches: "کوئی تجویز کردہ مماثلت نہیں",
     noMatchesBody: "زیرِ التوا ادائیگیوں سے مماثلت دیکھنے کے لیے اسٹیٹمنٹ درآمد کریں۔",
