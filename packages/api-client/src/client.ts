@@ -10,6 +10,7 @@ import type {
   AuditLogPage,
   AuthResponse,
   AuthTokens,
+  BankStatementImportResult,
   BankStatementLine,
   Book,
   BookLoan,
@@ -876,7 +877,7 @@ export function createApiClient({
     },
     bankStatement: {
       import: (input: ImportBankStatementInput) =>
-        request<{ imported: number }>("/bank-statement/import", {
+        request<BankStatementImportResult>("/bank-statement/import", {
           method: "POST",
           body: JSON.stringify(input),
         }),

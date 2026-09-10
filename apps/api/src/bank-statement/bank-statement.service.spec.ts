@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
+import { ConflictException, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { BankStatementService } from "./bank-statement.service";
 import type { PrismaService } from "../prisma/prisma.service";
@@ -57,7 +57,7 @@ describe("BankStatementService", () => {
         ].join("\n"),
       });
 
-      expect(result).toEqual({ imported: 2 });
+      expect(result).toEqual({ imported: 2, skipped: 0, rejections: [] });
       expect(prisma.bankStatementLine.createMany).toHaveBeenCalledWith({
         data: [
           expect.objectContaining({ schoolId: SCHOOL, amount: 5000, description: "IBFT AYESHA KHAN" }),
@@ -76,13 +76,6 @@ describe("BankStatementService", () => {
       });
     });
 
-    it("refuses a file with nothing parseable in it rather than reporting success", async () => {
-      await expect(
-        service.import(SCHOOL, { csvContent: "date,amount,description\n\n" }),
-      ).rejects.toThrow(BadRequestException);
-      expect(prisma.bankStatementLine.createMany).not.toHaveBeenCalled();
-    });
-
     it("tags every line with the caller's school, never one from the file", async () => {
       await service.import(SCHOOL, { csvContent: "2026-09-01,5000,IBFT" });
 
@@ -90,6 +83,174 @@ describe("BankStatementService", () => {
         { data: { schoolId: string }[] },
       ];
       expect(data.every((line) => line.schoolId === SCHOOL)).toBe(true);
+    });
+
+    // ---------- the amount, which is the field that matters ----------
+
+    it("reads a quoted thousands separator as one amount", async () => {
+      await service.import(SCHOOL, {
+        csvContent: '2026-09-01,"1,000.00",IBFT AYESHA KHAN',
+      });
+
+      // The bug this replaces imported this as 1 rupee.
+      expect(prisma.bankStatementLine.createMany).toHaveBeenCalledWith({
+        data: [expect.objectContaining({ amount: 1000 })],
+      });
+    });
+
+    it("refuses an unquoted thousands separator instead of importing 1 rupee", async () => {
+      const result = await service.import(SCHOOL, {
+        csvContent: "2026-09-01,1,000.00,IBFT AYESHA KHAN",
+      });
+
+      expect(result.imported).toBe(0);
+      expect(result.rejections).toEqual([
+        expect.objectContaining({ line: 1, reason: "AMBIGUOUS_AMOUNT" }),
+      ]);
+      expect(prisma.bankStatementLine.createMany).not.toHaveBeenCalled();
+    });
+
+    it("does not mistake a short amount with a numeric description for a split one", async () => {
+      await service.import(SCHOOL, { csvContent: "2026-09-01,500,IBFT 12345" });
+
+      expect(prisma.bankStatementLine.createMany).toHaveBeenCalledWith({
+        data: [expect.objectContaining({ amount: 500 })],
+      });
+    });
+
+    it("refuses an empty amount rather than importing a zero-rupee line", async () => {
+      const result = await service.import(SCHOOL, {
+        csvContent: "2026-09-01,,IBFT AYESHA KHAN",
+      });
+
+      expect(result.rejections).toEqual([
+        expect.objectContaining({ line: 1, reason: "BAD_AMOUNT" }),
+      ]);
+    });
+
+    it("handles an escaped quote inside a quoted description", async () => {
+      await service.import(SCHOOL, {
+        csvContent: '2026-09-01,5000,"IBFT ""AYESHA"" KHAN"',
+      });
+
+      expect(prisma.bankStatementLine.createMany).toHaveBeenCalledWith({
+        data: [expect.objectContaining({ description: 'IBFT "AYESHA" KHAN' })],
+      });
+    });
+
+    // ---------- reporting what didn't work ----------
+
+    it("imports the good rows and reports the bad ones with line numbers", async () => {
+      const result = await service.import(SCHOOL, {
+        csvContent: [
+          "date,amount,description",
+          "2026-09-01,5000,IBFT ONE",
+          "not-a-date,5000,IBFT TWO",
+          "2026-09-03,5000,IBFT THREE",
+          "2026-09-04,abc,IBFT FOUR",
+          "just-one-field",
+        ].join("\n"),
+      });
+
+      expect(result.imported).toBe(2);
+      expect(result.skipped).toBe(3);
+      expect(result.rejections).toEqual([
+        expect.objectContaining({ line: 3, reason: "BAD_DATE" }),
+        expect.objectContaining({ line: 5, reason: "BAD_AMOUNT" }),
+        expect.objectContaining({ line: 6, reason: "MALFORMED" }),
+      ]);
+      // The two good rows still landed — a partial statement beats none.
+      expect(prisma.bankStatementLine.createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({ description: "IBFT ONE" }),
+          expect.objectContaining({ description: "IBFT THREE" }),
+        ],
+      });
+    });
+
+    it("quotes the offending row back so the admin can find it", async () => {
+      const result = await service.import(SCHOOL, { csvContent: "not-a-date,5000,IBFT ONE" });
+
+      expect(result.rejections[0].content).toBe("not-a-date,5000,IBFT ONE");
+    });
+
+    it("reports a file with nothing importable rather than throwing", async () => {
+      // Previously this threw, which told the admin nothing about why. The
+      // count and the reasons are more use than an error with neither.
+      const result = await service.import(SCHOOL, {
+        csvContent: ["date,amount,description", "nonsense", "more nonsense"].join("\n"),
+      });
+
+      expect(result).toEqual({
+        imported: 0,
+        skipped: 2,
+        rejections: [
+          expect.objectContaining({ line: 2, reason: "MALFORMED" }),
+          expect.objectContaining({ line: 3, reason: "MALFORMED" }),
+        ],
+      });
+      expect(prisma.bankStatementLine.createMany).not.toHaveBeenCalled();
+    });
+
+    it("counts every bad row but describes at most fifty of them", async () => {
+      const rows = Array.from({ length: 60 }, () => "nonsense");
+      const result = await service.import(SCHOOL, { csvContent: rows.join("\n") });
+
+      expect(result.skipped).toBe(60);
+      expect(result.rejections).toHaveLength(50);
+    });
+
+    it("truncates a very long row in the report", async () => {
+      const result = await service.import(SCHOOL, {
+        csvContent: `not-a-date,5000,${"X".repeat(200)}`,
+      });
+
+      expect(result.rejections[0].content).toHaveLength(123);
+      expect(result.rejections[0].content.endsWith("...")).toBe(true);
+    });
+
+    it("ignores blank lines without counting them as skipped", async () => {
+      const result = await service.import(SCHOOL, {
+        csvContent: "2026-09-01,5000,IBFT ONE\n\n\n2026-09-02,6000,IBFT TWO\n",
+      });
+
+      expect(result).toEqual({ imported: 2, skipped: 0, rejections: [] });
+    });
+
+    // ---------- telling a header from a broken row ----------
+
+    it("takes a header with unfamiliar column names for a header anyway", async () => {
+      const result = await service.import(SCHOOL, {
+        csvContent: "Transaction Date,Credit,Narration\n2026-09-01,5000,IBFT ONE",
+      });
+
+      expect(result).toEqual({ imported: 1, skipped: 0, rejections: [] });
+    });
+
+    it("reports a first row with a bad date but a real amount instead of eating it as a header", async () => {
+      const result = await service.import(SCHOOL, {
+        csvContent: "2026-13-45,5000,IBFT ONE\n2026-09-02,6000,IBFT TWO",
+      });
+
+      expect(result.imported).toBe(1);
+      expect(result.rejections).toEqual([
+        expect.objectContaining({ line: 1, reason: "BAD_DATE" }),
+      ]);
+    });
+
+    it("only forgives a header on the first row with content in it", async () => {
+      const result = await service.import(SCHOOL, {
+        csvContent: [
+          "2026-09-01,5000,IBFT ONE",
+          "date,amount,description",
+          "2026-09-03,7000,IBFT THREE",
+        ].join("\n"),
+      });
+
+      expect(result.imported).toBe(2);
+      expect(result.rejections).toEqual([
+        expect.objectContaining({ line: 2, reason: "BAD_DATE" }),
+      ]);
     });
   });
 
