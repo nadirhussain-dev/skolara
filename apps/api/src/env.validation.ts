@@ -1,10 +1,16 @@
 import { z } from "zod";
 
+// A var that is present but empty — a `FOO=""` line in .env, or a blank value
+// from a deploy platform's config UI — means "not set", not "set to zero".
+// Without this, z.coerce turns "" into 0 and the positive() check rejects it,
+// so copying .env.example verbatim would stop the API booting.
+const blankAsUnset = (value: unknown) => (value === "" ? undefined : value);
+
 // Fails fast on boot if required config is missing/malformed, instead of
 // surfacing as a cryptic runtime error the first time a route needs it.
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  PORT: z.coerce.number().int().positive().default(4000),
+  PORT: z.preprocess(blankAsUnset, z.coerce.number().int().positive().default(4000)),
 
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   DIRECT_URL: z.string().min(1, "DIRECT_URL is required"),
@@ -24,7 +30,10 @@ const envSchema = z.object({
   SUPABASE_STORAGE_BUCKET: z.string().optional(),
   // How long an upload's signed URL stays valid. Stored on the record, so it
   // needs to outlive the record's useful life (default: one year).
-  STORAGE_SIGNED_URL_TTL_SECONDS: z.coerce.number().int().positive().optional(),
+  STORAGE_SIGNED_URL_TTL_SECONDS: z.preprocess(
+    blankAsUnset,
+    z.coerce.number().int().positive().optional(),
+  ),
   // Local-disk fallback used only when the Supabase storage vars are unset.
   STORAGE_LOCAL_DIR: z.string().optional(),
   PUBLIC_API_URL: z.string().optional(),
