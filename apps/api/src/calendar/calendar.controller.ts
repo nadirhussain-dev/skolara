@@ -19,6 +19,7 @@ import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
+import { ParseDatePipe } from "../common/pipes/parse-date.pipe";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
 import { CalendarService } from "./calendar.service";
@@ -39,14 +40,14 @@ export class CalendarController {
   @Roles("SCHOOL_ADMIN", "TEACHER", "STUDENT", "PARENT")
   list(
     @CurrentUser() user: AuthenticatedUser,
-    @Query("from") from?: string,
-    @Query("to") to?: string,
+    @Query("from", new ParseDatePipe({ optional: true })) from?: Date,
+    @Query("to", new ParseDatePipe({ optional: true })) to?: Date,
   ) {
     return this.calendarService.findVisibleFor(
       this.schoolOf(user),
       user,
-      from ? new Date(from) : undefined,
-      to ? new Date(to) : undefined,
+      from,
+      to,
     );
   }
 
