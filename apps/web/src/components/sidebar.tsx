@@ -46,6 +46,20 @@ export function Sidebar() {
     return Array.from(byGroup.entries());
   }, [user]);
 
+  // The longest matching href wins, so "/school" (the dashboard) isn't also
+  // highlighted on "/school/students", while "/school/students/42" still
+  // highlights Students.
+  const activeHref = useMemo(() => {
+    let best: string | null = null;
+    for (const [, items] of groups) {
+      for (const { href } of items) {
+        const matches = pathname === href || pathname.startsWith(`${href}/`);
+        if (matches && (best === null || href.length > best.length)) best = href;
+      }
+    }
+    return best;
+  }, [groups, pathname]);
+
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col bg-brand-900 text-white">
       <div className="px-4 py-5">
@@ -87,7 +101,7 @@ export function Sidebar() {
             </p>
             <div className="flex flex-col gap-0.5">
               {items.map((item) => {
-                const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const active = item.href === activeHref;
                 return (
                   <Link
                     key={item.href}

@@ -27,6 +27,17 @@ export class AnalyticsController {
     return this.analyticsService.school(user.schoolId);
   }
 
+  /**
+   * Not behind the ANALYTICS feature: this is the admin's home page, and
+   * every plan gets to see what is waiting on them.
+   */
+  @Get("school/today")
+  @Roles("SCHOOL_ADMIN")
+  schoolToday(@CurrentUser() user: AuthenticatedUser) {
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    return this.analyticsService.schoolToday(user.schoolId);
+  }
+
   @Get("defaulter-risk/:studentId")
   @Roles("SCHOOL_ADMIN")
   @RequiresFeature("AI")

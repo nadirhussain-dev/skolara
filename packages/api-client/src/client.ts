@@ -78,6 +78,7 @@ import type {
   ReviewPaymentInput,
   School,
   SchoolAnalytics,
+  SchoolToday,
   SchoolClass,
   SchoolGroup,
   SendMessageInput,
@@ -826,6 +827,7 @@ export function createApiClient({
     analytics: {
       platform: () => request<PlatformAnalytics>("/analytics/platform"),
       school: () => request<SchoolAnalytics>("/analytics/school"),
+      schoolToday: () => request<SchoolToday>("/analytics/school/today"),
       defaulterRisk: (studentId: string) =>
         request<DefaulterRiskWithExplanation>(`/analytics/defaulter-risk/${studentId}`),
     },

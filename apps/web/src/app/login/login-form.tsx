@@ -11,7 +11,7 @@ import { useAuth } from "@/lib/auth-context";
 
 const ROLE_HOME: Record<string, string> = {
   SUPER_ADMIN: "/super-admin/schools",
-  SCHOOL_ADMIN: "/school/analytics",
+  SCHOOL_ADMIN: "/school",
   TEACHER: "/teacher/gradebook",
 };
 
