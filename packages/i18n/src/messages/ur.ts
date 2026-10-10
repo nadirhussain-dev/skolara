@@ -9,6 +9,7 @@ import type { Messages } from "./en";
  */
 export const ur: Messages = {
   common: {
+    poweredBy: "بذریعہ",
     save: "محفوظ کریں",
     saving: "محفوظ ہو رہا ہے...",
     cancel: "منسوخ کریں",

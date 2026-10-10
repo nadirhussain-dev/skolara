@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Default theme — Skolara indigo. A signed-in school with its own primary
+ * colour overrides these on <html> (components/school-theme.tsx). Keep in
+ * step with DEFAULT_BRAND_COLOR in @skolara/utils and the fallbacks in
+ * packages/config/tailwind-preset.js.
+ */
+:root {
+  --brand-50: 241 241 249;
+  --brand-100: 227 226 242;
+  --brand-200: 199 197 229;
+  --brand-300: 165 162 214;
+  --brand-400: 127 123 196;
+  --brand-500: 95 89 181;
+  --brand-600: 71 65 170;
+  --brand-700: 55 48 163;
+  --brand-800: 45 39 134;
+  --brand-900: 33 29 98;
+}
+
 body {
   @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50;
+}
+
+/* Money, marks and counts line up in columns. */
+table {
+  font-variant-numeric: tabular-nums;
 }

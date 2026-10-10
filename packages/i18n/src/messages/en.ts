@@ -6,6 +6,7 @@
  */
 export const en = {
   common: {
+    poweredBy: "Powered by",
     save: "Save",
     saving: "Saving...",
     cancel: "Cancel",

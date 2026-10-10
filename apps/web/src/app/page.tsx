@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button } from "@skolara/ui";
+import { Button, SkolaraMark } from "@skolara/ui";
 
 export default function HomePage() {
   return (
@@ -13,11 +13,9 @@ export default function HomePage() {
         className="pointer-events-none absolute bottom-[-8rem] right-[-6rem] h-96 w-96 rounded-full bg-coral-gradient opacity-20 blur-3xl"
       />
 
-      <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-gradient text-3xl font-bold text-white shadow-glow">
-        S
-      </span>
-      <h1 className="bg-brand-gradient bg-clip-text text-5xl font-extrabold tracking-tight text-transparent">
-        Skolara
+      <SkolaraMark size={64} />
+      <h1 className="text-5xl font-extrabold lowercase tracking-tighter text-[#1E1B4B] dark:text-white">
+        skolara
       </h1>
       <p className="max-w-md text-lg text-slate-600 dark:text-slate-400">
         A modern, AI-assisted school management platform — fees, attendance, gradebook, and

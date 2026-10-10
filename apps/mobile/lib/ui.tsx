@@ -59,7 +59,8 @@ const buttonVariants: Record<
 > = {
   primary: { bg: colors.brand[700], fg: colors.white },
   secondary: { bg: colors.white, fg: colors.brand[700], borderColor: colors.brand[300] },
-  accent: { bg: colors.accent[500], fg: colors.white },
+  // Dark label: white on amber fails contrast.
+  accent: { bg: colors.accent[500], fg: colors.brand[900] },
   ghost: { bg: "transparent", fg: colors.brand[700] },
 };
 

@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { Sidebar } from "@/components/sidebar";
 import { useAuth } from "@/lib/auth-context";
 import { BroadcastBanner } from "@/components/broadcast-banner";
+import { SchoolTheme } from "@/components/school-theme";
 
 export default function DashboardLayout({
   children,
@@ -32,9 +33,10 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen">
+      <SchoolTheme />
       <Sidebar />
       <main className="flex-1 overflow-y-auto bg-slate-50 px-8 py-8 dark:bg-slate-950">
-        <div className="mx-auto flex max-w-5xl flex-col gap-4">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4">
           <BroadcastBanner />
           {children}
         </div>

@@ -3,6 +3,7 @@
 import { useMySchool, useUpdateBranding, useUploadFile } from "@skolara/api-client";
 import { Button, Card, CardHeader, CardTitle, Input, PageHeader } from "@skolara/ui";
 import { useTranslation } from "@skolara/i18n";
+import { DEFAULT_BRAND_COLOR } from "@skolara/utils";
 import { useEffect, useState } from "react";
 
 export default function BrandingPage() {
@@ -12,7 +13,7 @@ export default function BrandingPage() {
   const uploadFile = useUploadFile();
 
   const [logoUrl, setLogoUrl] = useState("");
-  const [primaryColor, setPrimaryColor] = useState("#6D28D9");
+  const [primaryColor, setPrimaryColor] = useState(DEFAULT_BRAND_COLOR);
   const [savedMessage, setSavedMessage] = useState("");
   const [uploadError, setUploadError] = useState("");
 
@@ -23,7 +24,7 @@ export default function BrandingPage() {
     if (school) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLogoUrl(school.logoUrl ?? "");
-      setPrimaryColor(school.primaryColor ?? "#6D28D9");
+      setPrimaryColor(school.primaryColor ?? DEFAULT_BRAND_COLOR);
     }
   }, [school]);
 
@@ -104,12 +105,12 @@ export default function BrandingPage() {
               <div className="flex items-center gap-2">
                 <input
                   type="color"
-                  value={/^#[0-9A-Fa-f]{6}$/.test(primaryColor) ? primaryColor : "#6D28D9"}
+                  value={/^#[0-9A-Fa-f]{6}$/.test(primaryColor) ? primaryColor : DEFAULT_BRAND_COLOR}
                   onChange={(e) => setPrimaryColor(e.target.value)}
                   className="h-9 w-9 cursor-pointer rounded border border-slate-300 dark:border-slate-700"
                 />
                 <Input
-                  placeholder="#6D28D9"
+                  placeholder={DEFAULT_BRAND_COLOR}
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
                   className="max-w-[140px]"

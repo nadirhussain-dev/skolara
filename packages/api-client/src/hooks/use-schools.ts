@@ -8,11 +8,16 @@ import { useApiClient } from "../context";
 
 export const schoolsQueryKey = ["schools"] as const;
 
-export function useMySchool() {
+/**
+ * The signed-in user's own school. Pass `enabled: false` for users who have
+ * none — the platform owner — so the request isn't made just to fail.
+ */
+export function useMySchool(options: { enabled?: boolean } = {}) {
   const api = useApiClient();
   return useQuery({
     queryKey: ["schools", "me"],
     queryFn: () => api.schools.mine(),
+    enabled: options.enabled ?? true,
   });
 }
 
