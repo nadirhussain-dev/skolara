@@ -204,4 +204,28 @@ export class SchoolsService {
     });
     return { available: !existing };
   }
+
+  /**
+   * The little a sign-in screen may show once someone types a school code:
+   * name, logo and colour. Suspended, rejected and not-yet-approved schools
+   * answer exactly like a code that does not exist.
+   */
+  async findPublicByCode(code: string) {
+    if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(code) || RESERVED_SUBDOMAINS.has(code)) {
+      throw new NotFoundException("School not found");
+    }
+    const school = await this.prisma.school.findUnique({
+      where: { subdomain: code },
+      select: { name: true, subdomain: true, logoUrl: true, primaryColor: true, subscriptionStatus: true },
+    });
+    if (!school || !["ACTIVE", "TRIAL"].includes(school.subscriptionStatus)) {
+      throw new NotFoundException("School not found");
+    }
+    return {
+      name: school.name,
+      subdomain: school.subdomain,
+      logoUrl: school.logoUrl,
+      primaryColor: school.primaryColor,
+    };
+  }
 }

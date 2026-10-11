@@ -81,3 +81,15 @@ export const registerSchoolResponseSchema = z.object({
   subscriptionStatus: subscriptionStatusSchema,
 });
 export type RegisterSchoolResponse = z.infer<typeof registerSchoolResponseSchema>;
+
+/**
+ * What anyone may know about a school before signing in: enough to show its
+ * name, logo and colour on the sign-in screen once its code is entered.
+ */
+export const publicSchoolSchema = z.object({
+  name: z.string(),
+  subdomain: z.string(),
+  logoUrl: z.string().nullable(),
+  primaryColor: z.string().nullable(),
+});
+export type PublicSchool = z.infer<typeof publicSchoolSchema>;

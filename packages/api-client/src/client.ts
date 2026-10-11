@@ -1,4 +1,10 @@
 import type {
+  BulkInvoiceInput,
+  BulkInvoiceResult,
+  Defaulter,
+  InvoiceFilter,
+  InvoiceList,
+  PublicSchool,
   NotificationInbox,
   BudgetCategory,
   CreateBudgetCategoryInput,
@@ -718,6 +724,21 @@ export function createApiClient({
         }),
       forStudent: (studentId: string) =>
         request<Invoice[]>(`/invoices/student/${studentId}`),
+      list: (filter: { status?: InvoiceFilter; classId?: string } = {}) => {
+        const query = new URLSearchParams();
+        if (filter.status && filter.status !== "ALL") query.set("status", filter.status);
+        if (filter.classId) query.set("classId", filter.classId);
+        const suffix = query.toString();
+        return request<InvoiceList>(`/invoices${suffix ? `?${suffix}` : ""}`);
+      },
+      createBulk: (input: BulkInvoiceInput) =>
+        request<BulkInvoiceResult>("/invoices/bulk", { method: "POST", body: JSON.stringify(input) }),
+      defaulters: () => request<Defaulter[]>("/invoices/defaulters"),
+      remind: (studentIds: string[]) =>
+        request<{ reminded: number; withoutParent: number }>("/invoices/reminders", {
+          method: "POST",
+          body: JSON.stringify({ studentIds }),
+        }),
     },
     attendance: {
       mark: (input: MarkAttendanceInput) =>

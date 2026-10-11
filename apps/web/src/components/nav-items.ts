@@ -166,7 +166,7 @@ export const NAV_ITEMS: NavItem[] = [
 
   {
     href: "/school/invoices",
-    labelKey: "nav.invoices",
+    labelKey: "nav.fees",
     roles: ["SCHOOL_ADMIN"],
     groupKey: "nav.finance",
   },

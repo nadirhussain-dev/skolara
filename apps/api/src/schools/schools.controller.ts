@@ -56,6 +56,15 @@ export class SchoolsController {
     return this.schoolsService.isSubdomainAvailable(subdomain.toLowerCase());
   }
 
+  // Public: the sign-in screen themes itself from this once a school code is
+  // typed. Throttled so it can't be used to enumerate schools quickly.
+  @Get("public/:code")
+  @Public()
+  @Throttle({ default: { limit: 30, ttl: 60 * 1000 } })
+  findPublic(@Param("code") code: string) {
+    return this.schoolsService.findPublicByCode(code.trim().toLowerCase());
+  }
+
   @Post()
   @Roles("SUPER_ADMIN")
   create(@Body(new ZodValidationPipe(createSchoolSchema)) body: CreateSchoolInput) {
