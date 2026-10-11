@@ -645,6 +645,8 @@ export function createApiClient({
           method: "POST",
           body: JSON.stringify(input),
         }),
+      /** Name, logo and colour for a school code. 404 when there is no such active school. */
+      findPublic: (code: string) => request<PublicSchool>(`/schools/public/${encodeURIComponent(code)}`),
       subdomainAvailable: (subdomain: string) =>
         request<{ available: boolean }>(
           `/schools/subdomain-available/${encodeURIComponent(subdomain)}`,

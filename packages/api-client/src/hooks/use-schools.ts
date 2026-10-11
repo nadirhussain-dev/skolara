@@ -81,3 +81,25 @@ export function useRejectSchool() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: schoolsQueryKey }),
   });
 }
+
+/** A school code as typed: lower-case letters, digits and hyphens, 3 to 40 long. */
+export function isSchoolCode(value: string): boolean {
+  return /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(value);
+}
+
+/**
+ * Looks a school up by its code before sign-in, so the screen can show the
+ * school's name, logo and colour. Not found is an answer, not a failure, so
+ * it is not retried.
+ */
+export function usePublicSchool(code: string) {
+  const api = useApiClient();
+  const normalised = code.trim().toLowerCase();
+  return useQuery({
+    queryKey: ["public-school", normalised],
+    queryFn: () => api.schools.findPublic(normalised),
+    enabled: isSchoolCode(normalised),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+}
