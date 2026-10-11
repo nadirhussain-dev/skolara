@@ -6,6 +6,8 @@ import { z } from "zod";
 // so copying .env.example verbatim would stop the API booting.
 const blankAsUnset = (value: unknown) => (value === "" ? undefined : value);
 
+const MIN_PRODUCTION_SECRET_LENGTH = 32;
+
 // Fails fast on boot if required config is missing/malformed, instead of
 // surfacing as a cryptic runtime error the first time a route needs it.
 const envSchema = z.object({
@@ -24,6 +26,11 @@ const envSchema = z.object({
   // (same-origin/non-browser only) in production; permissive in development.
   CORS_ORIGINS: z.string().optional(),
   ENABLE_API_DOCS: z.string().optional(),
+  // How many reverse proxies sit in front of the API (load balancer, CDN).
+  // Rate limiting is per client IP: left at 0 behind a proxy, every user
+  // shares the proxy's address and one busy school throttles everyone; set
+  // too high, a client can forge X-Forwarded-For and dodge the limit.
+  TRUST_PROXY: z.preprocess(blankAsUnset, z.coerce.number().int().min(0).max(10).default(0)),
 
   SUPABASE_URL: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
@@ -75,6 +82,23 @@ export function validateEnv(config: Record<string, unknown>): Env {
       throw new Error(
         "Refusing to start in production with a placeholder JWT secret — set real JWT_ACCESS_SECRET/JWT_REFRESH_SECRET values.",
       );
+    }
+  }
+
+  if (result.data.NODE_ENV === "production") {
+    // HS256 is only as strong as its key: a short secret can be brute-forced
+    // offline from any one captured token, after which every session,
+    // including the platform owner's, can be forged.
+    for (const name of ["JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET"] as const) {
+      if (result.data[name].length < MIN_PRODUCTION_SECRET_LENGTH) {
+        throw new Error(
+          `${name} must be at least ${MIN_PRODUCTION_SECRET_LENGTH} characters in production — generate one with: openssl rand -base64 48`,
+        );
+      }
+    }
+    // Shared, an access token would verify as a refresh token and vice versa.
+    if (result.data.JWT_ACCESS_SECRET === result.data.JWT_REFRESH_SECRET) {
+      throw new Error("JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different values.");
     }
   }
 

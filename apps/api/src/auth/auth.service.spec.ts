@@ -6,6 +6,13 @@ import * as bcrypt from "bcrypt";
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuthService } from "./auth.service";
+import { LoginAttemptsService } from "./login-attempts.service";
+
+// The real bcrypt, with `compare` wrapped so a test can see that it ran.
+jest.mock("bcrypt", () => {
+  const actual = jest.requireActual<typeof import("bcrypt")>("bcrypt");
+  return { ...actual, compare: jest.fn(actual.compare) };
+});
 
 describe("AuthService", () => {
   let service: AuthService;
@@ -90,6 +97,7 @@ describe("AuthService", () => {
         { provide: JwtService, useValue: jwt },
         { provide: ConfigService, useValue: config },
         { provide: NotificationsService, useValue: notifications },
+        LoginAttemptsService,
       ],
     }).compile();
 
@@ -193,6 +201,90 @@ describe("AuthService", () => {
         ).rejects.toThrow(UnauthorizedException);
       },
     );
+
+    it("spends the same bcrypt work on an unknown email as on a wrong password", async () => {
+      const compare = bcrypt.compare as unknown as jest.Mock;
+      compare.mockClear();
+      emailMatches();
+
+      await expect(
+        service.login({ email: "nobody@x.test", password: PASSWORD }),
+      ).rejects.toThrow("Invalid credentials");
+
+      // Skipping the comparison would make "no such account" answer faster
+      // than "wrong password", which is enough to enumerate emails.
+      expect(compare).toHaveBeenCalledTimes(1);
+      expect(compare).toHaveBeenCalledWith(PASSWORD, expect.stringMatching(/^\$2b\$10\$/));
+    });
+
+    it("does not reveal a suspended school to someone without the password", async () => {
+      emailMatches({ ...baseUser, passwordHash });
+      prisma.school.findUnique.mockResolvedValue({
+        ...activeSchool,
+        subscriptionStatus: "SUSPENDED",
+      });
+
+      await expect(
+        service.login({ email: baseUser.email, password: "wrong-password" }),
+      ).rejects.toThrow("Invalid credentials");
+    });
+
+    it("does tell the real account holder that their school is suspended", async () => {
+      emailMatches({ ...baseUser, passwordHash });
+      prisma.school.findUnique.mockResolvedValue({
+        ...activeSchool,
+        subscriptionStatus: "SUSPENDED",
+      });
+
+      await expect(
+        service.login({ email: baseUser.email, password: PASSWORD }),
+      ).rejects.toThrow(/suspended/);
+    });
+
+    it("locks the account after five wrong passwords, even for the right one", async () => {
+      emailMatches({ ...baseUser, passwordHash });
+      prisma.school.findUnique.mockResolvedValue(activeSchool);
+
+      for (let i = 0; i < 5; i++) {
+        await expect(
+          service.login({ email: baseUser.email, password: "wrong-password" }),
+        ).rejects.toThrow(UnauthorizedException);
+      }
+
+      await expect(
+        service.login({ email: baseUser.email, password: PASSWORD }),
+      ).rejects.toMatchObject({ status: 429 });
+    });
+
+    it("locks out guesses against an email that does not exist, the same way", async () => {
+      emailMatches();
+
+      for (let i = 0; i < 5; i++) {
+        await expect(
+          service.login({ email: "nobody@x.test", password: "guess" }),
+        ).rejects.toThrow(UnauthorizedException);
+      }
+
+      await expect(
+        service.login({ email: "nobody@x.test", password: "guess" }),
+      ).rejects.toMatchObject({ status: 429 });
+    });
+
+    it("clears earlier failures on a successful sign-in", async () => {
+      emailMatches({ ...baseUser, passwordHash });
+      prisma.school.findUnique.mockResolvedValue(activeSchool);
+
+      for (let round = 0; round < 3; round++) {
+        for (let i = 0; i < 4; i++) {
+          await expect(
+            service.login({ email: baseUser.email, password: "wrong-password" }),
+          ).rejects.toThrow(UnauthorizedException);
+        }
+        await expect(
+          service.login({ email: baseUser.email, password: PASSWORD }),
+        ).resolves.toBeDefined();
+      }
+    });
 
     it("rejects an incorrect password", async () => {
       emailMatches({ ...baseUser, passwordHash });

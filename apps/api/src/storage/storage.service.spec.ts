@@ -10,7 +10,11 @@ describe("StorageService", () => {
   const png = (overrides: Partial<{ mimetype: string; size: number; buffer: Buffer }> = {}) => ({
     mimetype: "image/png",
     size: 1024,
-    buffer: Buffer.from("fake-png-bytes"),
+    // A real PNG signature: the service checks content, not just the label.
+    buffer: Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      Buffer.from("fake-png-body"),
+    ]),
     ...overrides,
   });
 
@@ -46,6 +50,14 @@ describe("StorageService", () => {
     await expect(
       service.upload("school-1", "PAYMENT_SCREENSHOT", png({ size: MAX_UPLOAD_BYTES + 1 })),
     ).rejects.toBeInstanceOf(BadRequestException);
+    expect(provider.upload).not.toHaveBeenCalled();
+  });
+
+  it("rejects a file whose contents are not what its type claims", async () => {
+    const html = Buffer.from("<!DOCTYPE html><script>alert(1)</script>");
+    await expect(
+      service.upload("school-1", "PAYMENT_SCREENSHOT", png({ buffer: html, size: html.length })),
+    ).rejects.toThrow(/don't match/);
     expect(provider.upload).not.toHaveBeenCalled();
   });
 

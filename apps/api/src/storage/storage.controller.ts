@@ -14,6 +14,7 @@ import {
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ConfigService } from "@nestjs/config";
+import { Throttle } from "@nestjs/throttler";
 import type { Response } from "express";
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
@@ -51,6 +52,8 @@ export class StorageController {
     private config: ConfigService,
   ) {}
 
+  // Each upload is up to 10MB of storage someone else pays for.
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Post()
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor("file", { limits: { fileSize: MAX_UPLOAD_BYTES } }))
@@ -92,7 +95,19 @@ export class StorageController {
     if (!isFile) throw new NotFoundException("File not found");
 
     const extension = name.split(".").pop() ?? "";
-    res.setHeader("Content-Type", MIME_BY_EXTENSION[extension] ?? "application/octet-stream");
+    const contentType = MIME_BY_EXTENSION[extension] ?? "application/octet-stream";
+    res.setHeader("Content-Type", contentType);
+    // Belt and braces for user-supplied files served from the API's own
+    // origin: never let the browser guess a different type, never let the
+    // response run script or be framed, and only show images and PDFs inline.
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
+    res.setHeader(
+      "Content-Disposition",
+      contentType.startsWith("image/") || contentType === "application/pdf"
+        ? "inline"
+        : "attachment",
+    );
     createReadStream(path).pipe(res);
   }
 }

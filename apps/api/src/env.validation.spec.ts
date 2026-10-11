@@ -79,9 +79,47 @@ describe("validateEnv", () => {
     ).toThrow(/placeholder/);
   });
 
-  it("allows a real secret in production", () => {
-    expect(() =>
-      validateEnv({ ...validBase, NODE_ENV: "production" }),
-    ).not.toThrow();
+  const strongAccess = "a".repeat(20) + "Kq7ZpX2mVb9T4wLs8RnE";
+  const strongRefresh = "b".repeat(20) + "Hy3UcF6jNd1G5oMt0AeW";
+  const production = {
+    ...validBase,
+    NODE_ENV: "production",
+    JWT_ACCESS_SECRET: strongAccess,
+    JWT_REFRESH_SECRET: strongRefresh,
+  };
+
+  it("allows real secrets in production", () => {
+    expect(() => validateEnv(production)).not.toThrow();
+  });
+
+  it("refuses a short JWT secret in production", () => {
+    expect(() => validateEnv({ ...production, JWT_ACCESS_SECRET: "a-real-secret" })).toThrow(
+      /JWT_ACCESS_SECRET must be at least 32/,
+    );
+    expect(() => validateEnv({ ...production, JWT_REFRESH_SECRET: "short" })).toThrow(
+      /JWT_REFRESH_SECRET must be at least 32/,
+    );
+  });
+
+  it("refuses the same secret for access and refresh tokens in production", () => {
+    expect(() => validateEnv({ ...production, JWT_REFRESH_SECRET: strongAccess })).toThrow(
+      /must be different/,
+    );
+  });
+
+  it("still lets short secrets through in development, so a clean checkout boots", () => {
+    expect(() => validateEnv(validBase)).not.toThrow();
+  });
+
+  it("trusts no proxy unless told how many there are", () => {
+    expect(validateEnv(validBase).TRUST_PROXY).toBe(0);
+    expect(validateEnv({ ...validBase, TRUST_PROXY: "" }).TRUST_PROXY).toBe(0);
+    expect(validateEnv({ ...validBase, TRUST_PROXY: "1" }).TRUST_PROXY).toBe(1);
+  });
+
+  it("rejects a proxy count that isn't a small whole number", () => {
+    expect(() => validateEnv({ ...validBase, TRUST_PROXY: "true" })).toThrow();
+    expect(() => validateEnv({ ...validBase, TRUST_PROXY: "-1" })).toThrow();
+    expect(() => validateEnv({ ...validBase, TRUST_PROXY: "99" })).toThrow();
   });
 });

@@ -6,6 +6,7 @@ import {
   type UploadPurpose,
   type UploadedFile,
 } from "@skolara/types";
+import { contentMatchesType } from "./file-signature";
 import { STORAGE_PROVIDER, type StorageProvider } from "./storage-provider.interface";
 
 const EXTENSION_BY_MIME: Record<string, string> = {
@@ -52,6 +53,13 @@ export class StorageService {
     if (!allowed.includes(file.mimetype)) {
       throw new BadRequestException(
         `Unsupported file type ${file.mimetype} — allowed: ${allowed.join(", ")}`,
+      );
+    }
+
+    // The declared type is the client's word for it; the bytes are not.
+    if (!contentMatchesType(file.buffer, file.mimetype)) {
+      throw new BadRequestException(
+        `This file's contents don't match its type (${file.mimetype}). Upload the original file.`,
       );
     }
 

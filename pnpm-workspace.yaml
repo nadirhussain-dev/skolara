@@ -10,3 +10,12 @@ allowBuilds:
   prisma: true
   sharp: true
   unrs-resolver: true
+# Security floors for packages we only depend on indirectly. Each lifts a
+# transitive dependency past a published advisory; remove an entry once the
+# parent package requires the fixed version itself.
+overrides:
+  proxy-addr@<2.0.8: ^2.0.8
+  multer@<2.3.0: ^2.3.0
+  lodash@<4.17.24: ^4.17.24
+  postcss@<8.5.18: ^8.5.18
+  sharp@<0.35.5: ^0.35.5
