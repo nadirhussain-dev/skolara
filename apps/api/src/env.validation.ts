@@ -32,6 +32,10 @@ const envSchema = z.object({
   // too high, a client can forge X-Forwarded-For and dodge the limit.
   TRUST_PROXY: z.preprocess(blankAsUnset, z.coerce.number().int().min(0).max(10).default(0)),
 
+  // Skolara notifies people inside its own apps. WhatsApp and SMS stay off
+  // unless a deployment deliberately sets this to "true".
+  PHONE_ALERTS_ENABLED: z.preprocess(blankAsUnset, z.enum(["true", "false"]).default("false")),
+
   SUPABASE_URL: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   SUPABASE_STORAGE_BUCKET: z.string().optional(),

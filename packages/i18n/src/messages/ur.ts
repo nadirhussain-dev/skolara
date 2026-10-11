@@ -67,6 +67,8 @@ export const ur: Messages = {
   },
 
   shell: {
+    skipToContent: "مواد پر جائیں",
+    openMenu: "مینو کھولیں",
     pageError: "اس صفحے میں خرابی آ گئی",
     pageErrorBody: "یہ حصہ کھولنے میں کچھ غلط ہو گیا۔ آپ کے باقی صفحات پر کوئی اثر نہیں پڑا۔",
   },
@@ -1234,22 +1236,38 @@ export const ur: Messages = {
 
   notices: {
     title: "اعلانات",
-    alertChannel: "والدین تک پیغام کیسے پہنچے",
-    alertChannelBody:
-      "اعلانات، فیس کی اطلاعات اور غیر حاضری کی خبر پر لاگو۔ ایپ رکھنے والوں کو پش اطلاع بہرحال جاتی ہے۔",
-    smsCharged: "SMS پر آپ کا سروس فراہم کنندہ فی پیغام رقم لیتا ہے۔ واٹس ایپ پر نہیں۔",
-    broadcast: "اعلان جاری کریں",
-    sending: "بھیجا جا رہا ہے...",
-    publishWhatsApp: "شائع کریں + واٹس ایپ پر اطلاع",
-    publishSms: "شائع کریں + SMS پر اطلاع",
-    publishBoth: "شائع کریں + واٹس ایپ اور SMS پر اطلاع",
-    recent: "حالیہ اعلانات",
+    subtitle: "خاندانوں اور عملے کو ایک بار بتائیں۔ یہ انہیں اسکولارا ایپ میں ملتا ہے۔",
+    newNotice: "نیا اعلان",
+    noticeTitle: "عنوان",
+    noticeTitlePlaceholder: "جمعے کو اسکول بند رہے گا",
+    message: "پیغام",
+    messagePlaceholder: "لکھیں کہ لوگوں کو کیا جاننا ہے اور انہیں کیا کرنا ہے۔",
+    sendTo: "کس کو بھیجیں",
+    whichClass: "کون سی کلاس",
+    chooseClass: "کلاس منتخب کریں",
+    deliveryNote: "منتخب کردہ ہر فرد کو ایپ میں اطلاع ملتی ہے اور اعلان ان کے ان باکس میں رہتا ہے۔ SMS یا واٹس ایپ پر کچھ نہیں بھیجا جاتا۔",
+    publish: "اعلان شائع کریں",
+    sending: "شائع ہو رہا ہے...",
+    published: "شائع ہو گیا۔ لوگوں کو اطلاع دی جا رہی ہے۔",
+    titleRequired: "اعلان کا عنوان لکھیں۔",
+    messageRequired: "پیغام لکھیں۔",
+    classRequired: "وہ کلاس منتخب کریں جس کے لیے یہ ہے۔",
+    recent: "بھیجے گئے اعلانات",
+    emptyTitle: "ابھی کوئی اعلان نہیں",
+    emptyBody: "آپ کا پہلا شائع کردہ اعلان یہاں نظر آئے گا۔",
+    loadError: "اعلانات لوڈ نہیں ہو سکے۔",
+    preview: "فون پر یہ کیسا دکھے گا",
+    previewTitleFallback: "آپ کا عنوان",
+    previewBodyFallback: "آپ کا پیغام یہاں نظر آئے گا۔",
   },
 
-  communication: {
-    whatsappOnly: "صرف واٹس ایپ",
-    smsOnly: "صرف SMS",
-    both: "واٹس ایپ اور SMS",
+  notifications: {
+    title: "اطلاعات",
+    bellUnread: "اطلاعات، {count} بغیر پڑھی",
+    markAllRead: "سب پڑھی ہوئی کریں",
+    emptyTitle: "آپ نے سب دیکھ لیا ہے",
+    emptyBody: "نئی اطلاعات یہاں نظر آئیں گی۔",
+    loadError: "آپ کی اطلاعات لوڈ نہیں ہو سکیں۔",
   },
 
   absences: {

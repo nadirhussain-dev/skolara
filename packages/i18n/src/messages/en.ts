@@ -69,6 +69,8 @@ export const en = {
   },
 
   shell: {
+    skipToContent: "Skip to content",
+    openMenu: "Open menu",
     pageError: "This page hit a snag",
     pageErrorBody: "Something went wrong loading this section. Your other pages are unaffected.",
   },
@@ -1242,22 +1244,38 @@ export const en = {
 
   notices: {
     title: "Notices",
-    alertChannel: "How alerts reach parents",
-    alertChannelBody:
-      "Applies to notices, fee updates and absence alerts. Push notifications go to everyone with the app either way.",
-    smsCharged: "SMS is charged per message by your provider. WhatsApp is not.",
-    broadcast: "Broadcast a notice",
-    sending: "Sending...",
-    publishWhatsApp: "Publish + notify via WhatsApp",
-    publishSms: "Publish + notify by SMS",
-    publishBoth: "Publish + notify by WhatsApp and SMS",
-    recent: "Recent notices",
+    subtitle: "Tell families and staff something once. It reaches them in the Skolara app.",
+    newNotice: "New notice",
+    noticeTitle: "Title",
+    noticeTitlePlaceholder: "School closed on Friday",
+    message: "Message",
+    messagePlaceholder: "Write what people need to know and what they should do.",
+    sendTo: "Send to",
+    whichClass: "Which class",
+    chooseClass: "Choose a class",
+    deliveryNote: "Everyone chosen gets a notification in the app and finds the notice in their inbox. Nothing is sent by SMS or WhatsApp.",
+    publish: "Publish notice",
+    sending: "Publishing...",
+    published: "Published. People are being notified now.",
+    titleRequired: "Give the notice a title.",
+    messageRequired: "Write the message.",
+    classRequired: "Choose the class this is for.",
+    recent: "Sent notices",
+    emptyTitle: "No notices yet",
+    emptyBody: "The first notice you publish will appear here.",
+    loadError: "We could not load the notices.",
+    preview: "How it looks on a phone",
+    previewTitleFallback: "Your title",
+    previewBodyFallback: "Your message appears here.",
   },
 
-  communication: {
-    whatsappOnly: "WhatsApp only",
-    smsOnly: "SMS only",
-    both: "WhatsApp and SMS",
+  notifications: {
+    title: "Notifications",
+    bellUnread: "Notifications, {count} unread",
+    markAllRead: "Mark all as read",
+    emptyTitle: "You are all caught up",
+    emptyBody: "New alerts will appear here.",
+    loadError: "We could not load your notifications.",
   },
 
   absences: {

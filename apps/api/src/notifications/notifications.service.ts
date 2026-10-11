@@ -17,6 +17,15 @@ export interface PushPayload {
   data?: Record<string, string>;
 }
 
+/**
+ * Skolara notifies people inside its own apps: an inbox entry plus a push.
+ * WhatsApp and SMS alerts are off unless a deployment turns them on with
+ * PHONE_ALERTS_ENABLED=true. Read on each call so it can't be cached wrong.
+ */
+export function phoneAlertsEnabled(): boolean {
+  return process.env.PHONE_ALERTS_ENABLED === "true";
+}
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -71,7 +80,7 @@ export class NotificationsService {
     toPhone: string | null | undefined,
     body: string,
   ) {
-    if (!toPhone) return;
+    if (!phoneAlertsEnabled() || !toPhone) return;
 
     const channel = await this.phoneChannel(schoolId);
     await Promise.all([
@@ -92,6 +101,7 @@ export class NotificationsService {
     recipients: readonly (string | null)[],
     body: string,
   ) {
+    if (!phoneAlertsEnabled()) return;
     const numbers = recipients.filter((phone): phone is string => Boolean(phone));
     if (numbers.length === 0) return;
 
@@ -135,12 +145,28 @@ export class NotificationsService {
   }
 
   /**
-   * Fans a notification out to every device the given users have registered.
-   * Silently no-ops when none of them have the app installed.
+   * Notifies users: writes an entry to each one's in-app inbox, then fans a
+   * push out to every device they have registered. The inbox entry is written
+   * first and regardless of push, so a user with the app closed, or with no
+   * device at all, still finds the message when they next open Skolara.
    */
   async sendPush(userIds: string[], payload: PushPayload) {
     const uniqueUserIds = [...new Set(userIds)].filter(Boolean);
     if (uniqueUserIds.length === 0) return;
+
+    try {
+      await this.prisma.notification.createMany({
+        data: uniqueUserIds.map((userId) => ({
+          userId,
+          title: payload.title,
+          body: payload.body,
+          data: payload.data,
+        })),
+      });
+    } catch (error) {
+      // Same rule as every channel: never fail the operation that triggered it.
+      this.logger.warn(`Could not write in-app notifications: ${error}`);
+    }
 
     const devices = await this.prisma.deviceToken.findMany({
       where: { userId: { in: uniqueUserIds } },

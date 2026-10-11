@@ -9,6 +9,7 @@ describe("NotificationsService.sendPush", () => {
   let push: { send: jest.Mock };
   let prisma: {
     deviceToken: { findMany: jest.Mock; deleteMany: jest.Mock };
+    notification: { createMany: jest.Mock };
   };
   let service: NotificationsService;
 
@@ -19,6 +20,7 @@ describe("NotificationsService.sendPush", () => {
         findMany: jest.fn().mockResolvedValue([{ token: "tok-a" }, { token: "tok-b" }]),
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
+      notification: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
     };
     service = new NotificationsService(
       { send: jest.fn() } as unknown as WhatsAppProvider,
@@ -27,6 +29,29 @@ describe("NotificationsService.sendPush", () => {
       { send: jest.fn() } as unknown as SmsProvider,
       prisma as unknown as PrismaService,
     );
+  });
+
+  it("writes an inbox entry for each user, even when nobody has a device", async () => {
+    prisma.deviceToken.findMany.mockResolvedValue([]);
+    await service.sendPush(["user-1", "user-2", "user-1"], {
+      title: "Hi",
+      body: "There",
+      data: { screen: "notices" },
+    });
+
+    expect(prisma.notification.createMany).toHaveBeenCalledWith({
+      data: [
+        { userId: "user-1", title: "Hi", body: "There", data: { screen: "notices" } },
+        { userId: "user-2", title: "Hi", body: "There", data: { screen: "notices" } },
+      ],
+    });
+    expect(push.send).not.toHaveBeenCalled();
+  });
+
+  it("still pushes when the inbox write fails", async () => {
+    prisma.notification.createMany.mockRejectedValue(new Error("db down"));
+    await service.sendPush(["user-1"], { title: "Hi", body: "There" });
+    expect(push.send).toHaveBeenCalled();
   });
 
   it("sends one batched push to every device the users have registered", async () => {
@@ -81,6 +106,23 @@ describe("NotificationsService.sendPush", () => {
 
 
 describe("NotificationsService phone channel", () => {
+  // Phone alerts are off by default; these cover a deployment that opts in.
+  beforeAll(() => {
+    process.env.PHONE_ALERTS_ENABLED = "true";
+  });
+  afterAll(() => {
+    delete process.env.PHONE_ALERTS_ENABLED;
+  });
+
+  it("sends nothing by phone unless the deployment turns it on", async () => {
+    delete process.env.PHONE_ALERTS_ENABLED;
+    await service.sendPhoneAlert(SCHOOL, PHONE, "Ali was marked absent");
+    await service.sendPhoneAlerts(SCHOOL, [PHONE], "School closed tomorrow");
+    expect(whatsapp.send).not.toHaveBeenCalled();
+    expect(sms.send).not.toHaveBeenCalled();
+    process.env.PHONE_ALERTS_ENABLED = "true";
+  });
+
   const SCHOOL = "school-1";
   const PHONE = "+923001234567";
 

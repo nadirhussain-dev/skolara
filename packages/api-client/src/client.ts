@@ -1,4 +1,5 @@
 import type {
+  NotificationInbox,
   BudgetCategory,
   CreateBudgetCategoryInput,
   CreateExpenseInput,
@@ -838,6 +839,15 @@ export function createApiClient({
       schoolToday: () => request<SchoolToday>("/analytics/school/today"),
       defaulterRisk: (studentId: string) =>
         request<DefaulterRiskWithExplanation>(`/analytics/defaulter-risk/${studentId}`),
+    },
+    notifications: {
+      list: () => request<NotificationInbox>("/notifications"),
+      unreadCount: () => request<{ unreadCount: number }>("/notifications/unread-count"),
+      markRead: (ids?: string[]) =>
+        request<{ updated: number }>("/notifications/read", {
+          method: "POST",
+          body: JSON.stringify(ids ? { ids } : {}),
+        }),
     },
     finance: {
       overview: (month: string) =>

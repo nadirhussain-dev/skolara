@@ -186,6 +186,7 @@ model User {
   refreshTokens           RefreshToken[]
   passwordResetTokens     PasswordResetToken[]
   deviceTokens            DeviceToken[]
+  notifications           Notification[]
   timetableLessons        TimetableEntry[]    @relation("TimetableTeacher")
   authoredCalendarEvents  CalendarEvent[]     @relation("CalendarEventAuthor")
   leaveRequests           LeaveRequest[]      @relation("LeaveRequester")
@@ -1490,4 +1491,22 @@ model Expense {
   @@index([schoolId, spentOn])
   @@index([schoolId, status])
   @@index([categoryId, spentOn])
+}
+
+/// One entry in a user's in-app inbox. Written every time the user is
+/// notified, whether or not a push reached their phone, so nothing is lost
+/// when the app is closed or push permission is off.
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  /// Deep-link target and ids, the same payload the push carries.
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
 }

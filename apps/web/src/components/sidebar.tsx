@@ -5,7 +5,7 @@ import { useTranslation, type MessageKey } from "@skolara/i18n";
 import { SkolaraLogo, SkolaraMark, cn } from "@skolara/ui";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { LanguageSwitcher } from "./language-switcher";
 import { isInMvpNav } from "./mvp-scope";
@@ -25,7 +25,7 @@ function initials(...words: string[]) {
  * a small signature at the bottom. The platform owner, who has no school,
  * sees the Skolara logo instead.
  */
-export function Sidebar() {
+export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: () => void } = {}) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const { t } = useTranslation();
@@ -60,8 +60,33 @@ export function Sidebar() {
     return best;
   }, [groups, pathname]);
 
+  // Following a link closes the drawer on small screens.
+  useEffect(() => {
+    onClose?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only the route matters
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose?.();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col bg-brand-900 text-white">
+    <>
+    {open && (
+      <div aria-hidden onClick={onClose} className="fixed inset-0 z-30 bg-slate-950/50 lg:hidden print:hidden" />
+    )}
+    <aside
+      id="app-sidebar"
+      className={cn(
+        "fixed inset-y-0 start-0 z-40 flex h-screen w-64 shrink-0 flex-col bg-brand-900 text-white transition-transform duration-200 motion-reduce:transition-none lg:sticky lg:top-0 lg:translate-x-0 print:hidden",
+        open ? "translate-x-0" : "invisible -translate-x-full rtl:translate-x-full lg:visible",
+      )}
+    >
       <div className="px-4 py-5">
         {hasSchool ? (
           <Link href="/" className="flex items-center gap-3">
@@ -172,5 +197,6 @@ export function Sidebar() {
         </div>
       )}
     </aside>
+    </>
   );
 }
