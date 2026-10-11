@@ -84,7 +84,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       id="app-sidebar"
       className={cn(
         "fixed inset-y-0 start-0 z-40 flex h-screen w-64 shrink-0 flex-col bg-brand-900 text-white transition-transform duration-200 motion-reduce:transition-none lg:sticky lg:top-0 lg:translate-x-0 print:hidden",
-        open ? "translate-x-0" : "invisible -translate-x-full rtl:translate-x-full lg:visible",
+        open ? "translate-x-0" : "max-lg:invisible max-lg:-translate-x-full max-lg:rtl:translate-x-full",
       )}
     >
       <div className="px-4 py-5">

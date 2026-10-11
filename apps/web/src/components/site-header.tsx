@@ -1,7 +1,7 @@
 import { SkolaraLogo } from "@skolara/ui";
 import Link from "next/link";
 
-const link = "inline-flex min-h-[2.75rem] items-center rounded-lg px-3 text-sm font-bold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800";
+const link = "inline-flex min-h-[2.75rem] items-center whitespace-nowrap rounded-lg px-3 text-sm font-bold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800";
 
 /** Top bar for the public marketing pages. */
 export function SiteHeader() {
@@ -12,9 +12,9 @@ export function SiteHeader() {
           <SkolaraLogo size={32} />
         </Link>
         <nav aria-label="Main" className="flex items-center gap-1">
-          <Link href="/pricing" className={link}>Pricing</Link>
+          <Link href="/pricing" className={`${link} max-sm:hidden`}>Pricing</Link>
           <Link href="/login" className={link}>Sign in</Link>
-          <Link href="/signup" className="ms-1 inline-flex min-h-[2.75rem] items-center rounded-lg bg-brand-700 px-4 text-sm font-bold text-white hover:bg-brand-800">
+          <Link href="/signup" className="ms-1 inline-flex min-h-[2.75rem] items-center whitespace-nowrap rounded-lg bg-brand-700 px-4 text-sm font-bold text-white hover:bg-brand-800">
             Start free trial
           </Link>
         </nav>
