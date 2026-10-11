@@ -144,6 +144,27 @@ export const ur: Messages = {
     noInvoicesBody: "اوپر سے پہلی انوائس جاری کریں۔",
   },
 
+  profile: {
+    back: "تمام طلبہ",
+    notFound: "یہ طالب علم نہیں ملا۔",
+    born: "تاریخ پیدائش {date}",
+    feesTitle: "فیس",
+    feesOwed: "واجب الادا {amount}",
+    feesClear: "کچھ واجب الادا نہیں",
+    addInvoice: "انوائس شامل کریں",
+    addInvoiceTitle: "انوائس شامل کریں",
+    invoiceFor: "یہ کس کے لیے ہے",
+    invoiceInvalid: "لکھیں کہ یہ کس کے لیے ہے، 0 سے زیادہ رقم اور آخری تاریخ۔",
+    familyTitle: "خاندان",
+    chooseParent: "والدین کا اکاؤنٹ",
+    noParentAccounts: "کوئی غیر منسلک والدین اکاؤنٹ نہیں۔ پہلے اکاؤنٹس سے دعوت دیں۔",
+    certificatesTitle: "سرٹیفکیٹ",
+    certificateReady: "سرٹیفکیٹ {serial} تیار ہے۔",
+    removeParent: "{name} کو ہٹائیں",
+    moveClass: "کلاس",
+    classSaved: "کلاس تبدیل ہو گئی۔",
+  },
+
   examResults: {
     title: "امتحانات اور نتائج",
     subtitle: "امتحان طے کریں، مضمون وار نمبر درج کریں اور کلاس کی کارکردگی دیکھیں۔",

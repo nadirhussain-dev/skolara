@@ -146,6 +146,27 @@ export const en = {
     noInvoicesBody: "Raise the first invoice above.",
   },
 
+  profile: {
+    back: "All students",
+    notFound: "We could not find this student.",
+    born: "Born {date}",
+    feesTitle: "Fees",
+    feesOwed: "Owes {amount}",
+    feesClear: "Nothing owed",
+    addInvoice: "Add invoice",
+    addInvoiceTitle: "Add an invoice",
+    invoiceFor: "What it is for",
+    invoiceInvalid: "Fill in what it is for, an amount above 0 and a due date.",
+    familyTitle: "Family",
+    chooseParent: "Parent account",
+    noParentAccounts: "There are no unlinked parent accounts. Invite one from Accounts first.",
+    certificatesTitle: "Certificates",
+    certificateReady: "Certificate {serial} is ready.",
+    removeParent: "Remove {name}",
+    moveClass: "Class",
+    classSaved: "Class updated.",
+  },
+
   examResults: {
     title: "Exams and results",
     subtitle: "Schedule exams, enter marks subject by subject and see how the class did.",

@@ -179,6 +179,8 @@ export interface StudentWithUser {
   id: string;
   admissionNumber: string;
   classId: string | null;
+  /** ISO date; the API sends the full profile row. */
+  dateOfBirth?: string;
   user: {
     id: string;
     firstName: string;
