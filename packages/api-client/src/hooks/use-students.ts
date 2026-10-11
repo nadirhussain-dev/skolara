@@ -16,10 +16,7 @@ export function useAdmitStudent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: AdmitStudentInput) => api.students.admit(input),
-    onSuccess: (_, input) =>
-      queryClient.invalidateQueries({
-        queryKey: ["students", "class", input.classId],
-      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["students"] }),
   });
 }
 
@@ -30,5 +27,14 @@ export function useAssignStudentClass() {
     mutationFn: ({ id, classId }: { id: string; classId: string }) =>
       api.students.assignClass(id, classId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["students"] }),
+  });
+}
+
+/** Every student in the school, or one class when `classId` is given. */
+export function useStudents(classId?: string) {
+  const api = useApiClient();
+  return useQuery({
+    queryKey: ["students", "list", classId ?? "all"],
+    queryFn: () => (classId ? api.students.byClass(classId) : api.students.all()),
   });
 }
