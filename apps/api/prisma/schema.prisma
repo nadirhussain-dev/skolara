@@ -139,6 +139,9 @@ model School {
   inventoryItems      InventoryItem[]
   assetAssignments    AssetAssignment[]
   roleTemplates       RoleTemplate[]
+  budgetCategories    BudgetCategory[]
+  budgetLines         BudgetLine[]
+  expenses            Expense[]
   auditLogs           AuditLog[]
 
   @@index([schoolGroupId])
@@ -189,6 +192,8 @@ model User {
   reviewedLeaveRequests   LeaveRequest[]      @relation("LeaveReviewer")
   raisedAbsenceRequests   AbsenceRequest[]    @relation("AbsenceRaiser")
   reviewedAbsenceRequests AbsenceRequest[]    @relation("AbsenceReviewer")
+  raisedExpenses          Expense[]           @relation("ExpenseRaisedBy")
+  reviewedExpenses        Expense[]           @relation("ExpenseReviewedBy")
   offeredMeetingSlots     MeetingSlot[]       @relation("MeetingTeacher")
   bookedMeetingSlots      MeetingSlot[]       @relation("MeetingParent")
   raisedSupportTickets    SupportTicket[]        @relation("SupportRaiser")
@@ -1418,4 +1423,71 @@ model RoleTemplate {
 
   @@unique([schoolId, name])
   @@index([schoolId])
+}
+
+/// Where an expense is in the approval flow. Only APPROVED expenses count as
+/// money spent; PENDING ones are shown separately so the budget never looks
+/// healthier than it is about to be.
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  DECLINED
+}
+
+/// A heading the school budgets and spends under ("Salaries", "Utilities").
+/// Archived rather than deleted so past months keep their history.
+model BudgetCategory {
+  id         String    @id @default(uuid())
+  schoolId   String
+  school     School    @relation(fields: [schoolId], references: [id])
+  name       String
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  budgetLines BudgetLine[]
+  expenses    Expense[]
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+}
+
+/// The amount a school plans to spend in one category in one calendar month.
+/// `month` is always the first instant of the month in UTC.
+model BudgetLine {
+  id         String         @id @default(uuid())
+  schoolId   String
+  school     School         @relation(fields: [schoolId], references: [id])
+  categoryId String
+  category   BudgetCategory @relation(fields: [categoryId], references: [id])
+  month      DateTime
+  amount     Decimal        @db.Decimal(12, 2)
+
+  @@unique([categoryId, month])
+  @@index([schoolId, month])
+}
+
+model Expense {
+  id               String         @id @default(uuid())
+  schoolId         String
+  school           School         @relation(fields: [schoolId], references: [id])
+  categoryId       String
+  category         BudgetCategory @relation(fields: [categoryId], references: [id])
+  payee            String
+  description      String?
+  amount           Decimal        @db.Decimal(12, 2)
+  /// The day the money was (or will be) spent, stored as UTC midnight.
+  spentOn          DateTime
+  billUrl          String?
+  status           ExpenseStatus  @default(PENDING)
+  raisedByUserId   String
+  raisedByUser     User           @relation("ExpenseRaisedBy", fields: [raisedByUserId], references: [id])
+  reviewedByUserId String?
+  reviewedByUser   User?          @relation("ExpenseReviewedBy", fields: [reviewedByUserId], references: [id])
+  reviewedAt       DateTime?
+  reviewNote       String?
+  createdAt        DateTime       @default(now())
+
+  @@index([schoolId, spentOn])
+  @@index([schoolId, status])
+  @@index([categoryId, spentOn])
 }

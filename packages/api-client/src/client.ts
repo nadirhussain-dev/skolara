@@ -1,4 +1,12 @@
 import type {
+  BudgetCategory,
+  CreateBudgetCategoryInput,
+  CreateExpenseInput,
+  Expense,
+  ExpenseStatus,
+  FinanceOverview,
+  ReviewExpenseInput,
+  SetBudgetInput,
   AddComplaintCommentInput,
   AdmitStudentInput,
   ApiKey,
@@ -830,6 +838,47 @@ export function createApiClient({
       schoolToday: () => request<SchoolToday>("/analytics/school/today"),
       defaulterRisk: (studentId: string) =>
         request<DefaulterRiskWithExplanation>(`/analytics/defaulter-risk/${studentId}`),
+    },
+    finance: {
+      overview: (month: string) =>
+        request<FinanceOverview>(`/finance/overview?month=${encodeURIComponent(month)}`),
+      categories: () => request<BudgetCategory[]>("/finance/categories"),
+      createCategory: (input: CreateBudgetCategoryInput) =>
+        request<BudgetCategory>("/finance/categories", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      archiveCategory: (id: string, archived: boolean) =>
+        request<BudgetCategory>(`/finance/categories/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ archived }),
+        }),
+      setBudget: (input: SetBudgetInput) =>
+        request<{ updated: number }>("/finance/budget", {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      copyPreviousBudget: (month: string) =>
+        request<{ copied: number }>("/finance/budget/copy-previous", {
+          method: "POST",
+          body: JSON.stringify({ month }),
+        }),
+      expenses: (filter: { month?: string; status?: ExpenseStatus } = {}) => {
+        const query = new URLSearchParams();
+        if (filter.month) query.set("month", filter.month);
+        if (filter.status) query.set("status", filter.status);
+        const suffix = query.toString();
+        return request<Expense[]>(`/finance/expenses${suffix ? `?${suffix}` : ""}`);
+      },
+      createExpense: (input: CreateExpenseInput) =>
+        request<Expense>("/finance/expenses", { method: "POST", body: JSON.stringify(input) }),
+      reviewExpense: (id: string, input: ReviewExpenseInput) =>
+        request<Expense>(`/finance/expenses/${id}/review`, {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      deleteExpense: (id: string) =>
+        request<{ deleted: true }>(`/finance/expenses/${id}`, { method: "DELETE" }),
     },
     exams: {
       create: (input: CreateExamInput) =>

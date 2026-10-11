@@ -177,6 +177,12 @@ export const NAV_ITEMS: NavItem[] = [
     groupKey: "nav.finance",
   },
   {
+    href: "/school/finance",
+    labelKey: "nav.budgetAndExpenses",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.finance",
+  },
+  {
     href: "/school/bank-statement",
     labelKey: "nav.bankStatement",
     roles: ["SCHOOL_ADMIN"],
