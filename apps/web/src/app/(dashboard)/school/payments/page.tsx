@@ -7,6 +7,7 @@ import { useTranslation, type MessageKey } from "@skolara/i18n";
 import { formatCurrency } from "@skolara/utils";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { checkAmount, invoiceBalance } from "./amount-check";
+import { safeHttpUrl } from "@/lib/safe-url";
 
 const TABS: { status: PaymentSubmissionStatus; labelKey: MessageKey }[] = [
   { status: "PENDING_VERIFICATION", labelKey: "paymentQueue.tabWaiting" },
@@ -317,15 +318,15 @@ export default function PaymentQueuePage() {
 
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <a
-                  href={selected.screenshotUrl}
+                  href={safeHttpUrl(selected.screenshotUrl) ?? undefined}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="group relative block overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800"
                 >
                   {/* A parent's upload from arbitrary storage; shown at reading size. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={selected.screenshotUrl}
+                    src={safeHttpUrl(selected.screenshotUrl) ?? undefined}
                     alt={t("paymentQueue.screenshotAlt", { reference: selected.referenceId })}
                     className="h-80 w-full object-contain"
                   />
@@ -392,11 +393,11 @@ export default function PaymentQueuePage() {
                     </div>
                   )}
 
-                  {selected.receiptUrl && (
+                  {safeHttpUrl(selected.receiptUrl) && (
                     <a
-                      href={selected.receiptUrl}
+                      href={safeHttpUrl(selected.receiptUrl) ?? undefined}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className="text-sm font-bold text-brand-700 underline dark:text-brand-300"
                     >
                       {t("paymentQueue.receiptPdf")}

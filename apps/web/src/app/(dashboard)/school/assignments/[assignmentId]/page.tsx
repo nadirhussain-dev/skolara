@@ -5,6 +5,7 @@ import { Button, Card, CardHeader, CardTitle, EmptyState, Input } from "@skolara
 import { useTranslation } from "@skolara/i18n";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { safeHttpUrl } from "@/lib/safe-url";
 
 export default function AssignmentSubmissionsPage() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
@@ -34,7 +35,7 @@ export default function AssignmentSubmissionsPage() {
                 {s.student.user.firstName} {s.student.user.lastName}
               </p>
               <a
-                href={s.fileUrl}
+                href={safeHttpUrl(s.fileUrl) ?? undefined}
                 target="_blank"
                 rel="noreferrer"
                 className="text-sm text-brand-700 underline"

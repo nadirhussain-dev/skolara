@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth-context";
 import { LanguageSwitcher } from "./language-switcher";
 import { isInMvpNav } from "./mvp-scope";
 import { NAV_ITEMS } from "./nav-items";
+import { safeHttpUrl } from "@/lib/safe-url";
 
 function initials(...words: string[]) {
   return words
@@ -90,12 +91,12 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       <div className="px-4 py-5">
         {hasSchool ? (
           <Link href="/" className="flex items-center gap-3">
-            {school?.logoUrl ? (
+            {safeHttpUrl(school?.logoUrl) ? (
               // A school's own upload, from arbitrary storage hosts — not
               // worth routing through the image optimiser at 40px.
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={school.logoUrl}
+                src={safeHttpUrl(school?.logoUrl) ?? undefined}
                 alt=""
                 className="h-10 w-10 shrink-0 rounded-lg bg-white object-contain"
               />

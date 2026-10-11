@@ -7,6 +7,7 @@ import { brandCssVariables, isHexColor } from "@skolara/utils";
 import Link from "next/link";
 import { useEffect, type ReactNode } from "react";
 import { LanguageSwitcher } from "./language-switcher";
+import { safeHttpUrl } from "@/lib/safe-url";
 
 /**
  * Themes the page with a school's colour while it is on screen, and puts the
@@ -22,17 +23,6 @@ function useBrandColor(color: string | null | undefined) {
       for (const name of Object.keys(variables)) root.style.removeProperty(name);
     };
   }, [color]);
-}
-
-/** Only http(s) logos are shown. */
-function safeLogo(url: string | null | undefined): string | null {
-  if (!url) return null;
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.toString() : null;
-  } catch {
-    return null;
-  }
 }
 
 /**
@@ -58,7 +48,7 @@ export function AuthShell({
 }) {
   const { t } = useTranslation();
   useBrandColor(school?.primaryColor);
-  const logo = safeLogo(school?.logoUrl);
+  const logo = safeHttpUrl(school?.logoUrl);
   const initials = (school?.name ?? "").split(/\s+/).map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase();
 
   const identity = school ? (

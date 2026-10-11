@@ -24,15 +24,7 @@ import { useAuth } from "@/lib/auth-context";
 import { intlLocale } from "@/lib/intl";
 import { parseAmount } from "../../finance/finance-helpers";
 import { classLabel } from "../../home-helpers";
-
-function safeUrl(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.toString() : null;
-  } catch {
-    return null;
-  }
-}
+import { safeHttpUrl } from "@/lib/safe-url";
 
 function Fees({ studentId }: { studentId: string }) {
   const { t, locale } = useTranslation();
@@ -225,7 +217,7 @@ function Certificates({ studentId }: { studentId: string }) {
       { onSuccess: (result) => setIssued({ url: result.url, serial: result.serial }), onError: () => setError(t("studentDetail.couldNotIssue")) },
     );
   }
-  const url = issued ? safeUrl(issued.url) : null;
+  const url = issued ? safeHttpUrl(issued.url) : null;
 
   return (
     <Card>

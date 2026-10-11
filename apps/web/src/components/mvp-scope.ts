@@ -18,6 +18,12 @@ const DEFERRED_HREFS: ReadonlySet<string> = new Set([
   "/super-admin/broadcasts",
   "/super-admin/health",
   "/support",
+  // Outside the six loops for now
+  "/school/analytics",
+  "/school/timetable",
+  "/school/assignments",
+  "/school/roles",
+  "/teacher/timetable",
   // Learning
   "/school/materials",
   "/school/quizzes",

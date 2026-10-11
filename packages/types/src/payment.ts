@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { httpUrlSchema } from "./common";
 
 export const invoiceStatusSchema = z.enum([
   "UNPAID",
@@ -146,8 +147,9 @@ export type PaymentSubmission = z.infer<typeof paymentSubmissionSchema>;
 
 export const submitPaymentSchema = z.object({
   invoiceId: z.string().uuid(),
-  amountClaimed: z.number().positive(),
-  screenshotUrl: z.string().url(),
+  amountClaimed: z.number().positive().max(9_999_999_999.99),
+  // Shown to the reviewing admin as an image and a link.
+  screenshotUrl: httpUrlSchema,
 });
 export type SubmitPaymentInput = z.infer<typeof submitPaymentSchema>;
 

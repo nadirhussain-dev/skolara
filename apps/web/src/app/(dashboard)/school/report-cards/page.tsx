@@ -6,16 +6,7 @@ import { Button, Card, CardTitle, EmptyState, Input, Select } from "@skolara/ui"
 import { useMemo, useState, type FormEvent } from "react";
 import { Avatar, Field, PageTitle } from "@/components/ui-kit";
 import { classLabel } from "../home-helpers";
-
-/** Only http(s) links are rendered; a stored URL of any other kind is ignored. */
-function safeUrl(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.toString() : null;
-  } catch {
-    return null;
-  }
-}
+import { safeHttpUrl } from "@/lib/safe-url";
 
 export default function ReportCardsPage() {
   const { t } = useTranslation();
@@ -89,7 +80,7 @@ export default function ReportCardsPage() {
           </div>
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {cards.map((card) => {
-              const url = safeUrl(card.file.url);
+              const url = safeHttpUrl(card.file.url);
               return (
                 <li key={card.studentId} className="flex flex-wrap items-center gap-3 px-4 py-3">
                   <Avatar name={card.studentName} />

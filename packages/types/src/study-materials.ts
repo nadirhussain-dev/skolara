@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { httpUrlSchema } from "./common";
 
 export const studyMaterialSchema = z.object({
   id: z.string().uuid(),
@@ -27,7 +28,8 @@ export const publishStudyMaterialSchema = z.object({
   title: z.string().min(1).max(140),
   description: z.string().max(1000).optional(),
   fileKey: z.string().min(1),
-  fileUrl: z.string().min(1),
+  // Opened by students and parents.
+  fileUrl: httpUrlSchema,
   contentType: z.string().min(1),
   sizeBytes: z.number().int().nonnegative(),
 });

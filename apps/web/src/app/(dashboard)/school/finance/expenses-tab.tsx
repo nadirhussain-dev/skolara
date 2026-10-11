@@ -8,6 +8,7 @@ import { formatCurrency } from "@skolara/utils";
 import { useState, type FormEvent } from "react";
 import { intlLocale } from "@/lib/intl";
 import { defaultSpentOn, parseAmount } from "./finance-helpers";
+import { safeHttpUrl } from "@/lib/safe-url";
 
 const STATUS_TONE = { PENDING: "warning", APPROVED: "success", DECLINED: "danger" } as const;
 const STATUS_LABEL = {
@@ -17,17 +18,6 @@ const STATUS_LABEL = {
 } as const;
 const FILTERS: Array<ExpenseStatus | "ALL"> = ["ALL", "PENDING", "APPROVED", "DECLINED"];
 
-/** Only http(s) links are ever rendered as a link; anything else is ignored. */
-function safeLink(url: string | null): string | null {
-  if (!url) return null;
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
 function ExpenseRow({ expense, overview }: { expense: Expense; overview: FinanceOverview }) {
   const { t, locale } = useTranslation();
   const review = useReviewExpense();
@@ -36,7 +26,7 @@ function ExpenseRow({ expense, overview }: { expense: Expense; overview: Finance
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const category = overview.categories.find((c) => c.categoryId === expense.categoryId);
-  const bill = safeLink(expense.billUrl);
+  const bill = safeHttpUrl(expense.billUrl);
   const date = new Intl.DateTimeFormat(intlLocale(locale), { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(expense.spentOn));
   const busy = review.isPending || remove.isPending;
   const onError = () => setError(t("common.somethingWentWrong"));
@@ -149,7 +139,7 @@ function AddExpenseForm({ overview, onDone }: { overview: FinanceOverview; onDon
       setError(t("finance.amountInvalid"));
       return;
     }
-    if (billUrl.trim() && !safeLink(billUrl.trim())) {
+    if (billUrl.trim() && !safeHttpUrl(billUrl.trim())) {
       setError(t("finance.billLink"));
       return;
     }

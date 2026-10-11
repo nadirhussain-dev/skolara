@@ -34,6 +34,32 @@ steps to reproduce.
 - Uploads: type allowlist per purpose, 10MB cap, and a content check — the
   file's leading bytes must match its declared type, so an HTML page cannot be
   stored as an image.
+- **Submitted web addresses are http or https only** (`httpUrlSchema`):
+  payment screenshots, homework files, study materials, expense bills, school
+  logos and meeting links. Without this a parent could submit a `javascript:`
+  address as a payment screenshot and have it run in the admin's session when
+  they opened it. The web app applies the same check again (`safeHttpUrl`)
+  before any stored address reaches an `href` or `src`.
+- Money amounts are capped to what the database column holds and to two
+  decimal places; text fields that are shown to other people have length caps.
+
+### Who can see what
+- School money (budgets, expenses, statements) is for school admins only.
+- A teacher can load the roster, register and marks only for classes they are
+  assigned to. A parent sees only their linked children; a student only
+  themself.
+- Notifications are read and marked by the user id in the caller's token, so
+  nobody can read or clear anyone else's.
+- `GET /schools/public/:code` is the one unauthenticated read. It returns a
+  school's name, code, logo and colour, for active schools only, answers
+  suspended and unknown codes identically, and is limited to 30 a minute.
+- Bulk actions are throttled: class billing 10 a minute, fee reminders 5 a
+  minute.
+
+### Notifications
+- Skolara notifies people inside its own apps: an inbox entry plus a push.
+  WhatsApp and SMS are off unless `PHONE_ALERTS_ENABLED=true`, so no phone
+  numbers leave the system by default.
 
 ### Authentication and sessions
 - Passwords hashed with bcrypt. Refresh and reset tokens are stored hashed.
@@ -68,6 +94,7 @@ steps to reproduce.
 | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | 32+ characters each, different. `openssl rand -base64 48` |
 | `TRUST_PROXY` | Number of proxies in front of the API. Usually `1` behind one load balancer |
 | `CORS_ORIGINS` | The web app's origin(s). CORS is closed without it |
+| `PHONE_ALERTS_ENABLED` | Leave `false`. Skolara notifies inside its apps only |
 | HTTPS | Terminate TLS at the load balancer; never serve the API over plain http |
 | Supabase storage vars | The local-disk fallback is for development only |
 
@@ -89,7 +116,8 @@ Open items, most important first.
    the headers above. The stronger fix is an httpOnly cookie plus CSRF
    protection, and a nonce-based `script-src` policy.
 5. **A deactivated user keeps access until their access token expires** (up
-   to 15 minutes). Refresh is refused immediately.
+   to 15 minutes). Their refresh tokens are revoked at once, and an admin
+   cannot deactivate their own account.
 6. **Lockout can be used to annoy.** Anyone who knows an email can lock that
    account for 15 minutes by failing five times. The alternative — no lockout
    — is worse.
@@ -102,3 +130,10 @@ Open items, most important first.
 9. **Moderate advisories in the API** (`qs`, `file-type`, `js-yaml`,
    `@nestjs/core` 10). Clearing them means moving to NestJS 11.
 10. **No virus scanning of uploads.** The content check confirms format only.
+11. **The mobile apps have not been run on a physical phone as part of this
+    work.** They were typechecked, linted, bundled for Android and exercised
+    in a browser build against sample data. Test on real iOS and Android
+    devices before a store release.
+12. **Font loading.** The web app loads Manrope from Google Fonts at run
+    time. Self-host it if your schools' networks block Google or your privacy
+    policy rules out third-party requests.

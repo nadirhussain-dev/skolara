@@ -27,8 +27,8 @@ describe("isInMvpNav", () => {
   it("only defers links that exist, so a renamed route can't silently reappear", () => {
     const known = new Set(NAV_ITEMS.map((item) => item.href));
     const hidden = NAV_ITEMS.filter((item) => !isInMvpNav(item.href));
-    // 21 deferred hrefs, every one of them a real nav item.
-    expect(hidden).toHaveLength(21);
+    // 26 deferred hrefs, every one of them a real nav item.
+    expect(hidden).toHaveLength(26);
     for (const item of hidden) expect(known.has(item.href)).toBe(true);
   });
 

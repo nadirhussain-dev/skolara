@@ -1,17 +1,15 @@
-import { Card } from "@skolara/ui";
+import Link from "next/link";
+import { StatusPage, statusLink } from "@/components/status-page";
+
+export const metadata = { title: "Use the Skolara app" };
 
 export default function MobileOnlyPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <Card className="max-w-sm text-center">
-        <h1 className="mb-2 text-lg font-semibold text-brand-700">
-          Use the Skolara app
-        </h1>
-        <p className="text-sm text-slate-600 dark:text-slate-400">
-          Student and parent accounts are designed for the Skolara mobile app —
-          attendance, results, fee payment, and messaging all live there.
-        </p>
-      </Card>
-    </main>
+    <StatusPage
+      title="Parents and students use the Skolara app"
+      body="Attendance, results, fees and messages from school are in the Skolara mobile app. Open it on your phone and enter your school code to sign in."
+    >
+      <Link href="/login" className={statusLink}>Back to sign in</Link>
+    </StatusPage>
   );
 }

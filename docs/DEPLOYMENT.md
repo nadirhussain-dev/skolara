@@ -131,3 +131,38 @@ first test of the image. If that job is red, the Dockerfile is the problem, not 
 users with known passwords; it belongs in development and nowhere near a real deployment. The
 first real school arrives through the self-serve signup flow, and the platform owner account
 is created by hand.
+
+## The MVP release
+
+What changed for whoever runs the deploy:
+
+- **Two new migrations**, `029_finance` and `030_in_app_notifications`. Both
+  only add tables, so they are safe to apply while the previous API is still
+  serving traffic.
+- **`PHONE_ALERTS_ENABLED`** is a new API setting and defaults to `false`.
+  Skolara now notifies people inside its own apps (an inbox entry plus a
+  push). Leave it off unless you have decided to message families by WhatsApp
+  or SMS; the WhatsApp and Twilio settings are ignored while it is off.
+- **`NEXT_PUBLIC_SHOW_ALL_MODULES`** on the web app brings back the links to
+  modules that are outside the MVP (library, hostel, transport and so on).
+  The pages still exist; only their navigation links are hidden.
+
+### Mobile apps
+
+One Expo app serves parents, students, teachers and school admins. It is not
+released by the workflows above.
+
+1. Set `EXPO_PUBLIC_API_URL` to the production API address (it is compiled
+   into the app, so it must be set at build time).
+2. Create the project on expo.dev and put its id in `apps/mobile/app.json`
+   under `extra.eas.projectId`. Push notifications need it.
+3. Build with EAS: `eas build --platform android` and
+   `eas build --platform ios` from `apps/mobile`.
+4. Before submitting to the stores, run the app on a real Android phone and a
+   real iPhone and walk through: school code, sign-in, each tab for a parent,
+   a teacher taking a register with no signal, and an admin approving an
+   expense.
+
+`pnpm --filter @skolara/mobile web` runs the same app in a browser for a quick
+look. That build keeps the session in memory only and is not a product.
+

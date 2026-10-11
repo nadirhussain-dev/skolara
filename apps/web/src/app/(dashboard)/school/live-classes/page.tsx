@@ -22,6 +22,7 @@ import { useTranslation } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { intlLocale } from "@/lib/intl";
+import { safeHttpUrl } from "@/lib/safe-url";
 
 /** `datetime-local` gives a wall-clock string; the API wants an instant. */
 function toDate(local: string): Date {
@@ -201,7 +202,7 @@ export default function LiveClassesPage() {
                     })}
                   </p>
                   <a
-                    href={session.meetingUrl}
+                    href={safeHttpUrl(session.meetingUrl) ?? undefined}
                     target="_blank"
                     rel="noreferrer"
                     className="mt-1 block truncate text-sm text-brand-700 hover:underline"

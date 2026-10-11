@@ -24,6 +24,7 @@ import { useTranslation } from "@skolara/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { intlLocale } from "@/lib/intl";
+import { safeHttpUrl } from "@/lib/safe-url";
 
 const ACCEPT = allowedMimeTypesFor("STUDY_MATERIAL").join(",");
 
@@ -213,7 +214,7 @@ export default function StudyMaterialsPage() {
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <a
-                    href={material.fileUrl}
+                    href={safeHttpUrl(material.fileUrl) ?? undefined}
                     target="_blank"
                     rel="noreferrer"
                     className="font-medium text-brand-700 hover:underline"

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { httpUrlSchema } from "./common";
 
 export const assignmentSchema = z.object({
   id: z.string().uuid(),
@@ -35,8 +36,9 @@ export const assignmentSubmissionSchema = z.object({
 export type AssignmentSubmission = z.infer<typeof assignmentSubmissionSchema>;
 
 export const submitAssignmentSchema = z.object({
-  fileUrl: z.string().url(),
-  note: z.string().optional(),
+  // Opened by the teacher who marks it.
+  fileUrl: httpUrlSchema,
+  note: z.string().max(2000).optional(),
 });
 export type SubmitAssignmentInput = z.infer<typeof submitAssignmentSchema>;
 

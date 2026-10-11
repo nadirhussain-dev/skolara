@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { httpUrlSchema } from "./common";
 
 /** A calendar month as "YYYY-MM". */
 export const monthKeySchema = z
@@ -51,7 +52,7 @@ export const createExpenseSchema = z.object({
   amount: expenseAmountSchema,
   /** The day the money was spent, as YYYY-MM-DD. */
   spentOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must look like 2026-10-11"),
-  billUrl: z.string().url().max(2000).optional(),
+  billUrl: httpUrlSchema.optional(),
 });
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
 
