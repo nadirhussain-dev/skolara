@@ -30,3 +30,12 @@ export function useClassAttendance(classId: string | undefined, date: string) {
     enabled: Boolean(classId),
   });
 }
+
+export function useStudentAttendance(studentId: string | undefined) {
+  const api = useApiClient();
+  return useQuery({
+    queryKey: ["attendance", "student", studentId],
+    queryFn: () => api.attendance.forStudent(studentId as string),
+    enabled: Boolean(studentId),
+  });
+}

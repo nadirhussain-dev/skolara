@@ -771,6 +771,9 @@ export function createApiClient({
         request<AttendanceRecord[]>(
           `/attendance/class/${classId}?date=${date}`,
         ),
+      /** A student's whole attendance history, newest first. */
+      forStudent: (studentId: string) =>
+        request<AttendanceRecord[]>(`/attendance/student/${studentId}`),
       schoolDay: (date: string) =>
         request<SchoolDayAttendance>(`/attendance/school-day?date=${date}`),
     },

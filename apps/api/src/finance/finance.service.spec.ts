@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
+import type { NotificationsService } from "../notifications/notifications.service";
 import type { PrismaService } from "../prisma/prisma.service";
 import { FinanceService, addMonths, monthKey, monthStart, sumMoney } from "./finance.service";
 
@@ -50,6 +51,7 @@ function makePrisma() {
       deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     paymentSubmission: { findMany: jest.fn().mockResolvedValue([]) },
+    user: { findMany: jest.fn().mockResolvedValue([{ id: "admin-1" }, { id: "admin-2" }]) },
     invoice: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn().mockImplementation((ops: unknown[]) => Promise.all(ops)),
   };
@@ -73,10 +75,15 @@ describe("finance date and money helpers", () => {
 describe("FinanceService", () => {
   let prisma: ReturnType<typeof makePrisma>;
   let service: FinanceService;
+  let notifications: { sendPush: jest.Mock };
 
   beforeEach(() => {
     prisma = makePrisma();
-    service = new FinanceService(prisma as unknown as PrismaService);
+    notifications = { sendPush: jest.fn() };
+    service = new FinanceService(
+      prisma as unknown as PrismaService,
+      notifications as unknown as NotificationsService,
+    );
   });
 
   describe("categories", () => {
@@ -211,6 +218,22 @@ describe("FinanceService", () => {
       const result = await service.createExpense(SCHOOL, USER, input);
       expect(result.status).toBe("PENDING");
       expect(prisma.expense.create.mock.calls[0][0].data.reviewedAt).toBeNull();
+    });
+
+    it("tells the school's admins when an expense needs a decision", async () => {
+      prisma.budgetCategory.findFirst.mockResolvedValue({ id: "cat-1", archivedAt: null });
+      await service.createExpense(SCHOOL, USER, input);
+      expect(prisma.user.findMany.mock.calls[0][0].where).toEqual({ schoolId: SCHOOL, role: "SCHOOL_ADMIN", isActive: true });
+      const [userIds, payload] = notifications.sendPush.mock.calls[0];
+      expect(userIds).toEqual(["admin-1", "admin-2"]);
+      expect(payload.data).toMatchObject({ type: "EXPENSE" });
+    });
+
+    it("notifies nobody for an expense that is inside budget", async () => {
+      prisma.budgetCategory.findFirst.mockResolvedValue({ id: "cat-1", archivedAt: null });
+      prisma.budgetLine.findUnique.mockResolvedValue({ amount: 90000 });
+      await service.createExpense(SCHOOL, USER, input);
+      expect(notifications.sendPush).not.toHaveBeenCalled();
     });
 
     it("waits for approval when no budget is set", async () => {

@@ -14,6 +14,7 @@ import type {
   ReviewExpenseInput,
   SetBudgetInput,
 } from "@skolara/types";
+import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 /** Headings a new school starts with, so the budget page is never blank. */
@@ -103,7 +104,10 @@ function toExpense(row: ExpenseRow): Expense {
  */
 @Injectable()
 export class FinanceService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   /** Lists categories, creating the starter set the first time a school looks. */
   async categories(schoolId: string): Promise<BudgetCategory[]> {
@@ -266,6 +270,22 @@ export class FinanceService {
       },
       include: expenseInclude,
     });
+
+    if (!withinBudget) {
+      // Someone has to decide, so tell the school's admins where they will see it.
+      const admins = await this.prisma.user.findMany({
+        where: { schoolId, role: "SCHOOL_ADMIN", isActive: true },
+        select: { id: true },
+      });
+      await this.notifications.sendPush(
+        admins.map((admin) => admin.id),
+        {
+          title: "Expense to approve",
+          body: `${input.payee}: Rs ${input.amount.toLocaleString("en-PK")} is over budget and needs a decision.`,
+          data: { type: "EXPENSE", expenseId: row.id },
+        },
+      );
+    }
     return toExpense(row);
   }
 

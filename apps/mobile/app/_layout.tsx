@@ -2,14 +2,17 @@ import { useTranslation } from "@skolara/i18n";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Providers } from "@/lib/providers";
-import { colors } from "@/lib/theme";
+import { View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { palette, useTheme } from "@/lib/school-theme";
 
 export default function RootLayout() {
   return (
-    <Providers>
-      <StatusBar style="auto" />
-      <RootStack />
-    </Providers>
+    <SafeAreaProvider>
+      <Providers>
+        <RootStack />
+      </Providers>
+    </SafeAreaProvider>
   );
 }
 
@@ -20,24 +23,35 @@ export default function RootLayout() {
  */
 function RootStack() {
   const { t } = useTranslation();
+  const { brand, isRTL } = useTheme();
 
   return (
-    <Stack
+    // `direction` flips every row for right-to-left languages without the
+    // app restart that I18nManager.forceRTL would need.
+    <View style={{ flex: 1, direction: isRTL ? "rtl" : "ltr" }}>
+      <StatusBar style="auto" />
+      <Stack
         screenOptions={{
-          headerTintColor: colors.brand[700],
-          headerTitleStyle: { color: colors.slate[900] },
+          headerTintColor: brand[700],
+          headerTitleStyle: { color: palette.ink, fontWeight: "800" },
+          headerBackTitle: t("common.back"),
+          contentStyle: { backgroundColor: palette.page },
         }}
       >
-        <Stack.Screen name="index" options={{ title: "Skolara" }} />
-        <Stack.Screen name="(auth)/login" options={{ title: t("screens.signIn") }} />
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)/school" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)/forgot-password" options={{ title: t("screens.forgotPassword") }} />
+        <Stack.Screen name="(family)" options={{ headerShown: false }} />
+        <Stack.Screen name="(teacher)" options={{ headerShown: false }} />
+        <Stack.Screen name="(admin)" options={{ headerShown: false }} />
         <Stack.Screen
           name="attendance/[classId]"
           options={{ title: t("attendance.markAttendance") }}
         />
         <Stack.Screen name="payments/submit" options={{ title: t("screens.submitPayment") }} />
-        <Stack.Screen name="dashboard" options={{ title: "Skolara" }} />
-        <Stack.Screen name="teacher-dashboard" options={{ title: "Skolara" }} />
+        <Stack.Screen name="dashboard" options={{ headerShown: false }} />
+        <Stack.Screen name="teacher-dashboard" options={{ headerShown: false }} />
         <Stack.Screen name="super-admin/index" options={{ title: "Skolara" }} />
         <Stack.Screen name="results/index" options={{ title: t("results.title") }} />
         <Stack.Screen name="notices/index" options={{ title: t("nav.notices") }} />
@@ -65,6 +79,7 @@ function RootStack() {
         <Stack.Screen name="quizzes/[quizId]" options={{ title: t("screens.quiz") }} />
         <Stack.Screen name="live-classes/index" options={{ title: t("nav.liveClasses") }} />
         <Stack.Screen name="performance/index" options={{ title: t("dashboard.performance") }} />
-    </Stack>
+      </Stack>
+    </View>
   );
 }
