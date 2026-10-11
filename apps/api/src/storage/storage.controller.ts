@@ -100,6 +100,10 @@ export class StorageController {
     // Belt and braces for user-supplied files served from the API's own
     // origin: never let the browser guess a different type, never let the
     // response run script or be framed, and only show images and PDFs inline.
+    // The web app is on another origin and shows these as images (payment
+    // receipts, school logos). helmet's default of same-origin would make
+    // the browser refuse them.
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
     res.setHeader(

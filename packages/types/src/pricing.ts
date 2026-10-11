@@ -35,6 +35,7 @@ export const PLANS: Record<SubscriptionPlan, PlanDetails> = {
       "Fee invoices and manual payment verification",
       "Notices and in-app notifications",
       "Parent and teacher mobile apps",
+      "Your school's own logo and colour",
     ],
   },
   STANDARD: {
@@ -65,7 +66,7 @@ export const PLANS: Record<SubscriptionPlan, PlanDetails> = {
       "AI fee-defaulter risk flagging",
       "Payroll and payslips",
       "Analytics dashboards",
-      "White-labelling and custom subdomain",
+      "Custom subdomain",
       "API access",
     ],
   },

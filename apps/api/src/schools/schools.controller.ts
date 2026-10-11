@@ -24,7 +24,6 @@ import {
 import { z } from "zod";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { Public } from "../common/decorators/public.decorator";
-import { RequiresFeature } from "../common/decorators/requires-feature.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { FeatureGuard } from "../common/guards/feature.guard";
@@ -105,9 +104,10 @@ export class SchoolsController {
     return this.schoolsService.updateSubscriptionStatus(id, body.status);
   }
 
+  // Not gated by plan: every school's apps open in its own name, logo and
+  // colour, so every school has to be able to set them.
   @Patch(":id/branding")
   @Roles("SUPER_ADMIN", "SCHOOL_ADMIN")
-  @RequiresFeature("WHITE_LABEL")
   updateBranding(
     @Param("id") id: string,
     @Body(new ZodValidationPipe(updateBrandingSchema)) body: UpdateBrandingInput,
