@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { UpsertGradeEntryInput } from "@skolara/types";
+import type { BulkGradesInput, UpsertGradeEntryInput } from "@skolara/types";
 import { useApiClient } from "../context";
 
 export function useClassGrades(classId: string, term?: string) {
@@ -39,5 +39,19 @@ export function useUpsertGrade() {
       queryClient.invalidateQueries({
         queryKey: ["grades", "class", input.classId],
       }),
+  });
+}
+
+/** Saves one subject's marks for a whole class in a single request. */
+export function useSaveMarkSheet() {
+  const api = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: BulkGradesInput) => api.grades.upsertBulk(input),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["grades"] }),
+        queryClient.invalidateQueries({ queryKey: ["exams"] }),
+      ]),
   });
 }

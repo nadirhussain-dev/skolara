@@ -29,6 +29,29 @@ export const upsertGradeEntrySchema = z.object({
 });
 export type UpsertGradeEntryInput = z.infer<typeof upsertGradeEntrySchema>;
 
+/** Marks for a whole class in one subject of one assessment, saved together. */
+export const bulkGradesSchema = z
+  .object({
+    classId: z.string().uuid(),
+    subject: z.string().trim().min(1).max(60),
+    term: z.string().trim().min(1).max(60),
+    examType: z.string().trim().min(1).max(60),
+    maxMarks: z.number().positive().max(9999.99),
+    entries: z
+      .array(z.object({ studentId: z.string().uuid(), marksObtained: z.number().nonnegative().max(9999.99) }))
+      .min(1)
+      .max(300),
+  })
+  .refine((data) => data.entries.every((entry) => entry.marksObtained <= data.maxMarks), {
+    message: "Marks cannot be more than the maximum",
+    path: ["entries"],
+  })
+  .refine((data) => new Set(data.entries.map((e) => e.studentId)).size === data.entries.length, {
+    message: "Each student can appear only once",
+    path: ["entries"],
+  });
+export type BulkGradesInput = z.infer<typeof bulkGradesSchema>;
+
 /**
  * One assessment on a student's performance curve.
  *

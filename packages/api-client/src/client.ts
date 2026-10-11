@@ -1,4 +1,5 @@
 import type {
+  BulkGradesInput,
   BulkInvoiceInput,
   BulkInvoiceResult,
   Defaulter,
@@ -164,6 +165,14 @@ export interface PaymentQueueItem extends PaymentSubmission {
     user: { firstName: string; lastName: string };
   };
   invoice: Invoice;
+}
+
+/** A teacher assigned to a class. */
+export interface ClassTeacher {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
 }
 
 export interface StudentWithUser {
@@ -675,6 +684,14 @@ export function createApiClient({
     },
     classes: {
       list: () => request<SchoolClass[]>("/classes"),
+      teachers: (classId: string) => request<ClassTeacher[]>(`/classes/${classId}/teachers`),
+      assignTeacher: (classId: string, teacherUserId: string) =>
+        request<ClassTeacher[]>(`/classes/${classId}/teachers`, {
+          method: "POST",
+          body: JSON.stringify({ teacherUserId }),
+        }),
+      unassignTeacher: (classId: string, teacherUserId: string) =>
+        request<ClassTeacher[]>(`/classes/${classId}/teachers/${teacherUserId}`, { method: "DELETE" }),
       create: (input: CreateClassInput) =>
         request<SchoolClass>("/classes", {
           method: "POST",
@@ -770,6 +787,8 @@ export function createApiClient({
         }),
     },
     grades: {
+      upsertBulk: (input: BulkGradesInput) =>
+        request<{ saved: number }>("/grades/bulk", { method: "POST", body: JSON.stringify(input) }),
       upsert: (input: UpsertGradeEntryInput) =>
         request<GradeEntry>("/grades", {
           method: "POST",

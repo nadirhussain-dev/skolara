@@ -1,11 +1,11 @@
 "use client";
 
-import { ApiError, useClasses, useCreateClass, useStudents } from "@skolara/api-client";
+import { ApiError, useClassTeachers, useClasses, useCreateClass, useSetClassTeacher, useStudents, useTeachers } from "@skolara/api-client";
 import { useTranslation } from "@skolara/i18n";
 import { Button, Card, EmptyState, Input, Skeleton } from "@skolara/ui";
 import Link from "next/link";
 import { useMemo, useState, type FormEvent } from "react";
-import { Field, PageTitle, SidePanel } from "@/components/ui-kit";
+import { Field, ListState, PageTitle, SidePanel } from "@/components/ui-kit";
 import { useAuth } from "@/lib/auth-context";
 import { classLabel } from "../home-helpers";
 
@@ -61,11 +61,71 @@ function AddClassForm({ onDone }: { onDone: () => void }) {
   );
 }
 
+/** Tick the teachers who may take this class's register and enter its marks. */
+function ClassTeachers({ classId }: { classId: string }) {
+  const { t } = useTranslation();
+  const teachers = useTeachers();
+  const assigned = useClassTeachers(classId);
+  const setTeacher = useSetClassTeacher(classId);
+  const [error, setError] = useState<string | null>(null);
+
+  if (teachers.isError || assigned.isError || !teachers.data || !assigned.data) {
+    return (
+      <ListState
+        isError={teachers.isError || assigned.isError}
+        isLoading
+        onRetry={() => {
+          void teachers.refetch();
+          void assigned.refetch();
+        }}
+        errorText={t("people.loadError")}
+      />
+    );
+  }
+  if (teachers.data.length === 0) {
+    return <p className="py-6 text-sm text-slate-600 dark:text-slate-400">{t("examResults.noTeachersToAssign")}</p>;
+  }
+  const assignedIds = new Set(assigned.data.map((teacher) => teacher.id));
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{t("examResults.classTeachersIntro")}</p>
+      <p aria-live="polite" className="text-sm font-bold text-slate-700 dark:text-slate-300">{t("examResults.assigned", { count: assignedIds.size })}</p>
+      {error && <p role="alert" className="text-sm font-bold text-red-700 dark:text-red-400">{error}</p>}
+      <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+        {teachers.data.map((teacher) => (
+          <li key={teacher.id}>
+            <label className="flex min-h-[3.25rem] cursor-pointer items-center gap-3 py-2">
+              <input
+                type="checkbox"
+                checked={assignedIds.has(teacher.userId)}
+                disabled={setTeacher.isPending}
+                onChange={(e) => {
+                  setError(null);
+                  setTeacher.mutate(
+                    { teacherUserId: teacher.userId, assigned: e.target.checked },
+                    { onError: () => setError(t("common.somethingWentWrong")) },
+                  );
+                }}
+                className="h-5 w-5 rounded accent-[rgb(var(--brand-700))]"
+              />
+              <span className="min-w-0">
+                <span className="block font-bold text-slate-900 dark:text-slate-50">{teacher.user.firstName} {teacher.user.lastName}</span>
+                <span className="block truncate text-xs text-slate-600 dark:text-slate-400">{teacher.subjects.join(", ") || t("people.noSubjects")}</span>
+              </span>
+            </label>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function ClassesPage() {
   const { t } = useTranslation();
   const classes = useClasses();
   const students = useStudents();
   const [adding, setAdding] = useState(false);
+  const [teachersFor, setTeachersFor] = useState<{ id: string; label: string } | null>(null);
 
   const counts = useMemo(() => {
     const map = new Map<string, number>();
@@ -109,6 +169,13 @@ export default function ClassesPage() {
                     <Link href={`/school/students?class=${c.id}`} className="inline-flex min-h-[2.75rem] items-center rounded-lg bg-brand-50 px-3 text-sm font-extrabold text-brand-700 hover:bg-brand-100 dark:bg-brand-900/40 dark:text-brand-200">
                       {t("people.viewStudents")}
                     </Link>
+                    <button
+                      type="button"
+                      onClick={() => setTeachersFor({ id: c.id, label: classLabel(c.name, c.section ?? null) })}
+                      className="inline-flex min-h-[2.75rem] items-center rounded-lg px-3 text-sm font-bold text-slate-700 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                      {t("examResults.classTeachers")}
+                    </button>
                     <Link href="/school/attendance" className="inline-flex min-h-[2.75rem] items-center rounded-lg px-3 text-sm font-bold text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
                       {t("people.takeAttendance")}
                     </Link>
@@ -119,6 +186,10 @@ export default function ClassesPage() {
           })}
         </ul>
       )}
+
+      <SidePanel open={teachersFor !== null} title={t("examResults.classTeachersTitle", { name: teachersFor?.label ?? "" })} onClose={() => setTeachersFor(null)}>
+        {teachersFor && <ClassTeachers key={teachersFor.id} classId={teachersFor.id} />}
+      </SidePanel>
 
       <SidePanel open={adding} title={t("people.addClassTitle")} onClose={() => setAdding(false)}>
         <AddClassForm onDone={() => setAdding(false)} />

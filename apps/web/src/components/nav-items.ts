@@ -98,12 +98,6 @@ export const NAV_ITEMS: NavItem[] = [
     groupKey: "nav.communication",
   },
   {
-    href: "/teacher/gradebook",
-    labelKey: "nav.gradebook",
-    roles: ["TEACHER"],
-    groupKey: "nav.academics",
-  },
-  {
     href: "/school/exams",
     labelKey: "nav.exams",
     roles: ["SCHOOL_ADMIN", "TEACHER"],

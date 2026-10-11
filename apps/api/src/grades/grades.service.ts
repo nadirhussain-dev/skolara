@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type {
+  BulkGradesInput,
   PerformancePoint,
   StudentPerformance,
   UpsertGradeEntryInput,
@@ -72,6 +73,49 @@ export class GradesService {
         gradedByUserId,
       },
     });
+  }
+
+  /**
+   * Saves one subject's marks for a class in a single transaction: either
+   * every row is saved or none is, so a teacher never ends up with half a
+   * mark sheet. Every student must be in that class at the caller's school.
+   */
+  async upsertBulk(schoolId: string, gradedByUserId: string, input: BulkGradesInput) {
+    const ids = input.entries.map((entry) => entry.studentId);
+    const inClass = await this.prisma.studentProfile.count({
+      where: { id: { in: ids }, schoolId, classId: input.classId },
+    });
+    if (inClass !== ids.length) {
+      throw new NotFoundException("One or more students are not in that class");
+    }
+
+    await this.prisma.$transaction(
+      input.entries.map((entry) =>
+        this.prisma.gradeEntry.upsert({
+          where: {
+            studentId_subject_term_examType: {
+              studentId: entry.studentId,
+              subject: input.subject,
+              term: input.term,
+              examType: input.examType,
+            },
+          },
+          create: {
+            schoolId,
+            classId: input.classId,
+            studentId: entry.studentId,
+            subject: input.subject,
+            term: input.term,
+            examType: input.examType,
+            marksObtained: entry.marksObtained,
+            maxMarks: input.maxMarks,
+            gradedByUserId,
+          },
+          update: { marksObtained: entry.marksObtained, maxMarks: input.maxMarks, gradedByUserId },
+        }),
+      ),
+    );
+    return { saved: input.entries.length };
   }
 
   findForClass(schoolId: string, classId: string, term?: string) {

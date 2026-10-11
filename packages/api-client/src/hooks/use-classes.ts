@@ -22,3 +22,25 @@ export function useCreateClass() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: classesQueryKey }),
   });
 }
+
+export function useClassTeachers(classId: string | undefined) {
+  const api = useApiClient();
+  return useQuery({
+    queryKey: [...classesQueryKey, classId, "teachers"],
+    queryFn: () => api.classes.teachers(classId as string),
+    enabled: Boolean(classId),
+  });
+}
+
+/** Assigns or removes a teacher; the server answers with the class's new list. */
+export function useSetClassTeacher(classId: string) {
+  const api = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { teacherUserId: string; assigned: boolean }) =>
+      input.assigned
+        ? api.classes.assignTeacher(classId, input.teacherUserId)
+        : api.classes.unassignTeacher(classId, input.teacherUserId),
+    onSuccess: (teachers) => queryClient.setQueryData([...classesQueryKey, classId, "teachers"], teachers),
+  });
+}
