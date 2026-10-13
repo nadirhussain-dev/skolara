@@ -1,124 +1,108 @@
-import {
-  useMyChildren,
-  useMyTimetable,
-  usePeriods,
-  useStudentTimetable,
-  type TimetableEntryDetail,
-} from "@skolara/api-client";
-import { TEACHING_DAYS, type DayOfWeek } from "@skolara/types";
-import { useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useMyTimetable, useStudentTimetable, type TimetableEntryDetail } from "@skolara/api-client";
 import { useTranslation } from "@skolara/i18n";
+import { TEACHING_DAYS, type DayOfWeek } from "@skolara/types";
+import { useState } from "react";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ChildSwitcher } from "@/components/child-switcher";
+import { ChildProvider, useChild } from "@/lib/child-context";
+import { palette, useTheme } from "@/lib/school-theme";
 import { useSession } from "@/lib/session";
-import { colors, spacing, typography } from "@/lib/theme";
-import { Card, Chip, EmptyState, LoadingLine, Screen, SectionLabel } from "@/lib/ui";
+import { subjectColour } from "@/lib/subject-colour";
+import { radius, spacing } from "@/lib/theme";
+import { Card, Chip, EmptyState, ErrorState, Muted, Skeleton, Txt } from "@/lib/ui";
 
 /**
- * One screen for both audiences. A teacher sees the lessons they teach; a
- * parent or student sees the lessons their class receives. The layout is a
- * day-by-day list rather than the web's week grid — a seven-column table is
- * unreadable on a phone.
+ * One day at a time, today first. A teacher sees what they teach; a family
+ * sees what the child's class has. A seven-column grid is unreadable on a
+ * phone, so the week is a row of day chips instead.
  */
 export default function TimetableScreen() {
-  const { role } = useSession();
+  return (
+    <ChildProvider>
+      <Timetable />
+    </ChildProvider>
+  );
+}
+
+function todaysDay(): DayOfWeek {
+  return TEACHING_DAYS[(new Date().getDay() + 6) % 7] ?? "MONDAY";
+}
+
+function Timetable() {
   const { t } = useTranslation();
-  const isTeacher = role === "TEACHER";
-
-  const { data: children } = useMyChildren();
-  const [studentId, setStudentId] = useState<string>();
-  const activeStudentId = studentId ?? children?.[0]?.id;
-
-  const teacherTimetable = useMyTimetable();
-  const studentTimetable = useStudentTimetable(isTeacher ? undefined : activeStudentId);
-  const { data: periods } = usePeriods();
-
-  const query = isTeacher ? teacherTimetable : studentTimetable;
-  const entries = query.data;
-
-  const byDay = useMemo(() => {
-    const order = new Map(periods?.map((p, i) => [p.id, i]) ?? []);
-    const grouped = new Map<DayOfWeek, TimetableEntryDetail[]>();
-    for (const day of TEACHING_DAYS) {
-      const lessons = (entries ?? [])
-        .filter((entry) => entry.dayOfWeek === day)
-        .sort((a, b) => (order.get(a.periodId) ?? 0) - (order.get(b.periodId) ?? 0));
-      if (lessons.length > 0) grouped.set(day, lessons);
-    }
-    return grouped;
-  }, [entries, periods]);
+  const { brand } = useTheme();
+  const session = useSession();
+  const isTeacher = session.role === "TEACHER";
+  const { child } = useChild();
+  const mine = useMyTimetable({ enabled: isTeacher });
+  const family = useStudentTimetable(session.isLoaded && !isTeacher ? child?.id : undefined);
+  const query = isTeacher ? mine : family;
+  const [day, setDay] = useState<DayOfWeek>(todaysDay);
+  const today = todaysDay();
+  const lessons = (query.data ?? [])
+    .filter((entry: TimetableEntryDetail) => entry.dayOfWeek === day)
+    .sort((a, b) => a.period.sortOrder - b.period.sortOrder);
+  const now = new Date();
+  const nowHm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={styles.container}>
-        {!isTeacher && (children?.length ?? 0) > 1 && (
-          <View style={styles.chipRow}>
-            {children?.map((child) => (
-              <Chip
-                key={child.id}
-                label={child.user.firstName}
-                active={activeStudentId === child.id}
-                onPress={() => setStudentId(child.id)}
-              />
-            ))}
-          </View>
-        )}
-
-        {query.isLoading && <LoadingLine label={t("common.loading")} />}
-
-        {!query.isLoading && byDay.size === 0 && (
-          <EmptyState
-            title={
-              isTeacher
-                ? t("timetable.noLessonsScheduled")
-                : t("mobileFamilyWork.noTimetableForClass")
-            }
-          />
-        )}
-
-        {TEACHING_DAYS.filter((day) => byDay.has(day)).map((day) => (
-          <View key={day} style={styles.daySection}>
-            <SectionLabel>{t(`days.long.${day}`)}</SectionLabel>
-            {byDay.get(day)?.map((entry) => {
-              const period = periods?.find((p) => p.id === entry.periodId);
-              return (
-                <Card key={entry.id} style={styles.lesson}>
-                  <View style={styles.time}>
-                    <Text style={styles.timeText}>{period?.startTime ?? "--:--"}</Text>
-                    <Text style={styles.timeSub}>{period?.endTime ?? ""}</Text>
-                  </View>
-                  <View style={styles.detail}>
-                    <Text style={styles.subject}>{entry.subject}</Text>
-                    <Text style={styles.meta}>
-                      {isTeacher
-                        ? `${entry.class.name} ${entry.class.section}`
-                        : `${entry.teacherUser.firstName} ${entry.teacherUser.lastName}`}
-                      {entry.room ? ` · ${entry.room}` : ""}
-                    </Text>
-                  </View>
-                </Card>
-              );
-            })}
-          </View>
+    <ScrollView
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={() => void query.refetch()} />}
+    >
+      {!isTeacher && <ChildSwitcher />}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.days}>
+        {TEACHING_DAYS.map((d) => (
+          <Chip key={d} label={d === today ? `${t(`days.short.${d}`)} •` : t(`days.short.${d}`)} active={d === day} onPress={() => setDay(d)} />
         ))}
       </ScrollView>
-    </Screen>
+      <Txt accessibilityRole="header" style={styles.heading}>{day === today ? t("timetable.today") : t(`days.long.${day}`)}</Txt>
+
+      {query.isError ? (
+        <ErrorState message={t("app.loadError")} retryLabel={t("app.retry")} onRetry={() => void query.refetch()} />
+      ) : !query.data ? (
+        <><Skeleton height={64} /><Skeleton height={64} /><Skeleton height={64} /></>
+      ) : query.data.length === 0 ? (
+        <Card><EmptyState title={isTeacher ? t("timetable.noLessonsScheduled") : t("mobileFamilyWork.noTimetableForClass")} /></Card>
+      ) : lessons.length === 0 ? (
+        <Card><EmptyState title={t("everyday.noLessonsThatDay")} /></Card>
+      ) : (
+        lessons.map((lesson) => {
+          const colour = subjectColour(lesson.subject);
+          const isNow = day === today && lesson.period.startTime <= nowHm && nowHm < lesson.period.endTime;
+          return (
+            <View key={lesson.id} style={[styles.lesson, isNow && { borderColor: brand[700], borderWidth: 2 }]}>
+              <View style={styles.time}>
+                <Text style={styles.start}>{lesson.period.startTime}</Text>
+                <Text style={styles.end}>{lesson.period.endTime}</Text>
+              </View>
+              <View style={[styles.bar, { backgroundColor: colour.fg }]} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[styles.subject, { color: colour.fg }]}>{lesson.subject}</Text>
+                <Muted style={{ fontSize: 13 }}>
+                  {isTeacher ? `${lesson.class.name}-${lesson.class.section}` : `${lesson.teacherUser.firstName} ${lesson.teacherUser.lastName}`}
+                  {lesson.room ? ` · ${t("timetable.roomShort", { room: lesson.room })}` : ""}
+                </Muted>
+              </View>
+              {isNow && <View style={[styles.now, { backgroundColor: brand[700] }]}><Text style={styles.nowText}>{t("everyday.now")}</Text></View>}
+            </View>
+          );
+        })
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { gap: spacing.md, paddingBottom: spacing.xl },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  daySection: { gap: spacing.sm },
-  lesson: { flexDirection: "row", gap: spacing.md, alignItems: "center" },
-  time: {
-    minWidth: 56,
-    borderRightWidth: 1,
-    borderRightColor: colors.slate[100],
-    paddingRight: spacing.md,
-  },
-  timeText: { ...typography.subheading, fontVariant: ["tabular-nums"] },
-  timeSub: { fontSize: 12, color: colors.slate[400], fontVariant: ["tabular-nums"] },
-  detail: { flex: 1, gap: 2 },
-  subject: { ...typography.subheading },
-  meta: { fontSize: 13, color: colors.slate[500] },
+  content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
+  days: { gap: spacing.sm },
+  heading: { color: palette.ink, fontWeight: "800", fontSize: 18 },
+  lesson: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: palette.surface, borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: palette.line, minHeight: 64 },
+  time: { width: 50 },
+  start: { color: palette.ink, fontWeight: "800", fontSize: 15, fontVariant: ["tabular-nums"] },
+  end: { color: palette.muted, fontSize: 12, fontVariant: ["tabular-nums"] },
+  bar: { width: 4, alignSelf: "stretch", borderRadius: 2 },
+  subject: { fontWeight: "800", fontSize: 16 },
+  now: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  nowText: { color: "#FFFFFF", fontWeight: "800", fontSize: 12 },
 });

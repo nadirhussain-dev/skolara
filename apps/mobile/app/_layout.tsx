@@ -55,23 +55,22 @@ function RootStack() {
         <Stack.Screen name="super-admin/index" options={{ title: "Skolara" }} />
         <Stack.Screen name="results/index" options={{ title: t("results.title") }} />
         <Stack.Screen name="notices/index" options={{ title: t("nav.notices") }} />
-        <Stack.Screen name="assignments/index" options={{ title: t("screens.selectClass") }} />
-        <Stack.Screen name="assignments/[classId]" options={{ title: t("nav.assignments") }} />
+        <Stack.Screen name="assignments/index" options={{ title: t("nav.homework") }} />
         <Stack.Screen
           name="assignments/submissions/[assignmentId]"
           options={{ title: t("screens.submissions") }}
         />
-        <Stack.Screen name="assignments/mine" options={{ title: t("dashboard.homework") }} />
-        <Stack.Screen name="complaints/index" options={{ title: t("nav.complaints") }} />
+        <Stack.Screen name="assignments/mine" options={{ title: t("nav.homework") }} />
+        <Stack.Screen name="complaints/index" options={{ title: t("concerns.title") }} />
         <Stack.Screen name="complaints/[id]" options={{ title: t("screens.complaint") }} />
-        <Stack.Screen name="messages/index" options={{ title: t("dashboard.messages") }} />
+        <Stack.Screen name="messages/index" options={{ title: t("nav.messages") }} />
         <Stack.Screen name="messages/[threadId]" options={{ title: t("screens.conversation") }} />
         <Stack.Screen name="transport/index" options={{ title: t("dashboard.busTracking") }} />
         <Stack.Screen name="library/index" options={{ title: t("nav.library") }} />
         <Stack.Screen name="payroll/index" options={{ title: t("dashboard.myPayslips") }} />
         <Stack.Screen name="timetable/index" options={{ title: t("nav.timetable") }} />
         <Stack.Screen name="calendar/index" options={{ title: t("nav.calendar") }} />
-        <Stack.Screen name="leave/index" options={{ title: t("nav.leave") }} />
+        <Stack.Screen name="leave/index" options={{ title: t("nav.myLeave") }} />
         <Stack.Screen name="absences/index" options={{ title: t("screens.reportAbsence") }} />
         <Stack.Screen name="meetings/index" options={{ title: t("nav.meetings") }} />
         <Stack.Screen name="materials/index" options={{ title: t("nav.studyMaterials") }} />

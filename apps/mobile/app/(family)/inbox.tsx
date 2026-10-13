@@ -11,6 +11,7 @@ export default function FamilyInbox() {
         MESSAGE: "/messages",
         COMPLAINT: "/complaints",
         MEETING: "/meetings",
+        HOMEWORK: "/assignments/mine",
       }}
     />
   );

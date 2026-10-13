@@ -1,122 +1,140 @@
-import {
-  useClassAssignments,
-  useMyChildren,
-  useStudentAssignments,
-  useSubmitAssignment,
-  useUploadFile,
-} from "@skolara/api-client";
-import * as ImagePicker from "expo-image-picker";
-import { useMemo, useState } from "react";
-import { Alert, FlatList, StyleSheet, Text, View } from "react-native";
+import { useClassAssignments, useStudentAssignments, useSubmitAssignment, useUploadFile, type AssignmentWithProgress } from "@skolara/api-client";
 import { useTranslation } from "@skolara/i18n";
-import { colors, spacing, typography } from "@/lib/theme";
-import { intlLocale } from "@/lib/intl";
+import * as ImagePicker from "expo-image-picker";
+import { useState } from "react";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ChildSwitcher } from "@/components/child-switcher";
+import { ChildProvider, useChild } from "@/lib/child-context";
+import { formatDay, todayKey } from "@/lib/dates";
+import { palette } from "@/lib/school-theme";
+import { subjectColour } from "@/lib/subject-colour";
+import { spacing } from "@/lib/theme";
 import { assetToUploadable } from "@/lib/upload";
-import { Button, Card, Chip, EmptyState, Pill, Screen } from "@/lib/ui";
+import { Button, Card, EmptyState, ErrorState, Muted, Pill, SectionLabel, Skeleton, Txt } from "@/lib/ui";
 
-export default function MyAssignmentsScreen() {
+/** Homework for the selected child: what is due, what is in, and the teacher's mark. */
+export default function HomeworkScreen() {
+  return (
+    <ChildProvider>
+      <Homework />
+    </ChildProvider>
+  );
+}
+
+function localDay(value: Date | string): string {
+  return todayKey(new Date(value));
+}
+
+function Homework() {
+  const { t } = useTranslation();
+  const { child } = useChild();
+  const homework = useClassAssignments(child?.classId ?? "");
+  const handedIn = useStudentAssignments(child?.id);
+  const byAssignment = new Map((handedIn.data ?? []).map((s) => [s.assignmentId, s]));
+  const today = todayKey();
+  const all = homework.data ?? [];
+  const todo = all.filter((a) => !byAssignment.has(a.id) && localDay(a.dueDate) >= today).sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate));
+  const done = all.filter((a) => byAssignment.has(a.id));
+  const missed = all.filter((a) => !byAssignment.has(a.id) && localDay(a.dueDate) < today);
+
+  return (
+    <ScrollView
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={homework.isRefetching} onRefresh={() => { void homework.refetch(); void handedIn.refetch(); }} />}
+    >
+      <ChildSwitcher />
+      {!child ? (
+        <Card><EmptyState title={t("app.noChildren")} description={t("app.noChildrenBody")} /></Card>
+      ) : homework.isError ? (
+        <ErrorState message={t("app.loadError")} retryLabel={t("app.retry")} onRetry={() => void homework.refetch()} />
+      ) : !homework.data ? (
+        <><Skeleton height={120} /><Skeleton height={120} /></>
+      ) : all.length === 0 ? (
+        <Card><EmptyState title={t("mobileFamilyWork.noAssignmentsForClass")} description={t("everyday.homeworkEmptyBody")} /></Card>
+      ) : (
+        <>
+          <SectionLabel>{t("everyday.toDo", { count: todo.length })}</SectionLabel>
+          {todo.length === 0 ? <Card><Muted>{t("everyday.allDone")}</Muted></Card> : todo.map((a) => <HomeworkCard key={a.id} homework={a} studentId={child.id} />)}
+          {done.length > 0 && <SectionLabel>{t("everyday.handedInSection")}</SectionLabel>}
+          {done.map((a) => <HomeworkCard key={a.id} homework={a} studentId={child.id} submission={byAssignment.get(a.id)} />)}
+          {missed.length > 0 && <SectionLabel>{t("everyday.missed")}</SectionLabel>}
+          {missed.map((a) => <HomeworkCard key={a.id} homework={a} studentId={child.id} missed />)}
+        </>
+      )}
+    </ScrollView>
+  );
+}
+
+function HomeworkCard({
+  homework,
+  studentId,
+  submission,
+  missed,
+}: {
+  homework: AssignmentWithProgress;
+  studentId: string;
+  submission?: { grade: string | null; feedback: string | null; submittedAt: Date | string };
+  missed?: boolean;
+}) {
   const { t, locale } = useTranslation();
-  const { data: children } = useMyChildren();
-  const [studentId, setStudentId] = useState<string>();
-  const child = children?.find((c) => c.id === studentId);
+  const upload = useUploadFile();
+  const submit = useSubmitAssignment();
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const colour = subjectColour(homework.subject);
+  const today = todayKey();
+  const dueKey = localDay(homework.dueDate);
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const due = dueKey === today ? t("homework.dueToday") : dueKey === todayKey(tomorrow) ? t("homework.dueTomorrow") : t("homework.dueOn", { date: formatDay(homework.dueDate, locale) });
 
-  const { data: assignments } = useClassAssignments(child?.classId ?? "");
-  const { data: submissions } = useStudentAssignments(studentId);
-  const submitAssignment = useSubmitAssignment();
-  const uploadFile = useUploadFile();
-
-  const submittedByAssignmentId = useMemo(() => {
-    const map = new Map<string, { grade: string | null }>();
-    submissions?.forEach((s) => map.set(s.assignmentId, { grade: s.grade }));
-    return map;
-  }, [submissions]);
-
-  async function submit(assignmentId: string) {
-    if (!studentId) return;
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return;
-    const picked = await ImagePicker.launchImageLibraryAsync({ quality: 0.7 });
-    if (picked.canceled) return;
-
+  async function handIn(fromCamera: boolean) {
+    setStatus(null);
+    const permission = fromCamera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setStatus({ ok: false, text: t("everyday.needPermission") });
+      return;
+    }
+    const picked = fromCamera ? await ImagePicker.launchCameraAsync({ quality: 0.7 }) : await ImagePicker.launchImageLibraryAsync({ quality: 0.7 });
+    if (picked.canceled || !picked.assets[0]) return;
     try {
-      // The teacher opens this from their own browser, so the file has to
-      // live in storage rather than on this device.
-      const uploaded = await uploadFile.mutateAsync({
-        file: assetToUploadable(picked.assets[0]),
-        purpose: "ASSIGNMENT_SUBMISSION",
-      });
-      await submitAssignment.mutateAsync({
-        assignmentId,
-        studentId,
-        input: { fileUrl: uploaded.url },
-      });
-      Alert.alert(t("mobileFamilyWork.submittedTitle"), t("mobileFamilyWork.submittedBody"));
+      // The teacher opens it from their own browser, so it goes to storage first.
+      const file = await upload.mutateAsync({ file: assetToUploadable(picked.assets[0]), purpose: "ASSIGNMENT_SUBMISSION" });
+      await submit.mutateAsync({ assignmentId: homework.id, studentId, input: { fileUrl: file.url } });
+      setStatus({ ok: true, text: t("mobileFamilyWork.submittedBody") });
     } catch (error) {
-      Alert.alert(
-        t("mobileFamilyWork.couldNotSubmit"),
-        error instanceof Error ? error.message : t("mobileFamilyWork.tryAgain"),
-      );
+      setStatus({ ok: false, text: error instanceof Error ? error.message : t("mobileFamilyWork.tryAgain") });
     }
   }
 
+  const busy = upload.isPending || submit.isPending;
   return (
-    <Screen>
-      <View style={styles.chipRow}>
-        {children?.map((c) => (
-          <Chip
-            key={c.id}
-            label={c.user.firstName}
-            active={studentId === c.id}
-            onPress={() => setStudentId(c.id)}
-          />
-        ))}
+    <Card>
+      <View style={styles.top}>
+        <View style={[styles.subject, { backgroundColor: colour.bg }]}><Text style={{ color: colour.fg, fontWeight: "800", fontSize: 12 }}>{homework.subject}</Text></View>
+        {submission ? (
+          <Pill label={submission.grade ? t("mobileFamilyWork.submittedWithGrade", { grade: submission.grade }) : t("mobileFamilyWork.submitted")} tone="success" />
+        ) : (
+          <Pill label={missed ? t("homework.closedOn", { date: formatDay(homework.dueDate, locale) }) : due} tone={missed ? "danger" : dueKey === today ? "warning" : "brand"} />
+        )}
       </View>
-
-      <FlatList
-        data={assignments}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ gap: spacing.sm }}
-        renderItem={({ item }) => {
-          const submission = submittedByAssignmentId.get(item.id);
-          return (
-            <Card>
-              <Text style={styles.title}>
-                {item.title} ({item.subject})
-              </Text>
-              <Text style={styles.due}>
-                {t("mobileFamilyWork.dueOn", {
-                  date: new Date(item.dueDate).toLocaleDateString(intlLocale(locale)),
-                })}
-              </Text>
-              {submission ? (
-                <Pill
-                  label={
-                    submission.grade
-                      ? t("mobileFamilyWork.submittedWithGrade", { grade: submission.grade })
-                      : t("mobileFamilyWork.submitted")
-                  }
-                  tone="success"
-                />
-              ) : (
-                <Button
-                  title={t("mobileFamilyWork.submitWork")}
-                  variant="secondary"
-                  onPress={() => submit(item.id)}
-                />
-              )}
-            </Card>
-          );
-        }}
-        ListEmptyComponent={
-          studentId ? <EmptyState title={t("mobileFamilyWork.noAssignmentsForClass")} /> : null
-        }
-      />
-    </Screen>
+      <Txt style={styles.title}>{homework.title}</Txt>
+      {homework.description ? <Muted>{homework.description}</Muted> : null}
+      {submission?.feedback ? <Txt style={{ color: palette.ink }}>“{submission.feedback}”</Txt> : null}
+      {status && <Txt accessibilityLiveRegion="polite" style={{ color: status.ok ? palette.success : palette.danger, fontWeight: "700" }}>{status.text}</Txt>}
+      {!submission && !missed && (
+        <View style={styles.actions}>
+          <Button title={t("everyday.takePhoto")} icon="camera-outline" onPress={() => void handIn(true)} loading={busy} style={{ flex: 1 }} />
+          <Button title={t("everyday.choosePhoto")} icon="images-outline" variant="secondary" onPress={() => void handIn(false)} disabled={busy} style={{ flex: 1 }} />
+        </View>
+      )}
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  title: { ...typography.subheading },
-  due: { ...typography.muted, color: colors.slate[500] },
+  content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
+  top: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, flexWrap: "wrap" },
+  subject: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  title: { color: palette.ink, fontWeight: "800", fontSize: 17 },
+  actions: { flexDirection: "row", gap: spacing.sm },
 });

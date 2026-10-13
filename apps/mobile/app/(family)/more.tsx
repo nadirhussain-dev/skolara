@@ -6,11 +6,13 @@ export default function FamilyMore() {
   return (
     <MoreScreen
       links={[
-        { icon: "medkit-outline", title: t("app.reportAbsence"), href: "/absences" },
         { icon: "book-outline", title: t("app.homework"), href: "/assignments/mine" },
+        { icon: "time-outline", title: t("app.timetable"), href: "/timetable" },
         { icon: "chatbubbles-outline", title: t("app.messageTeacher"), href: "/messages" },
-        { icon: "megaphone-outline", title: t("app.complaints"), href: "/complaints" },
-        { icon: "calendar-outline", title: t("app.timetable"), href: "/timetable" },
+        { icon: "medkit-outline", title: t("app.reportAbsence"), href: "/absences" },
+        { icon: "people-outline", title: t("nav.meetings"), href: "/meetings" },
+        { icon: "calendar-outline", title: t("nav.calendar"), href: "/calendar" },
+        { icon: "megaphone-outline", title: t("everyday.raiseConcern"), href: "/complaints" },
       ]}
     />
   );

@@ -1,151 +1,185 @@
-import {
-  useAvailableMeetingSlots,
-  useBookedMeetingSlots,
-  useBookMeetingSlot,
-  useCancelMeetingBooking,
-  useMyChildren,
-} from "@skolara/api-client";
+import { useAvailableMeetingSlots, useBookMeetingSlot, useBookedMeetingSlots, useCancelMeetingBooking, useMyMeetingSlots, useWithdrawMeetingSlot, type MeetingSlotDetail } from "@skolara/api-client";
+import { useTranslation } from "@skolara/i18n";
 import { useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useTranslation, type Locale } from "@skolara/i18n";
-import { colors, spacing, typography } from "@/lib/theme";
-import { intlLocale } from "@/lib/intl";
-import {
-  Button,
-  Card,
-  Chip,
-  EmptyState,
-  Input,
-  LoadingLine,
-  Screen,
-  SectionLabel,
-} from "@/lib/ui";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ChildSwitcher } from "@/components/child-switcher";
+import { ChildProvider, useChild } from "@/lib/child-context";
+import { palette, useTheme } from "@/lib/school-theme";
+import { useSession } from "@/lib/session";
+import { radius, spacing } from "@/lib/theme";
+import { Avatar, Button, Card, EmptyState, Field, Muted, SectionLabel, Skeleton, Txt } from "@/lib/ui";
 
-function slotLabel(startsAt: string | Date, locale: Locale): string {
-  return new Date(startsAt).toLocaleString(intlLocale(locale), {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+/** Parent–teacher meetings: book one of the times a teacher has offered, or cancel. */
+export default function MeetingsScreen() {
+  const session = useSession();
+  if (!session.isLoaded) return null;
+  if (session.role === "TEACHER") return <TeacherMeetings />;
+  return (
+    <ChildProvider>
+      <Meetings />
+    </ChildProvider>
+  );
 }
 
-export default function MeetingsScreen() {
+/** A teacher's own slots: who has booked which time, and the free ones to withdraw. */
+function TeacherMeetings() {
   const { t, locale } = useTranslation();
-  const { data: children } = useMyChildren();
-  const { data: available, isLoading } = useAvailableMeetingSlots();
-  const { data: booked } = useBookedMeetingSlots();
+  const slots = useMyMeetingSlots();
+  const withdraw = useWithdrawMeetingSlot();
+  const tag = locale === "ur" ? "ur-PK" : "en-GB";
+  const time = new Intl.DateTimeFormat(tag, { hour: "numeric", minute: "2-digit" });
+  const day = new Intl.DateTimeFormat(tag, { weekday: "long", day: "numeric", month: "long" });
+  const upcoming = (slots.data ?? []).filter((s) => new Date(s.endsAt) > new Date());
+  const days = new Map<string, MeetingSlotDetail[]>();
+  for (const slot of upcoming) {
+    const key = day.format(new Date(slot.startsAt));
+    days.set(key, [...(days.get(key) ?? []), slot]);
+  }
+  return (
+    <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={slots.isRefetching} onRefresh={() => void slots.refetch()} />}>
+      <Muted>{t("everyday.offerOnWeb")}</Muted>
+      {!slots.data ? (
+        <Skeleton />
+      ) : upcoming.length === 0 ? (
+        <Card><EmptyState title={t("meetings.noSlots")} description={t("meetings.noSlotsBody")} /></Card>
+      ) : (
+        [...days.entries()].map(([label, list]) => (
+          <View key={label} style={{ gap: spacing.sm }}>
+            <SectionLabel>{label}</SectionLabel>
+            <Card style={{ padding: 0, gap: 0, overflow: "hidden" }}>
+              {list.map((slot, i) => (
+                <View key={slot.id} style={[styles.slotRow, i > 0 && { borderTopWidth: 1, borderTopColor: palette.line }]}>
+                  <Txt style={[styles.strong, { width: 72 }]}>{time.format(new Date(slot.startsAt))}</Txt>
+                  {slot.bookedByParentUser && slot.student ? (
+                    <View style={{ flex: 1 }}>
+                      <Txt style={{ color: palette.ink, fontWeight: "700" }}>{slot.student.user.firstName} {slot.student.user.lastName}</Txt>
+                      <Muted style={{ fontSize: 13 }}>{slot.bookedByParentUser.firstName} {slot.bookedByParentUser.lastName}{slot.note ? ` · “${slot.note}”` : ""}</Muted>
+                    </View>
+                  ) : (
+                    <>
+                      <Muted style={{ flex: 1 }}>{t("meetings.openForBooking")}</Muted>
+                      <Button title={t("meetings.withdraw")} variant="ghost" onPress={() => withdraw.mutate(slot.id)} />
+                    </>
+                  )}
+                </View>
+              ))}
+            </Card>
+          </View>
+        ))
+      )}
+    </ScrollView>
+  );
+}
+
+function Meetings() {
+  const { t, locale } = useTranslation();
+  const { brand } = useTheme();
+  const { child } = useChild();
+  const available = useAvailableMeetingSlots();
+  const booked = useBookedMeetingSlots();
   const book = useBookMeetingSlot();
   const cancel = useCancelMeetingBooking();
-
-  const [studentId, setStudentId] = useState<string>();
   const [note, setNote] = useState("");
-  const activeStudentId = studentId ?? children?.[0]?.id;
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const tag = locale === "ur" ? "ur-PK" : "en-GB";
+  const time = new Intl.DateTimeFormat(tag, { hour: "numeric", minute: "2-digit" });
+  const day = new Intl.DateTimeFormat(tag, { weekday: "long", day: "numeric", month: "long" });
 
-  async function bookSlot(slotId: string) {
-    if (!activeStudentId) {
-      Alert.alert(t("mobileMeetings.pickChild"), t("mobileMeetings.pickChildBody"));
-      return;
-    }
-    try {
-      await book.mutateAsync({
-        slotId,
-        input: { studentId: activeStudentId, note: note || undefined },
-      });
-      setNote("");
-      Alert.alert(t("mobileMeetings.booked"), t("mobileMeetings.bookedBody"));
-    } catch (error) {
-      // The API distinguishes "someone just took it" from "it's gone" — worth
-      // passing through, since the two need different reactions.
-      Alert.alert(
-        t("mobileMeetings.couldNotBook"),
-        error instanceof Error ? error.message : t("mobileMeetings.tryAnotherSlot"),
-      );
-    }
+  // Group what's on offer by teacher, then by day.
+  const groups = new Map<string, { teacher: MeetingSlotDetail["teacherUser"]; days: Map<string, MeetingSlotDetail[]> }>();
+  for (const slot of available.data ?? []) {
+    const g = groups.get(slot.teacherUser.id) ?? { teacher: slot.teacherUser, days: new Map() };
+    const key = day.format(new Date(slot.startsAt));
+    g.days.set(key, [...(g.days.get(key) ?? []), slot]);
+    groups.set(slot.teacherUser.id, g);
+  }
+
+  function pick(slot: MeetingSlotDetail) {
+    if (!child) return;
+    setStatus(null);
+    book.mutate(
+      { slotId: slot.id, input: { studentId: child.id, note: note.trim() || undefined } },
+      {
+        onSuccess: () => { setNote(""); setStatus({ ok: true, text: t("everyday.bookedWith", { teacher: `${slot.teacherUser.firstName} ${slot.teacherUser.lastName}`, time: `${day.format(new Date(slot.startsAt))}, ${time.format(new Date(slot.startsAt))}` }) }); },
+        onError: (e) => setStatus({ ok: false, text: e instanceof Error ? e.message : t("mobileMeetings.tryAnotherSlot") }),
+      },
+    );
   }
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={styles.container}>
-        {(booked?.length ?? 0) > 0 && (
-          <>
-            <SectionLabel>{t("mobileMeetings.yourAppointments")}</SectionLabel>
-            {booked?.map((slot) => (
-              <Card key={slot.id} style={styles.slot}>
-                <View style={styles.slotDetail}>
-                  <Text style={styles.slotTime}>{slotLabel(slot.startsAt, locale)}</Text>
-                  <Text style={styles.slotMeta}>
-                    {slot.teacherUser.firstName} {slot.teacherUser.lastName}
-                    {slot.student
-                      ? t("mobileMeetings.aboutChild", {
-                          student: slot.student.user.firstName,
-                        })
-                      : ""}
-                  </Text>
+    <ScrollView
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={available.isRefetching} onRefresh={() => { void available.refetch(); void booked.refetch(); }} />}
+    >
+      {(booked.data ?? []).length > 0 && (
+        <>
+          <SectionLabel>{t("mobileMeetings.yourAppointments")}</SectionLabel>
+          {(booked.data ?? []).map((slot) => (
+            <Card key={slot.id} style={{ borderColor: brand[300], borderWidth: 1 }}>
+              <View style={styles.row}>
+                <Avatar name={`${slot.teacherUser.firstName} ${slot.teacherUser.lastName}`} />
+                <View style={{ flex: 1 }}>
+                  <Txt style={styles.strong}>{day.format(new Date(slot.startsAt))}, {time.format(new Date(slot.startsAt))}</Txt>
+                  <Muted>{slot.teacherUser.firstName} {slot.teacherUser.lastName}{slot.student ? t("mobileMeetings.aboutChild", { student: slot.student.user.firstName }) : ""}</Muted>
                 </View>
-                <Button
-                  title={t("common.cancel")}
-                  variant="ghost"
-                  onPress={() => cancel.mutate(slot.id)}
-                />
-              </Card>
-            ))}
-          </>
-        )}
+              </View>
+              {slot.note ? <Muted>“{slot.note}”</Muted> : null}
+              <Button title={t("everyday.cancelBooking")} variant="danger" onPress={() => cancel.mutate(slot.id)} loading={cancel.isPending} />
+            </Card>
+          ))}
+        </>
+      )}
 
-        <SectionLabel>{t("mobileMeetings.bookMeeting")}</SectionLabel>
-
-        {(children?.length ?? 0) > 1 && (
-          <View style={styles.chipRow}>
-            {children?.map((child) => (
-              <Chip
-                key={child.id}
-                label={child.user.firstName}
-                active={activeStudentId === child.id}
-                onPress={() => setStudentId(child.id)}
-              />
-            ))}
-          </View>
-        )}
-
-        <Input
-          placeholder={t("mobileMeetings.noteHint")}
-          value={note}
-          onChangeText={setNote}
-        />
-
-        {isLoading && <LoadingLine label={t("common.loading")} />}
-        {!isLoading && available?.length === 0 && (
-          <EmptyState title={t("mobileMeetings.noSlots")} />
-        )}
-
-        {available?.map((slot) => (
-          <Card key={slot.id} style={styles.slot}>
-            <View style={styles.slotDetail}>
-              <Text style={styles.slotTime}>{slotLabel(slot.startsAt, locale)}</Text>
-              <Text style={styles.slotMeta}>
-                {slot.teacherUser.firstName} {slot.teacherUser.lastName}
-              </Text>
+      <SectionLabel>{t("mobileMeetings.bookMeeting")}</SectionLabel>
+      <Card>
+        {child && <Muted>{t("everyday.aboutChild", { child: `${child.user.firstName} ${child.user.lastName}` })}</Muted>}
+        <ChildSwitcher />
+        <Field label={t("mobileMeetings.noteHint")} value={note} onChangeText={setNote} maxLength={500} />
+      </Card>
+      {status && <Txt accessibilityLiveRegion="polite" style={{ color: status.ok ? palette.success : palette.danger, fontWeight: "700" }}>{status.text}</Txt>}
+      {!available.data ? (
+        <Skeleton />
+      ) : groups.size === 0 ? (
+        <Card><EmptyState title={t("mobileMeetings.noSlots")} /></Card>
+      ) : (
+        [...groups.values()].map((g) => (
+          <Card key={g.teacher.id}>
+            <View style={styles.row}>
+              <Avatar name={`${g.teacher.firstName} ${g.teacher.lastName}`} />
+              <Txt style={styles.strong}>{g.teacher.firstName} {g.teacher.lastName}</Txt>
             </View>
-            <Button
-              title={t("mobileMeetings.book")}
-              variant="secondary"
-              loading={book.isPending}
-              onPress={() => bookSlot(slot.id)}
-            />
+            {[...g.days.entries()].map(([label, slots]) => (
+              <View key={label} style={{ gap: spacing.sm }}>
+                <Muted style={{ fontWeight: "700" }}>{label}</Muted>
+                <View style={styles.times}>
+                  {slots.map((slot) => (
+                    <Pressable
+                      key={slot.id}
+                      onPress={() => pick(slot)}
+                      disabled={book.isPending || !child}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("everyday.bookAt", { time: time.format(new Date(slot.startsAt)) })}
+                      style={({ pressed }) => [styles.time, { borderColor: brand[300], backgroundColor: pressed ? brand[50] : palette.surface }]}
+                    >
+                      <Text style={{ color: brand[700], fontWeight: "800", fontVariant: ["tabular-nums"] }}>{time.format(new Date(slot.startsAt))}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ))}
           </Card>
-        ))}
-      </ScrollView>
-    </Screen>
+        ))
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { gap: spacing.sm, paddingBottom: spacing.xl },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  slot: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  slotDetail: { flex: 1, gap: 2 },
-  slotTime: { ...typography.subheading, fontVariant: ["tabular-nums"] },
-  slotMeta: { fontSize: 13, color: colors.slate[500] },
+  content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
+  row: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  strong: { color: palette.ink, fontWeight: "800", fontSize: 16 },
+  times: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  slotRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, minHeight: 56 },
+  time: { minWidth: 76, minHeight: 44, borderRadius: radius.md, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 12 },
 });

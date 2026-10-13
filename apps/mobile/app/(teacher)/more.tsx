@@ -6,10 +6,12 @@ export default function TeacherMore() {
   return (
     <MoreScreen
       links={[
-        { icon: "calendar-outline", title: t("app.timetable"), href: "/timetable" },
+        { icon: "time-outline", title: t("app.timetable"), href: "/timetable" },
         { icon: "book-outline", title: t("app.homework"), href: "/assignments" },
-        { icon: "chatbubbles-outline", title: t("app.messageTeacher"), href: "/messages" },
+        { icon: "chatbubbles-outline", title: t("nav.messages"), href: "/messages" },
         { icon: "airplane-outline", title: t("app.leave"), href: "/leave" },
+        { icon: "people-outline", title: t("nav.meetings"), href: "/meetings" },
+        { icon: "calendar-outline", title: t("nav.calendar"), href: "/calendar" },
       ]}
     />
   );

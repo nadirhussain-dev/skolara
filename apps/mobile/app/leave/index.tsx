@@ -1,173 +1,116 @@
-import {
-  useCancelLeave,
-  useLeaveBalances,
-  useMyLeave,
-  useRequestLeave,
-} from "@skolara/api-client";
-import { leaveKindSchema, type LeaveKind, type LeaveStatus } from "@skolara/types";
+import { useCancelLeave, useLeaveBalances, useMyLeave, useRequestLeave } from "@skolara/api-client";
+import { useTranslation } from "@skolara/i18n";
+import type { LeaveKind } from "@skolara/types";
 import { useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useTranslation, type Locale } from "@skolara/i18n";
-import { intlLocale } from "@/lib/intl";
-import { colors, spacing, typography, type Tone } from "@/lib/theme";
-import { Button, Card, Chip, EmptyState, Input, LoadingLine, Pill, Screen, SectionLabel } from "@/lib/ui";
+import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { DayRangePicker, RangeSummary, type DayRange } from "@/components/day-picker";
+import { formatDay } from "@/lib/dates";
+import { palette } from "@/lib/school-theme";
+import { spacing } from "@/lib/theme";
+import { REQUEST_TONE } from "@/lib/tones";
+import { Button, Card, Chip, EmptyState, Field, Meter, Muted, Pill, SectionLabel, Skeleton, Txt } from "@/lib/ui";
 
-const STATUS_TONE: Record<LeaveStatus, Tone> = {
-  PENDING: "warning",
-  APPROVED: "success",
-  REJECTED: "danger",
-  CANCELLED: "neutral",
-};
+const KINDS: LeaveKind[] = ["CASUAL", "SICK", "UNPAID", "MATERNITY", "OTHER"];
 
-/** YYYY-MM-DD, which is what a plain text field can be validated against. */
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-function formatRange(start: string | Date, end: string | Date, locale: Locale): string {
-  const tag = intlLocale(locale);
-  const from = new Date(start).toLocaleDateString(tag);
-  const to = new Date(end).toLocaleDateString(tag);
-  return from === to ? from : `${from} – ${to}`;
-}
-
+/** A teacher's own leave: what is left, a quick request, and the answers. */
 export default function LeaveScreen() {
   const { t, locale } = useTranslation();
-  const { data: balances, isLoading: balancesLoading } = useLeaveBalances();
-  const { data: requests } = useMyLeave();
-  const requestLeave = useRequestLeave();
-  const cancelLeave = useCancelLeave();
-
+  const balances = useLeaveBalances();
+  const mine = useMyLeave();
+  const request = useRequestLeave();
+  const cancel = useCancelLeave();
   const [kind, setKind] = useState<LeaveKind>("CASUAL");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [range, setRange] = useState<DayRange>({ start: null, end: null });
   const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
 
-  async function submit() {
-    if (!ISO_DATE.test(startDate) || !ISO_DATE.test(endDate)) {
-      Alert.alert(t("mobileLeave.checkDates"), t("mobileLeave.checkDatesBody"));
+  function submit() {
+    if (!range.start) {
+      setError(t("everyday.pickDays"));
       return;
     }
-    try {
-      await requestLeave.mutateAsync({
-        kind,
-        startDate: new Date(`${startDate}T00:00:00.000Z`),
-        endDate: new Date(`${endDate}T00:00:00.000Z`),
-        reason: reason || undefined,
-      });
-      setStartDate("");
-      setEndDate("");
-      setReason("");
-      Alert.alert(t("mobileLeave.sent"), t("mobileLeave.sentBody"));
-    } catch (error) {
-      // The API explains allowance overruns and non-working ranges precisely,
-      // so show what it said rather than a generic failure.
-      Alert.alert(
-        t("mobileLeave.couldNotSend"),
-        error instanceof Error ? error.message : t("mobileLeave.tryAgain"),
-      );
-    }
+    setError(null);
+    request.mutate(
+      { kind, startDate: new Date(`${range.start}T00:00:00Z`), endDate: new Date(`${range.end ?? range.start}T00:00:00Z`), reason: reason.trim() || undefined },
+      {
+        onSuccess: () => {
+          setRange({ start: null, end: null });
+          setReason("");
+          setSent(true);
+        },
+        onError: (e) => setError(e instanceof Error ? e.message : t("mobileLeave.tryAgain")),
+      },
+    );
   }
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={styles.container}>
-        <SectionLabel>{t("mobileLeave.yourAllowance")}</SectionLabel>
-        {balancesLoading && <LoadingLine label={t("common.loading")} />}
-        <View style={styles.balanceRow}>
-          {balances?.map((balance) => (
-            <Card key={balance.kind} style={styles.balanceCard}>
-              <Text style={styles.balanceValue}>
-                {balance.remainingDays === null ? "—" : balance.remainingDays}
-              </Text>
-              <Text style={styles.balanceLabel}>{t(`leaveKind.${balance.kind}`)}</Text>
-              <Text style={styles.balanceSub}>
-                {balance.allowanceDays === null
-                  ? t("mobileLeave.uncapped")
-                  : t("mobileLeave.usedOf", {
-                      used: balance.usedDays,
-                      allowance: balance.allowanceDays,
-                    })}
-              </Text>
+    <ScrollView
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={mine.isRefetching} onRefresh={() => { void mine.refetch(); void balances.refetch(); }} />}
+    >
+      <SectionLabel>{t("mobileLeave.yourAllowance")}</SectionLabel>
+      {!balances.data ? (
+        <Skeleton height={96} />
+      ) : (
+        <View style={styles.balances}>
+          {balances.data.filter((b) => b.allowanceDays !== null && b.kind !== "MATERNITY").map((b) => (
+            <Card key={b.kind} style={styles.balance}>
+              <Muted style={{ fontSize: 13 }}>{t(`leaveKind.${b.kind}`)}</Muted>
+              <Txt style={styles.big}>{b.remainingDays === 1 ? t("staffLeave.leftOne") : t("staffLeave.left", { count: b.remainingDays ?? 0 })}</Txt>
+              <Meter value={b.allowanceDays ? (b.usedDays / b.allowanceDays) * 100 : 0} label={t("staffLeave.usedOf", { used: b.usedDays, total: b.allowanceDays ?? 0 })} />
             </Card>
           ))}
         </View>
+      )}
 
-        <SectionLabel>{t("mobileLeave.requestLeave")}</SectionLabel>
-        <Card>
-          <View style={styles.chipRow}>
-            {leaveKindSchema.options.map((option) => (
-              <Chip
-                key={option}
-                label={t(`leaveKind.${option}`)}
-                active={kind === option}
-                onPress={() => setKind(option)}
-              />
-            ))}
-          </View>
+      <Card>
+        <Txt style={styles.title}>{t("staffLeave.ask")}</Txt>
+        <View style={styles.chips}>
+          {KINDS.map((k) => <Chip key={k} label={t(`leaveKind.${k}`)} active={kind === k} onPress={() => setKind(k)} />)}
+        </View>
+        <Txt style={styles.label}>{t("everyday.whichDays")}</Txt>
+        <DayRangePicker value={range} onChange={(next) => { setRange(next); setSent(false); }} from={0} to={60} />
+        <RangeSummary value={range} emptyText={t("everyday.tapDays")} daysLabel={(n) => (n === 1 ? t("staffLeave.dayOne") : t("staffLeave.days", { count: n }))} />
+        <Field label={t("mobileLeave.reasonOptional")} value={reason} onChangeText={setReason} placeholder={t("mobileLeave.reasonHint")} maxLength={500} multiline />
+        {error && <Txt style={{ color: palette.danger, fontWeight: "700" }}>{error}</Txt>}
+        {sent && <Txt accessibilityLiveRegion="polite" style={{ color: palette.success, fontWeight: "700" }}>{t("staffLeave.sent")}</Txt>}
+        <Button title={t("staffLeave.send")} onPress={submit} loading={request.isPending} />
+        <Muted style={{ fontSize: 13 }}>{t("mobileLeave.hint")}</Muted>
+      </Card>
 
-          <SectionLabel>{t("mobileLeave.firstDay")}</SectionLabel>
-          <Input placeholder="2026-09-07" value={startDate} onChangeText={setStartDate} autoCapitalize="none" />
-          <SectionLabel>{t("mobileLeave.lastDay")}</SectionLabel>
-          <Input placeholder="2026-09-11" value={endDate} onChangeText={setEndDate} autoCapitalize="none" />
-          <SectionLabel>{t("mobileLeave.reasonOptional")}</SectionLabel>
-          <Input
-            placeholder={t("mobileLeave.reasonHint")}
-            value={reason}
-            onChangeText={setReason}
-          />
-
-          <Button
-            title={t("mobileLeave.sendRequest")}
-            onPress={submit}
-            loading={requestLeave.isPending}
-            style={styles.submit}
-          />
-          <Text style={styles.hint}>{t("mobileLeave.hint")}</Text>
-        </Card>
-
-        <SectionLabel>{t("mobileLeave.yourRequests")}</SectionLabel>
-        {requests?.length === 0 && <EmptyState title={t("mobileLeave.none")} />}
-        {requests?.map((request) => (
-          <Card key={request.id} style={styles.request}>
-            <View style={styles.requestHead}>
-              <Text style={styles.requestKind}>{t(`leaveKind.${request.kind}`)}</Text>
-              <Pill
-                label={t(`leaveStatus.${request.status}`)}
-                tone={STATUS_TONE[request.status]}
-              />
+      <SectionLabel>{t("mobileLeave.yourRequests")}</SectionLabel>
+      {!mine.data ? (
+        <Skeleton />
+      ) : mine.data.length === 0 ? (
+        <Card><EmptyState title={t("mobileLeave.none")} /></Card>
+      ) : (
+        mine.data.map((r) => (
+          <Card key={r.id}>
+            <View style={styles.rowTop}>
+              <View style={{ flex: 1 }}>
+                <Txt style={{ color: palette.ink, fontWeight: "800" }}>{t(`leaveKind.${r.kind}`)}</Txt>
+                <Muted>{formatDay(r.startDate, locale)}{formatDay(r.startDate, locale) !== formatDay(r.endDate, locale) ? ` – ${formatDay(r.endDate, locale)}` : ""}</Muted>
+              </View>
+              <Pill label={t(`leaveStatus.${r.status}`)} tone={REQUEST_TONE[r.status]} />
             </View>
-            <Text style={styles.requestDates}>
-              {formatRange(request.startDate, request.endDate, locale)}
-            </Text>
-            {request.reviewNote ? (
-              <Text style={styles.reviewNote}>{request.reviewNote}</Text>
-            ) : null}
-            {request.status === "PENDING" && (
-              <Button
-                title={t("meetings.withdraw")}
-                variant="ghost"
-                onPress={() => cancelLeave.mutate(request.id)}
-              />
-            )}
+            {r.reviewNote ? <Txt style={{ color: palette.ink }}>“{r.reviewNote}”</Txt> : null}
+            {r.status === "PENDING" && <Button title={t("staffLeave.withdraw")} variant="ghost" onPress={() => cancel.mutate(r.id)} loading={cancel.isPending} />}
           </Card>
-        ))}
-      </ScrollView>
-    </Screen>
+        ))
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { gap: spacing.sm, paddingBottom: spacing.xl },
-  balanceRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  balanceCard: { flexGrow: 1, minWidth: 96, alignItems: "center", gap: 2 },
-  balanceValue: { ...typography.title, fontSize: 22, fontVariant: ["tabular-nums"] },
-  balanceLabel: { ...typography.subheading, fontSize: 13 },
-  balanceSub: { fontSize: 11, color: colors.slate[400], textAlign: "center" },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.sm },
-  submit: { marginTop: spacing.sm },
-  hint: { fontSize: 12, color: colors.slate[500], marginTop: spacing.sm },
-  request: { gap: 4 },
-  requestHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  requestKind: { ...typography.subheading },
-  requestDates: { fontSize: 13, color: colors.slate[500] },
-  reviewNote: { fontSize: 13, color: colors.warning },
+  content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
+  balances: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  balance: { flexBasis: "47%", flexGrow: 1, gap: 6 },
+  big: { color: palette.ink, fontWeight: "800", fontSize: 20 },
+  title: { color: palette.ink, fontWeight: "800", fontSize: 17 },
+  label: { color: palette.ink, fontWeight: "700", fontSize: 14 },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  rowTop: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
 });
