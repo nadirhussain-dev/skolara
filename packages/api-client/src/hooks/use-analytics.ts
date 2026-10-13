@@ -17,6 +17,17 @@ export function useSchoolAnalytics() {
   });
 }
 
+/** The admin dashboard home: what is waiting on the school today. */
+export function useSchoolToday() {
+  const api = useApiClient();
+  return useQuery({
+    queryKey: ["analytics", "school", "today"],
+    queryFn: () => api.analytics.schoolToday(),
+    // The verification queue moves while the page is open.
+    refetchInterval: 60_000,
+  });
+}
+
 export function useDefaulterRisk(studentId: string | undefined) {
   const api = useApiClient();
   return useQuery({

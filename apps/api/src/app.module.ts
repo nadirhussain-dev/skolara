@@ -4,6 +4,7 @@ import { ConfigModule } from "@nestjs/config";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AiModule } from "./ai/ai.module";
 import { ApiKeysModule } from "./api-keys/api-keys.module";
+import { FinanceModule } from "./finance/finance.module";
 import { AnalyticsModule } from "./analytics/analytics.module";
 import { AssignmentsModule } from "./assignments/assignments.module";
 import { AuditModule } from "./audit/audit.module";
@@ -110,6 +111,7 @@ import { validateEnv } from "./env.validation";
     TransportModule,
     PayrollModule,
     AnalyticsModule,
+    FinanceModule,
     ApiKeysModule,
   ],
   providers: [

@@ -4,6 +4,7 @@ import {
   type DefaulterRisk,
   type PlatformAnalytics,
   type SchoolAnalytics,
+  type SchoolToday,
 } from "@skolara/types";
 import { AiService } from "../ai/ai.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -98,6 +99,64 @@ export class AnalyticsService {
       attendanceRateLast30Days,
       feeCollectionRate,
       pendingPaymentSubmissions,
+    };
+  }
+
+  /**
+   * The dashboard home page: what is waiting on the admin today.
+   *
+   * `now` is a parameter so "this month" is testable. Month boundaries are
+   * UTC, matching how due dates are stored (parsed from YYYY-MM-DD).
+   */
+  async schoolToday(schoolId: string, now: Date = new Date()): Promise<SchoolToday> {
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+
+    const [pendingPayments, invoices, pendingLeaveRequests, openComplaints] = await Promise.all([
+      this.prisma.paymentSubmission.findMany({
+        where: { schoolId, status: "PENDING_VERIFICATION" },
+        select: { amountClaimed: true, createdAt: true },
+      }),
+      this.prisma.invoice.findMany({
+        where: { schoolId, dueDate: { gte: monthStart, lt: nextMonthStart } },
+        select: { amountDue: true, amountPaid: true, status: true },
+      }),
+      this.prisma.leaveRequest.count({ where: { schoolId, status: "PENDING" } }),
+      this.prisma.complaint.findMany({
+        where: { schoolId, status: { in: ["OPEN", "IN_PROGRESS"] } },
+        select: { createdAt: true },
+      }),
+    ]);
+
+    const oldest = (rows: { createdAt: Date }[]): Date | null =>
+      rows.length > 0
+        ? new Date(Math.min(...rows.map((row) => row.createdAt.getTime())))
+        : null;
+
+    const invoicedAmount = invoices.reduce((sum, inv) => sum + Number(inv.amountDue), 0);
+    // A parent can overpay one invoice; that must not make the month look
+    // better collected than it is, so each invoice counts up to its own due.
+    const collectedAmount = invoices.reduce(
+      (sum, inv) => sum + Math.min(Number(inv.amountPaid), Number(inv.amountDue)),
+      0,
+    );
+    const paidInvoiceCount = invoices.filter((inv) => inv.status === "PAID").length;
+
+    return {
+      payments: {
+        pendingCount: pendingPayments.length,
+        pendingAmount: pendingPayments.reduce((sum, p) => sum + Number(p.amountClaimed), 0),
+        oldestPendingAt: oldest(pendingPayments),
+      },
+      feesThisMonth: {
+        invoicedAmount,
+        collectedAmount,
+        collectionRate: invoicedAmount > 0 ? (collectedAmount / invoicedAmount) * 100 : null,
+        paidInvoiceCount,
+        unpaidInvoiceCount: invoices.length - paidInvoiceCount,
+      },
+      pendingLeaveRequests,
+      complaints: { openCount: openComplaints.length, oldestOpenAt: oldest(openComplaints) },
     };
   }
 

@@ -1,102 +1,71 @@
 import { PLANS, PLAN_ORDER, TRIAL_DAYS } from "@skolara/types";
-import { Card } from "@skolara/ui";
 import Link from "next/link";
+import { SiteFooter, SiteHeader } from "@/components/site-header";
 
 export const metadata = {
-  title: "Pricing — Skolara",
-  description: "Transparent per-month pricing for schools. No demo required.",
+  title: "Pricing",
+  description: "Published monthly pricing for schools. Every plan starts with a free trial.",
 };
 
 function formatPrice(pricePkr: number | null): string {
-  if (pricePkr === null) return "Let's talk";
-  return `Rs. ${pricePkr.toLocaleString("en-PK")}`;
+  return pricePkr === null ? "Let's talk" : `Rs ${pricePkr.toLocaleString("en-PK")}`;
 }
 
 export default function PricingPage() {
   return (
-    <main className="relative min-h-screen overflow-hidden px-4 py-16">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-32 left-1/2 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-brand-gradient opacity-20 blur-3xl"
-      />
-
-      <div className="relative mx-auto max-w-6xl">
-        <div className="mb-12 text-center">
-          <h1 className="bg-brand-gradient bg-clip-text text-4xl font-extrabold tracking-tight text-transparent">
-            Simple, published pricing
-          </h1>
-          <p className="mx-auto mt-3 max-w-xl text-slate-600 dark:text-slate-400">
-            Every plan starts with a {TRIAL_DAYS}-day free trial. No demo call, no
-            &ldquo;contact us for a quote&rdquo; — sign up and set your school up today.
+    <div className="bg-white dark:bg-slate-950">
+      <SiteHeader />
+      <main className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+        <div className="max-w-2xl">
+          <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50">Simple, published pricing</h1>
+          <p className="mt-3 text-lg leading-relaxed text-slate-700 dark:text-slate-300">
+            Every plan starts with a {TRIAL_DAYS}-day free trial. No demo call and no quote to wait for: sign up and set your school up today.
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {PLAN_ORDER.map((planKey) => {
-            const plan = PLANS[planKey];
-            const isFeatured = plan.plan === "STANDARD";
+        <ul className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {PLAN_ORDER.map((key) => {
+            const plan = PLANS[key];
+            const featured = key === "STANDARD";
+            const enterprise = plan.monthlyPricePkr === null;
             return (
-              <Card
-                key={plan.plan}
-                className={
-                  isFeatured
-                    ? "relative border-brand-500 ring-1 ring-brand-500"
-                    : "relative"
-                }
+              <li
+                key={key}
+                className={`flex flex-col rounded-2xl border bg-white p-6 dark:bg-slate-900 ${featured ? "border-brand-700 shadow-lg shadow-brand-900/10 ring-1 ring-brand-700" : "border-slate-200 dark:border-slate-700"}`}
               >
-                {isFeatured && (
-                  <span className="absolute -top-3 left-4 rounded-full bg-brand-gradient px-3 py-0.5 text-xs font-semibold text-white">
-                    Most popular
-                  </span>
-                )}
-                <h2 className="text-lg font-bold">{plan.name}</h2>
-                <p className="mt-1 min-h-[2.5rem] text-sm text-slate-500">{plan.tagline}</p>
-
-                <p className="mt-4 text-3xl font-bold">
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="text-xl font-extrabold text-slate-900 dark:text-slate-50">{plan.name}</h2>
+                  {featured && <span className="rounded-full bg-accent-500 px-2.5 py-1 text-xs font-extrabold text-[#1E1B4B]">Most popular</span>}
+                </div>
+                <p className="mt-1 min-h-[2.5rem] text-sm text-slate-600 dark:text-slate-400">{plan.tagline}</p>
+                <p className="mt-4 text-3xl font-extrabold tabular-nums text-slate-900 dark:text-slate-50">
                   {formatPrice(plan.monthlyPricePkr)}
-                  {plan.monthlyPricePkr !== null && (
-                    <span className="text-sm font-normal text-slate-500"> / month</span>
-                  )}
+                  {!enterprise && <span className="text-sm font-semibold text-slate-600 dark:text-slate-400"> / month</span>}
                 </p>
-                <p className="mt-1 text-xs text-slate-400">
-                  {plan.maxStudents
-                    ? `Up to ${plan.maxStudents.toLocaleString("en-PK")} students`
-                    : "Unlimited students"}
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                  {plan.maxStudents ? `Up to ${plan.maxStudents.toLocaleString("en-PK")} students` : "Unlimited students"}
                 </p>
-
-                <ul className="mt-5 flex flex-col gap-2 text-sm">
+                <ul className="mt-5 flex flex-1 flex-col gap-2.5 text-sm text-slate-700 dark:text-slate-300">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex gap-2">
-                      <span aria-hidden className="text-brand-600">
-                        ✓
-                      </span>
-                      <span className="text-slate-600 dark:text-slate-300">{feature}</span>
+                      <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0 text-emerald-700 dark:text-emerald-400"><path d="M5 12l5 5 9-10" /></svg>
+                      <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
-
                 <Link
-                  href={
-                    plan.monthlyPricePkr === null
-                      ? "mailto:sales@skolara.app"
-                      : `/signup?plan=${plan.plan}`
-                  }
-                  className="mt-6 block rounded-lg bg-brand-gradient px-4 py-2 text-center text-sm font-semibold text-white"
+                  href={enterprise ? "mailto:sales@skolara.app" : `/signup?plan=${key}`}
+                  className={`mt-6 inline-flex h-12 items-center justify-center rounded-lg px-4 text-sm font-bold ${featured ? "bg-brand-700 text-white hover:bg-brand-800" : "border border-brand-200 text-brand-700 hover:bg-brand-50 dark:border-slate-700 dark:text-brand-300 dark:hover:bg-slate-800"}`}
                 >
-                  {plan.monthlyPricePkr === null ? "Contact sales" : "Start free trial"}
+                  {enterprise ? "Contact sales" : "Start free trial"}
+                  <span className="sr-only"> on {plan.name}</span>
                 </Link>
-              </Card>
+              </li>
             );
           })}
-        </div>
-
-        <p className="mt-10 text-center text-sm text-slate-500">
-          Already have an account?{" "}
-          <Link href="/login" className="text-brand-700 hover:underline">
-            Sign in
-          </Link>
-        </p>
-      </div>
-    </main>
+        </ul>
+      </main>
+      <SiteFooter />
+    </div>
   );
 }

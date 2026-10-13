@@ -1,32 +1,34 @@
 /**
  * Shared design tokens for the Skolara mobile app.
  *
- * Mirrors the brand/accent palette in packages/config/tailwind-preset.js so the
- * mobile app and web dashboard read as one product.
+ * Mirrors the default brand/accent palette in packages/config/tailwind-preset.js
+ * so the mobile app and web dashboard read as one product.
  */
 
 export const colors = {
-  // Deep violet — primary brand hue.
+  // Indigo — the Skolara default. Matches the web default scale derived by
+  // `brandScale` in @skolara/utils; a school's own colour will replace it
+  // once the mobile theme is made dynamic.
   brand: {
-    50: "#F5F3FF",
-    100: "#EDE9FE",
-    200: "#DDD6FE",
-    300: "#C4B5FD",
-    400: "#A78BFA",
-    500: "#8B5CF6",
-    600: "#7C3AED",
-    700: "#6D28D9",
-    800: "#5B21B6",
-    900: "#4C1D95",
+    50: "#F1F1F9",
+    100: "#E3E2F2",
+    200: "#C7C5E5",
+    300: "#A5A2D6",
+    400: "#7F7BC4",
+    500: "#5F59B5",
+    600: "#4741AA",
+    700: "#3730A3",
+    800: "#2D2786",
+    900: "#211D62",
   },
-  // Coral — accent/CTA hue, used sparingly against the violet brand.
+  // Amber — highlights only (fee due, unread, achievement). Text on it is dark.
   accent: {
-    100: "#FFE4E6",
-    300: "#FDA4AF",
-    500: "#FB7185",
-    700: "#BE123C",
+    100: "#FEF3C7",
+    300: "#FCD34D",
+    500: "#F59E0B",
+    700: "#B45309",
   },
-  // Amber — kept distinct from the coral accent so "warning" never reads as "danger".
+  // Same amber ramp under its semantic name, for "pending" and "late".
   warningScale: {
     100: "#FEF3C7",
     300: "#FCD34D",
@@ -51,8 +53,8 @@ export const colors = {
   dangerBg: "#FEE2E2",
   warning: "#F59E0B",
   warningBg: "#FEF3C7",
-  info: "#6D28D9",
-  infoBg: "#F5F3FF",
+  info: "#3730A3",
+  infoBg: "#F1F1F9",
   white: "#FFFFFF",
 } as const;
 
@@ -102,7 +104,7 @@ export const shadow = {
     elevation: 1,
   },
   glow: {
-    shadowColor: "#6D28D9",
+    shadowColor: "#3730A3",
     shadowOpacity: 0.3,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },

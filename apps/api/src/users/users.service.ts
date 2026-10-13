@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
 import type { CreateUserInput, RoleType } from "@skolara/types";
 import { PrismaService } from "../prisma/prisma.service";
@@ -71,8 +71,24 @@ export class UsersService {
     return user;
   }
 
-  async setActive(schoolId: string, id: string, isActive: boolean) {
+  /**
+   * Switches an account on or off. An admin cannot switch off their own
+   * account: a school with one admin would be locked out with nobody able to
+   * undo it. Switching an account off also revokes its sessions, so the
+   * person is signed out when their current short-lived token runs out
+   * rather than being able to renew it.
+   */
+  async setActive(schoolId: string, id: string, isActive: boolean, actorUserId?: string) {
+    if (!isActive && actorUserId === id) {
+      throw new BadRequestException("You cannot deactivate your own account");
+    }
     await this.findOne(schoolId, id);
+    if (!isActive) {
+      await this.prisma.refreshToken.updateMany({
+        where: { userId: id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
     return this.prisma.user.update({
       where: { id },
       data: { isActive },

@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { ConfigService } from "@nestjs/config";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import compression from "compression";
@@ -8,8 +9,21 @@ import helmet from "helmet";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
   const config = app.get(ConfigService);
+
+  // Must be set before anything reads the client address. Without it, behind
+  // a load balancer every request appears to come from the balancer, and the
+  // per-IP rate limits apply to all users as one.
+  const trustedProxies = Number(config.get("TRUST_PROXY") ?? 0);
+  if (trustedProxies > 0) app.set("trust proxy", trustedProxies);
+  if (config.get<string>("NODE_ENV") === "production" && trustedProxies === 0) {
+    Logger.warn(
+      "TRUST_PROXY is 0. If this API runs behind a load balancer or CDN, set it to the number " +
+        "of proxies in front, or rate limiting will treat every user as one client.",
+      "Bootstrap",
+    );
+  }
 
   app.use(helmet());
   app.use(compression());

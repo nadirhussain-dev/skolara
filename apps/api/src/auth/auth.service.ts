@@ -13,8 +13,15 @@ import type {
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 import type { JwtPayload } from "./jwt-payload.interface";
+import { LoginAttemptsService } from "./login-attempts.service";
 
 const LOGIN_ALLOWED_STATUSES = new Set(["TRIAL", "ACTIVE"]);
+
+// Compared against when no account matches, so a wrong email costs the same
+// bcrypt work as a wrong password. Without it the response time alone tells
+// an attacker which emails are registered. It is the hash of a random string
+// nobody knows; nothing can sign in with it.
+const DUMMY_PASSWORD_HASH = "$2b$10$6LCf5OvfyndOnS7yZge4jOPR03yxTT.ryhQ48xl.xP0FQ5OAEhaDy";
 
 // Refresh tokens are already high-entropy signed JWTs, not low-entropy
 // secrets like passwords — a fast hash is the right tool here, a slow one
@@ -30,6 +37,7 @@ export class AuthService {
     private jwt: JwtService,
     private config: ConfigService,
     private notifications: NotificationsService,
+    private loginAttempts: LoginAttemptsService,
   ) {}
 
   /**
@@ -59,11 +67,26 @@ export class AuthService {
   }
 
   async login(input: LoginInput): Promise<AuthResponse> {
-    const user = await this.resolveLoginUser(input.email, input.subdomain);
-    if (!user || !user.isActive) {
+    const attemptsKey = LoginAttemptsService.keyFor(input.email, input.subdomain);
+    this.loginAttempts.assertNotLocked(attemptsKey);
+
+    const found = await this.resolveLoginUser(input.email, input.subdomain);
+    const user = found?.isActive ? found : null;
+
+    // Always run the comparison, even with nobody to compare against — see
+    // DUMMY_PASSWORD_HASH.
+    const passwordMatches = await bcrypt.compare(
+      input.password,
+      user?.passwordHash ?? DUMMY_PASSWORD_HASH,
+    );
+    if (!user || !passwordMatches) {
+      this.loginAttempts.recordFailure(attemptsKey);
       throw new UnauthorizedException("Invalid credentials");
     }
 
+    // Only once the password is proven. Checked earlier, "this school's
+    // account is suspended" would confirm to anyone that the email is
+    // registered there, with no password needed.
     if (user.schoolId) {
       const school = await this.prisma.school.findUnique({
         where: { id: user.schoolId },
@@ -78,13 +101,7 @@ export class AuthService {
       }
     }
 
-    const passwordMatches = await bcrypt.compare(
-      input.password,
-      user.passwordHash,
-    );
-    if (!passwordMatches) {
-      throw new UnauthorizedException("Invalid credentials");
-    }
+    this.loginAttempts.recordSuccess(attemptsKey);
 
     const tokens = await this.issueTokens({
       sub: user.id,

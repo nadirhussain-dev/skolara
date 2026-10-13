@@ -1,38 +1,18 @@
-import {
-  useCancelAbsenceRequest,
-  useMyAbsenceRequests,
-  useMyChildren,
-  useRequestAbsence,
-} from "@skolara/api-client";
+import { useCancelAbsenceRequest, useMyAbsenceRequests, useRequestAbsence } from "@skolara/api-client";
+import { useTranslation, type MessageKey } from "@skolara/i18n";
 import { MAX_ABSENCE_REQUEST_DAYS, type LeaveStatus } from "@skolara/types";
-import { useTranslation, type Locale, type MessageKey } from "@skolara/i18n";
 import { useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
-import { intlLocale } from "@/lib/intl";
-import { colors, spacing, typography, type Tone } from "@/lib/theme";
-import {
-  Button,
-  Card,
-  Chip,
-  EmptyState,
-  Input,
-  LoadingLine,
-  Pill,
-  Screen,
-  SectionLabel,
-} from "@/lib/ui";
+import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { ChildSwitcher } from "@/components/child-switcher";
+import { DayRangePicker, RangeSummary, type DayRange } from "@/components/day-picker";
+import { ChildProvider, useChild } from "@/lib/child-context";
+import { formatDay } from "@/lib/dates";
+import { palette } from "@/lib/school-theme";
+import { spacing } from "@/lib/theme";
+import { REQUEST_TONE } from "@/lib/tones";
+import { Button, Card, EmptyState, ErrorState, Field, Muted, Pill, SectionLabel, Skeleton, Txt } from "@/lib/ui";
 
-const STATUS_TONE: Record<LeaveStatus, Tone> = {
-  PENDING: "warning",
-  APPROVED: "success",
-  REJECTED: "danger",
-  CANCELLED: "neutral",
-};
-
-/**
- * Said from the family's side, not the office's. "Excused" is what a parent
- * wants to read, where the admin queue calls the same state "approved".
- */
+/** Said from the family's side: "excused" is what a parent wants to read. */
 const STATUS_LABEL: Record<LeaveStatus, MessageKey> = {
   PENDING: "mobileAbsences.statusPending",
   APPROVED: "mobileAbsences.statusApproved",
@@ -40,167 +20,101 @@ const STATUS_LABEL: Record<LeaveStatus, MessageKey> = {
   CANCELLED: "mobileAbsences.statusCancelled",
 };
 
-/** YYYY-MM-DD, which is what a plain text field can be validated against. */
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-function formatRange(start: string | Date, end: string | Date, locale: Locale): string {
-  const tag = intlLocale(locale);
-  const from = new Date(start).toLocaleDateString(tag);
-  const to = new Date(end).toLocaleDateString(tag);
-  return from === to ? from : `${from} – ${to}`;
+/** Tell the school a child will be (or was) away, and see what the office said. */
+export default function AbsencesScreen() {
+  return (
+    <ChildProvider>
+      <Absences />
+    </ChildProvider>
+  );
 }
 
-export default function AbsencesScreen() {
+function Absences() {
   const { t, locale } = useTranslation();
-  const { data: children } = useMyChildren();
-  const { data: requests, isLoading } = useMyAbsenceRequests();
-  const requestAbsence = useRequestAbsence();
-  const cancelRequest = useCancelAbsenceRequest();
-
-  const [studentId, setStudentId] = useState<string>();
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const { child } = useChild();
+  const requests = useMyAbsenceRequests();
+  const request = useRequestAbsence();
+  const cancel = useCancelAbsenceRequest();
+  const [range, setRange] = useState<DayRange>({ start: null, end: null });
   const [reason, setReason] = useState("");
+  const [errors, setErrors] = useState<{ days?: string; reason?: string; form?: string }>({});
+  const [sent, setSent] = useState(false);
 
-  // A student signed in for themselves has exactly one profile, so the
-  // switcher collapses to nothing and the first entry is simply them.
-  const activeStudentId = studentId ?? children?.[0]?.id;
-
-  async function submit() {
-    if (!activeStudentId) return;
-    if (!ISO_DATE.test(startDate) || !ISO_DATE.test(endDate || startDate)) {
-      Alert.alert(t("mobileAbsences.checkDates"), t("mobileAbsences.checkDatesBody"));
-      return;
-    }
-    if (reason.trim().length < 3) {
-      Alert.alert(t("mobileAbsences.addReason"), t("mobileAbsences.addReasonBody"));
-      return;
-    }
-
-    try {
-      await requestAbsence.mutateAsync({
-        studentId: activeStudentId,
-        startDate: new Date(`${startDate}T00:00:00.000Z`),
-        // One-day absences are the common case, so leaving the last day blank
-        // means the same day rather than being an error.
-        endDate: new Date(`${endDate || startDate}T00:00:00.000Z`),
-        reason: reason.trim(),
-      });
-      setStartDate("");
-      setEndDate("");
-      setReason("");
-      Alert.alert(t("mobileAbsences.sent"), t("mobileAbsences.sentBody"));
-    } catch (error) {
-      // The API is specific about overlaps and over-long ranges, so pass on
-      // what it said rather than a generic failure.
-      Alert.alert(
-        t("mobileAbsences.couldNotSend"),
-        error instanceof Error ? error.message : t("mobileAbsences.tryAgain"),
-      );
-    }
+  function submit() {
+    if (!child) return;
+    const days = range.start ? Math.round((Date.parse(`${range.end ?? range.start}T12:00:00`) - Date.parse(`${range.start}T12:00:00`)) / 864e5) + 1 : 0;
+    const found = {
+      days: !range.start ? t("everyday.pickDays") : days > MAX_ABSENCE_REQUEST_DAYS ? t("mobileAbsences.hint", { days: MAX_ABSENCE_REQUEST_DAYS }) : undefined,
+      reason: reason.trim().length < 3 ? t("mobileAbsences.addReasonBody") : undefined,
+    };
+    setErrors(found);
+    setSent(false);
+    if (found.days || found.reason || !range.start) return;
+    request.mutate(
+      { studentId: child.id, startDate: new Date(`${range.start}T00:00:00Z`), endDate: new Date(`${range.end ?? range.start}T00:00:00Z`), reason: reason.trim() },
+      {
+        onSuccess: () => {
+          setRange({ start: null, end: null });
+          setReason("");
+          setSent(true);
+        },
+        onError: (e) => setErrors({ form: e instanceof Error ? e.message : t("mobileAbsences.tryAgain") }),
+      },
+    );
   }
 
+  const mine = (requests.data ?? []).filter((r) => !child || r.student.id === child.id);
+
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Card>
-          <SectionLabel>{t("mobileAbsences.tellSchool")}</SectionLabel>
-          <Text style={styles.intro}>{t("mobileAbsences.intro")}</Text>
+    <ScrollView
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={requests.isRefetching} onRefresh={() => void requests.refetch()} />}
+    >
+      <Card>
+        <Txt style={styles.title}>{child ? t("everyday.awayTitle", { child: child.user.firstName }) : t("mobileAbsences.tellSchool")}</Txt>
+        <Muted>{t("mobileAbsences.intro")}</Muted>
+        <ChildSwitcher />
+        <Txt style={styles.label}>{t("everyday.whichDays")}</Txt>
+        <DayRangePicker value={range} onChange={(next) => { setRange(next); setSent(false); }} from={-7} to={30} />
+        <RangeSummary value={range} emptyText={t("everyday.tapDays")} daysLabel={(n) => (n === 1 ? t("staffLeave.dayOne") : t("staffLeave.days", { count: n }))} />
+        {errors.days && <Txt style={styles.error}>{errors.days}</Txt>}
+        <Field label={t("staffLeave.reason")} value={reason} onChangeText={setReason} placeholder={t("mobileAbsences.reasonHint")} maxLength={500} multiline error={errors.reason} />
+        {errors.form && <Txt style={styles.error}>{errors.form}</Txt>}
+        {sent && <Txt accessibilityLiveRegion="polite" style={{ color: palette.success, fontWeight: "700" }}>{t("mobileAbsences.sentBody")}</Txt>}
+        <Button title={t("mobileAbsences.send")} onPress={submit} loading={request.isPending} disabled={!child} />
+      </Card>
 
-          {(children?.length ?? 0) > 1 && (
-            <View style={styles.chipRow}>
-              {children?.map((child) => (
-                <Chip
-                  key={child.id}
-                  label={child.user.firstName}
-                  active={activeStudentId === child.id}
-                  onPress={() => setStudentId(child.id)}
-                />
-              ))}
+      <SectionLabel>{t("mobileAbsences.yourRequests")}</SectionLabel>
+      {requests.isError ? (
+        <ErrorState message={t("app.loadError")} retryLabel={t("app.retry")} onRetry={() => void requests.refetch()} />
+      ) : !requests.data ? (
+        <Skeleton />
+      ) : mine.length === 0 ? (
+        <Card><EmptyState title={t("mobileAbsences.none")} description={t("mobileAbsences.noneBody")} /></Card>
+      ) : (
+        mine.map((r) => (
+          <Card key={r.id}>
+            <View style={styles.rowTop}>
+              <Txt style={{ flex: 1, color: palette.ink, fontWeight: "800" }}>
+                {formatDay(r.startDate, locale)}{formatDay(r.startDate, locale) !== formatDay(r.endDate, locale) ? ` – ${formatDay(r.endDate, locale)}` : ""}
+              </Txt>
+              <Pill label={t(STATUS_LABEL[r.status])} tone={REQUEST_TONE[r.status]} />
             </View>
-          )}
-
-          <SectionLabel>{t("mobileAbsences.firstDay")}</SectionLabel>
-          <Input
-            placeholder="2026-09-07"
-            value={startDate}
-            onChangeText={setStartDate}
-            autoCapitalize="none"
-          />
-          <SectionLabel>{t("mobileAbsences.lastDay")}</SectionLabel>
-          <Input
-            placeholder="2026-09-09"
-            value={endDate}
-            onChangeText={setEndDate}
-            autoCapitalize="none"
-          />
-          <SectionLabel>{t("fields.reason")}</SectionLabel>
-          <Input
-            placeholder={t("mobileAbsences.reasonHint")}
-            value={reason}
-            onChangeText={setReason}
-            multiline
-          />
-
-          <Button
-            title={t("mobileAbsences.send")}
-            onPress={submit}
-            loading={requestAbsence.isPending}
-            style={styles.submit}
-          />
-          <Text style={styles.hint}>
-            {t("mobileAbsences.hint", { days: MAX_ABSENCE_REQUEST_DAYS })}
-          </Text>
-        </Card>
-
-        <SectionLabel>{t("mobileAbsences.yourRequests")}</SectionLabel>
-        {isLoading && <LoadingLine />}
-        {!isLoading && requests?.length === 0 && (
-          <EmptyState
-            title={t("mobileAbsences.none")}
-            description={t("mobileAbsences.noneBody")}
-          />
-        )}
-        {requests?.map((request) => (
-          <Card key={request.id} style={styles.request}>
-            <View style={styles.requestHead}>
-              <Text style={styles.requestName}>{request.student.user.firstName}</Text>
-              <Pill
-                label={t(STATUS_LABEL[request.status])}
-                tone={STATUS_TONE[request.status]}
-              />
-            </View>
-            <Text style={styles.requestDates}>
-              {formatRange(request.startDate, request.endDate, locale)}
-            </Text>
-            <Text style={styles.reason}>{request.reason}</Text>
-            {request.reviewNote ? (
-              <Text style={styles.reviewNote}>{request.reviewNote}</Text>
-            ) : null}
-            {request.status === "PENDING" && (
-              <Button
-                title={t("meetings.withdraw")}
-                variant="ghost"
-                onPress={() => cancelRequest.mutate(request.id)}
-              />
-            )}
+            <Muted>{r.reason}</Muted>
+            {r.reviewNote ? <Txt style={{ color: palette.ink }}>“{r.reviewNote}”</Txt> : null}
+            {r.status === "PENDING" && <Button title={t("staffLeave.withdraw")} variant="ghost" onPress={() => cancel.mutate(r.id)} loading={cancel.isPending} />}
           </Card>
-        ))}
-      </ScrollView>
-    </Screen>
+        ))
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { gap: spacing.sm, paddingBottom: spacing.xl },
-  intro: { fontSize: 13, color: colors.slate[500], marginBottom: spacing.sm },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.sm },
-  submit: { marginTop: spacing.sm },
-  hint: { fontSize: 12, color: colors.slate[500], marginTop: spacing.sm },
-  request: { gap: 4 },
-  requestHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  requestName: { ...typography.subheading },
-  requestDates: { fontSize: 13, color: colors.slate[500] },
-  reason: { fontSize: 13 },
-  reviewNote: { fontSize: 13, color: colors.warning },
+  content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
+  title: { color: palette.ink, fontWeight: "800", fontSize: 17 },
+  label: { color: palette.ink, fontWeight: "700", fontSize: 14, marginTop: spacing.xs },
+  error: { color: palette.danger, fontWeight: "700" },
+  rowTop: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
 });

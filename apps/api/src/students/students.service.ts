@@ -88,6 +88,14 @@ export class StudentsService {
     });
   }
 
+  /** A student account's own profile, as a one-item list like a parent's children. */
+  findOwnProfile(userId: string) {
+    return this.prisma.studentProfile.findMany({
+      where: { userId },
+      include: { user: { select: PUBLIC_USER_SELECT } },
+    });
+  }
+
   /**
    * Every student in the school, or just one class's.
    *

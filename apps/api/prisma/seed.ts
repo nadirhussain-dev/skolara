@@ -33,12 +33,12 @@ async function main() {
       subdomain: DEMO_SUBDOMAIN,
       plan: "STANDARD",
       subscriptionStatus: "ACTIVE",
-      primaryColor: "#6D28D9",
+      primaryColor: "#0F766E",
     },
     update: {},
   });
 
-  await upsertUser({
+  const principal = await upsertUser({
     schoolId: school.id,
     email: "principal@demo.skolara.app",
     role: "SCHOOL_ADMIN",
@@ -93,6 +93,16 @@ async function main() {
       },
       update: {},
     });
+
+    // A teacher can only take registers and enter marks for classes they are
+    // assigned to, so the demo teachers are assigned to every demo class.
+    for (const schoolClass of classes) {
+      await prisma.classTeacher.upsert({
+        where: { classId_teacherUserId: { classId: schoolClass.id, teacherUserId: user.id } },
+        create: { classId: schoolClass.id, teacherUserId: user.id },
+        update: {},
+      });
+    }
   }
 
   const students = [
@@ -171,6 +181,8 @@ async function main() {
     }
   }
 
+  await seedFinance(school.id, principal.id);
+
   console.log(
     [
       "Seeded:",
@@ -181,6 +193,67 @@ async function main() {
       `  school          ${school.name} at ${DEMO_SUBDOMAIN}.skolara.app`,
     ].join("\n"),
   );
+}
+
+/**
+ * A budget for the current month and a few expenses, so the Finance screens
+ * have something to show: two inside budget, one over and waiting for a
+ * decision.
+ */
+async function seedFinance(schoolId: string, raisedByUserId: string) {
+  const budgets: [string, number][] = [
+    ["Salaries", 400000],
+    ["Rent", 120000],
+    ["Utilities", 45000],
+    ["Transport", 30000],
+    ["Supplies", 25000],
+    ["Maintenance", 20000],
+    ["Other", 10000],
+  ];
+  await prisma.budgetCategory.createMany({
+    data: budgets.map(([name]) => ({ schoolId, name })),
+    skipDuplicates: true,
+  });
+  const categories = await prisma.budgetCategory.findMany({ where: { schoolId } });
+  const idByName = new Map(categories.map((category) => [category.name, category.id]));
+
+  const now = new Date();
+  const month = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  for (const [name, amount] of budgets) {
+    const categoryId = idByName.get(name);
+    if (!categoryId) continue;
+    await prisma.budgetLine.upsert({
+      where: { categoryId_month: { categoryId, month } },
+      create: { schoolId, categoryId, month, amount },
+      update: {},
+    });
+  }
+
+  // Expenses have no natural key, so only add them to a school that has none.
+  if ((await prisma.expense.count({ where: { schoolId } })) > 0) return;
+  const expenses: { category: string; payee: string; description: string; amount: number; approved: boolean }[] = [
+    { category: "Salaries", payee: "Staff salaries", description: "Monthly payroll", amount: 400000, approved: true },
+    { category: "Utilities", payee: "Electricity company", description: "Last month's bill", amount: 38000, approved: true },
+    { category: "Supplies", payee: "City Printers", description: "Exam papers", amount: 31000, approved: false },
+  ];
+  for (const expense of expenses) {
+    const categoryId = idByName.get(expense.category);
+    if (!categoryId) continue;
+    await prisma.expense.create({
+      data: {
+        schoolId,
+        categoryId,
+        payee: expense.payee,
+        description: expense.description,
+        amount: expense.amount,
+        spentOn: month,
+        raisedByUserId,
+        status: expense.approved ? "APPROVED" : "PENDING",
+        reviewedAt: expense.approved ? now : null,
+        reviewNote: expense.approved ? "Within budget" : null,
+      },
+    });
+  }
 }
 
 async function upsertUser(data: {

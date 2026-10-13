@@ -24,7 +24,6 @@ import {
 import { z } from "zod";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { Public } from "../common/decorators/public.decorator";
-import { RequiresFeature } from "../common/decorators/requires-feature.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { FeatureGuard } from "../common/guards/feature.guard";
@@ -56,6 +55,15 @@ export class SchoolsController {
     return this.schoolsService.isSubdomainAvailable(subdomain.toLowerCase());
   }
 
+  // Public: the sign-in screen themes itself from this once a school code is
+  // typed. Throttled so it can't be used to enumerate schools quickly.
+  @Get("public/:code")
+  @Public()
+  @Throttle({ default: { limit: 30, ttl: 60 * 1000 } })
+  findPublic(@Param("code") code: string) {
+    return this.schoolsService.findPublicByCode(code.trim().toLowerCase());
+  }
+
   @Post()
   @Roles("SUPER_ADMIN")
   create(@Body(new ZodValidationPipe(createSchoolSchema)) body: CreateSchoolInput) {
@@ -69,10 +77,20 @@ export class SchoolsController {
   }
 
   @Get("me")
-  @Roles("SCHOOL_ADMIN")
-  findMine(@CurrentUser() user: AuthenticatedUser) {
+  @Roles("SCHOOL_ADMIN", "TEACHER", "PARENT", "STUDENT")
+  async findMine(@CurrentUser() user: AuthenticatedUser) {
     if (!user.schoolId) throw new ForbiddenException("No school context");
-    return this.schoolsService.findOne(user.schoolId);
+    const school = await this.schoolsService.findOne(user.schoolId);
+    if (user.role === "SCHOOL_ADMIN") return school;
+    // Everyone else gets what they need to wear the school's look — its name,
+    // logo and colour — and nothing about its plan or billing.
+    return {
+      id: school.id,
+      name: school.name,
+      subdomain: school.subdomain,
+      logoUrl: school.logoUrl,
+      primaryColor: school.primaryColor,
+    };
   }
 
   @Patch(":id/approve")
@@ -96,9 +114,10 @@ export class SchoolsController {
     return this.schoolsService.updateSubscriptionStatus(id, body.status);
   }
 
+  // Not gated by plan: every school's apps open in its own name, logo and
+  // colour, so every school has to be able to set them.
   @Patch(":id/branding")
   @Roles("SUPER_ADMIN", "SCHOOL_ADMIN")
-  @RequiresFeature("WHITE_LABEL")
   updateBranding(
     @Param("id") id: string,
     @Body(new ZodValidationPipe(updateBrandingSchema)) body: UpdateBrandingInput,

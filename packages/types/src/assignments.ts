@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { httpUrlSchema } from "./common";
 
 export const assignmentSchema = z.object({
   id: z.string().uuid(),
@@ -15,9 +16,9 @@ export type Assignment = z.infer<typeof assignmentSchema>;
 
 export const createAssignmentSchema = z.object({
   classId: z.string().uuid(),
-  subject: z.string().min(1),
-  title: z.string().min(1),
-  description: z.string().optional(),
+  subject: z.string().trim().min(1).max(60),
+  title: z.string().trim().min(1).max(140),
+  description: z.string().trim().max(2000).optional(),
   dueDate: z.coerce.date(),
 });
 export type CreateAssignmentInput = z.infer<typeof createAssignmentSchema>;
@@ -35,13 +36,14 @@ export const assignmentSubmissionSchema = z.object({
 export type AssignmentSubmission = z.infer<typeof assignmentSubmissionSchema>;
 
 export const submitAssignmentSchema = z.object({
-  fileUrl: z.string().url(),
-  note: z.string().optional(),
+  // Opened by the teacher who marks it.
+  fileUrl: httpUrlSchema,
+  note: z.string().max(2000).optional(),
 });
 export type SubmitAssignmentInput = z.infer<typeof submitAssignmentSchema>;
 
 export const gradeAssignmentSchema = z.object({
-  grade: z.string().min(1),
-  feedback: z.string().optional(),
+  grade: z.string().trim().min(1).max(20),
+  feedback: z.string().trim().max(1000).optional(),
 });
 export type GradeAssignmentInput = z.infer<typeof gradeAssignmentSchema>;

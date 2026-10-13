@@ -9,7 +9,9 @@ import {
   Query,
   UseGuards,
 } from "@nestjs/common";
-import { upsertGradeEntrySchema, type UpsertGradeEntryInput } from "@skolara/types";
+import { bulkGradesSchema,
+  upsertGradeEntrySchema,
+  type BulkGradesInput, type UpsertGradeEntryInput } from "@skolara/types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { RequiresFeature } from "../common/decorators/requires-feature.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
@@ -40,6 +42,17 @@ export class GradesController {
     if (!user.schoolId) throw new ForbiddenException("No school context");
     await this.classAccess.assertCanTeachClass(user, body.classId);
     return this.gradesService.upsert(user.schoolId, user.id, body);
+  }
+
+  @Post("bulk")
+  @Roles("TEACHER", "SCHOOL_ADMIN")
+  async upsertBulk(
+    @Body(new ZodValidationPipe(bulkGradesSchema)) body: BulkGradesInput,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    await this.classAccess.assertCanTeachClass(user, body.classId);
+    return this.gradesService.upsertBulk(user.schoolId, user.id, body);
   }
 
   @Get("class/:classId")

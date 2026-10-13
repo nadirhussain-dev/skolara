@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#6D28D9",
+  themeColor: "#3730A3",
 };
 
 export default async function RootLayout({
@@ -25,6 +25,17 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} dir={LOCALE_META[locale].dir}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* The root layout wraps every route, so the pages-router warning
+            about per-page fonts doesn't apply here. */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+        />
+      </head>
       <body className="font-sans">
         <Providers initialLocale={locale}>{children}</Providers>
       </body>

@@ -1,47 +1,25 @@
-import { router } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
-import { useTranslation } from "@skolara/i18n";
-import { Button } from "@/lib/ui";
-import { colors, spacing, typography } from "@/lib/theme";
+import { Redirect } from "expo-router";
+import { ActivityIndicator, View } from "react-native";
+import { homeRouteFor } from "@/lib/auth";
+import { palette, useTheme } from "@/lib/school-theme";
+import { useSession } from "@/lib/session";
 
-export default function HomeScreen() {
-  const { t } = useTranslation();
-  return (
-    <View style={styles.container}>
-      <View style={styles.mark}>
-        <Text style={styles.markText}>S</Text>
+/**
+ * The first screen. Decides where to go from what is stored on the phone:
+ * signed in goes to that role's home, a remembered school goes to sign-in,
+ * a new phone starts by asking for the school code.
+ */
+export default function Boot() {
+  const session = useSession();
+  const { school, isLoaded, brand } = useTheme();
+
+  if (!session.isLoaded || !isLoaded) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: palette.surface }}>
+        <ActivityIndicator color={brand[700]} accessibilityLabel="Loading" />
       </View>
-      <Text style={styles.title}>Skolara</Text>
-      <Text style={styles.subtitle}>{t("brand.tagline")}</Text>
-      <Button
-        title={t("auth.signIn")}
-        onPress={() => router.push("/(auth)/login")}
-        style={styles.button}
-      />
-    </View>
-  );
+    );
+  }
+  if (session.role) return <Redirect href={homeRouteFor(session.role)} />;
+  return <Redirect href={school ? "/(auth)/login" : "/(auth)/school"} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    padding: spacing.xl,
-    backgroundColor: colors.white,
-  },
-  mark: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    backgroundColor: colors.brand[700],
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.sm,
-  },
-  markText: { color: colors.white, fontSize: 30, fontWeight: "800" },
-  title: { ...typography.title },
-  subtitle: { ...typography.body, color: colors.slate[500], marginBottom: spacing.md },
-  button: { minWidth: 160, marginTop: spacing.sm },
-});

@@ -7,11 +7,11 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
-    "backgroundColor": "#6D28D9",
+    "backgroundColor": "#3730A3",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#6D28D9"
+      "backgroundColor": "#3730A3"
     },
     "plugins": [
       "expo-router",
@@ -25,11 +25,13 @@
       "package": "com.skolara.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#6D28D9"
+        "backgroundColor": "#3730A3"
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
     },
     "extra": {
       "eas": {
@@ -38,7 +40,8 @@
     },
     "notification": {
       "icon": "./assets/adaptive-icon.png",
-      "color": "#6D28D9"
-    }
+      "color": "#3730A3"
+    },
+    "description": "Skolara for parents, students, teachers and school owners."
   }
 }

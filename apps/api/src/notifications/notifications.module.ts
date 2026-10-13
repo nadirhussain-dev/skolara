@@ -2,6 +2,8 @@ import { Global, Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { EMAIL_PROVIDER } from "./email-provider.interface";
 import { NotificationsService } from "./notifications.service";
+import { InboxController } from "./inbox.controller";
+import { InboxService } from "./inbox.service";
 import { ConsoleEmailProvider } from "./providers/console-email.provider";
 import { ConsolePushProvider } from "./providers/console-push.provider";
 import { ConsoleWhatsAppProvider } from "./providers/console-whatsapp.provider";
@@ -16,7 +18,9 @@ import { WHATSAPP_PROVIDER } from "./whatsapp-provider.interface";
 
 @Global()
 @Module({
+  controllers: [InboxController],
   providers: [
+    InboxService,
     {
       provide: WHATSAPP_PROVIDER,
       useFactory: (config: ConfigService) => {

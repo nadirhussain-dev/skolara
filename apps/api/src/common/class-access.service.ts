@@ -35,6 +35,30 @@ export class ClassAccessService {
     }
   }
 
+  /**
+   * Asserts the caller may read what is published to a class — its homework,
+   * timetable and exam schedule. Staff may read any class in their school;
+   * a student only their own class, and a parent only a class one of their
+   * children is in.
+   */
+  async assertCanReadClass(user: AuthenticatedUser, classId: string) {
+    const schoolClass = await this.prisma.schoolClass.findFirst({
+      where: { id: classId, schoolId: user.schoolId ?? undefined },
+      select: { id: true },
+    });
+    if (!schoolClass) throw new NotFoundException("Class not found");
+    if (user.role === "SCHOOL_ADMIN" || user.role === "TEACHER") return;
+
+    const member = await this.prisma.studentProfile.findFirst({
+      where:
+        user.role === "STUDENT"
+          ? { classId, userId: user.id }
+          : { classId, parentLinks: { some: { parentUserId: user.id } } },
+      select: { id: true },
+    });
+    if (!member) throw new ForbiddenException("Not your class");
+  }
+
   /** Class ids a teacher is assigned to, for scoping list endpoints. */
   async classIdsForTeacher(teacherUserId: string): Promise<string[]> {
     const rows = await this.prisma.classTeacher.findMany({

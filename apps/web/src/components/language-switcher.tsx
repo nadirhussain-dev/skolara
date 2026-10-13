@@ -7,7 +7,14 @@ import { cn } from "@skolara/ui";
  * Each language is labelled in its own script — someone who only reads Urdu
  * can't be expected to find it behind the English word "Urdu".
  */
-export function LanguageSwitcher({ className }: { className?: string }) {
+export function LanguageSwitcher({
+  className,
+  tone = "light",
+}: {
+  className?: string;
+  /** `dark` for the themed sidebar, where the light-surface colours vanish. */
+  tone?: "light" | "dark";
+}) {
   const { locale, setLocale, t } = useTranslation();
 
   return (
@@ -22,9 +29,13 @@ export function LanguageSwitcher({ className }: { className?: string }) {
           onClick={() => setLocale(code)}
           className={cn(
             "rounded-md px-2 py-1 text-xs font-medium transition-colors",
-            locale === code
-              ? "bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200"
-              : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-100",
+            tone === "dark"
+              ? locale === code
+                ? "bg-white/20 text-white"
+                : "text-white/75 hover:text-white"
+              : locale === code
+                ? "bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200"
+                : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-100",
           )}
         >
           {LOCALE_META[code].nativeName}

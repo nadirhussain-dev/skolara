@@ -1,5 +1,6 @@
 import { NotFoundException } from "@nestjs/common";
 import { InvoicesService } from "./invoices.service";
+import type { NotificationsService } from "../notifications/notifications.service";
 import type { PrismaService } from "../prisma/prisma.service";
 
 const SCHOOL = "school-1";
@@ -31,7 +32,10 @@ describe("InvoicesService", () => {
       },
       studentProfile: { findFirst: jest.fn().mockResolvedValue({ id: STUDENT }) },
     };
-    service = new InvoicesService(prisma as unknown as PrismaService);
+    service = new InvoicesService(
+      prisma as unknown as PrismaService,
+      { sendPush: jest.fn() } as unknown as NotificationsService,
+    );
   });
 
   describe("create", () => {

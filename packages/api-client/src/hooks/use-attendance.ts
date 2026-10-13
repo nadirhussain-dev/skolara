@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { MarkAttendanceInput } from "@skolara/types";
 import { useApiClient } from "../context";
 
@@ -13,7 +13,29 @@ export function useStudentsByClass(classId: string) {
 
 export function useMarkAttendance() {
   const api = useApiClient();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: MarkAttendanceInput) => api.attendance.mark(input),
+    // The day summary and the saved register both change.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attendance"] }),
+  });
+}
+
+/** The register already saved for a class on a day (YYYY-MM-DD); empty if not taken. */
+export function useClassAttendance(classId: string | undefined, date: string) {
+  const api = useApiClient();
+  return useQuery({
+    queryKey: ["attendance", "class", classId, date],
+    queryFn: () => api.attendance.byClass(classId as string, date),
+    enabled: Boolean(classId),
+  });
+}
+
+export function useStudentAttendance(studentId: string | undefined) {
+  const api = useApiClient();
+  return useQuery({
+    queryKey: ["attendance", "student", studentId],
+    queryFn: () => api.attendance.forStudent(studentId as string),
+    enabled: Boolean(studentId),
   });
 }

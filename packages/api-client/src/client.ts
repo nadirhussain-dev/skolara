@@ -1,4 +1,20 @@
 import type {
+  BulkGradesInput,
+  BulkInvoiceInput,
+  BulkInvoiceResult,
+  Defaulter,
+  InvoiceFilter,
+  InvoiceList,
+  PublicSchool,
+  NotificationInbox,
+  BudgetCategory,
+  CreateBudgetCategoryInput,
+  CreateExpenseInput,
+  Expense,
+  ExpenseStatus,
+  FinanceOverview,
+  ReviewExpenseInput,
+  SetBudgetInput,
   AddComplaintCommentInput,
   AdmitStudentInput,
   ApiKey,
@@ -22,6 +38,8 @@ import type {
   CalendarEvent,
   Complaint,
   ComplaintComment,
+  ComplaintSummary,
+  ComplaintWithComments,
   CreateApiKeyInput,
   CreateApiKeyResponse,
   CreateAssignmentInput,
@@ -78,6 +96,7 @@ import type {
   ReviewPaymentInput,
   School,
   SchoolAnalytics,
+  SchoolToday,
   SchoolClass,
   SchoolGroup,
   SendMessageInput,
@@ -150,10 +169,20 @@ export interface PaymentQueueItem extends PaymentSubmission {
   invoice: Invoice;
 }
 
+/** A teacher assigned to a class. */
+export interface ClassTeacher {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 export interface StudentWithUser {
   id: string;
   admissionNumber: string;
   classId: string | null;
+  /** ISO date; the API sends the full profile row. */
+  dateOfBirth?: string;
   user: {
     id: string;
     firstName: string;
@@ -171,16 +200,28 @@ export interface AssignmentSubmissionWithStudent extends AssignmentSubmission {
   student: { id: string; user: { id: string; firstName: string; lastName: string } };
 }
 
+/** Homework as a class list shows it: with how many have handed it in. */
+export interface AssignmentWithProgress extends Assignment {
+  submittedCount: number;
+  classSize: number;
+}
+
 export interface AssignmentSubmissionWithAssignment extends AssignmentSubmission {
   assignment: Assignment;
 }
 
-export interface MessageThreadWithStudent extends MessageThread {
-  student: { id: string; user: { id: string; firstName: string; lastName: string } };
+interface ThreadPerson {
+  id: string;
+  firstName: string;
+  lastName: string;
 }
 
-export interface ComplaintWithComments extends Complaint {
-  comments: ComplaintComment[];
+/** A conversation as the inbox lists it: who it is with, about whom, and the latest line. */
+export interface MessageThreadWithStudent extends MessageThread {
+  student: { id: string; user: ThreadPerson; class: { name: string; section: string | null } | null };
+  teacherUser: ThreadPerson;
+  parentUser: ThreadPerson;
+  lastMessage: Message | null;
 }
 
 export interface DefaulterRiskWithExplanation extends DefaulterRisk {
@@ -618,6 +659,8 @@ export function createApiClient({
           method: "POST",
           body: JSON.stringify(input),
         }),
+      /** Name, logo and colour for a school code. 404 when there is no such active school. */
+      findPublic: (code: string) => request<PublicSchool>(`/schools/public/${encodeURIComponent(code)}`),
       subdomainAvailable: (subdomain: string) =>
         request<{ available: boolean }>(
           `/schools/subdomain-available/${encodeURIComponent(subdomain)}`,
@@ -659,6 +702,14 @@ export function createApiClient({
     },
     classes: {
       list: () => request<SchoolClass[]>("/classes"),
+      teachers: (classId: string) => request<ClassTeacher[]>(`/classes/${classId}/teachers`),
+      assignTeacher: (classId: string, teacherUserId: string) =>
+        request<ClassTeacher[]>(`/classes/${classId}/teachers`, {
+          method: "POST",
+          body: JSON.stringify({ teacherUserId }),
+        }),
+      unassignTeacher: (classId: string, teacherUserId: string) =>
+        request<ClassTeacher[]>(`/classes/${classId}/teachers/${teacherUserId}`, { method: "DELETE" }),
       create: (input: CreateClassInput) =>
         request<SchoolClass>("/classes", {
           method: "POST",
@@ -708,6 +759,21 @@ export function createApiClient({
         }),
       forStudent: (studentId: string) =>
         request<Invoice[]>(`/invoices/student/${studentId}`),
+      list: (filter: { status?: InvoiceFilter; classId?: string } = {}) => {
+        const query = new URLSearchParams();
+        if (filter.status && filter.status !== "ALL") query.set("status", filter.status);
+        if (filter.classId) query.set("classId", filter.classId);
+        const suffix = query.toString();
+        return request<InvoiceList>(`/invoices${suffix ? `?${suffix}` : ""}`);
+      },
+      createBulk: (input: BulkInvoiceInput) =>
+        request<BulkInvoiceResult>("/invoices/bulk", { method: "POST", body: JSON.stringify(input) }),
+      defaulters: () => request<Defaulter[]>("/invoices/defaulters"),
+      remind: (studentIds: string[]) =>
+        request<{ reminded: number; withoutParent: number }>("/invoices/reminders", {
+          method: "POST",
+          body: JSON.stringify({ studentIds }),
+        }),
     },
     attendance: {
       mark: (input: MarkAttendanceInput) =>
@@ -719,6 +785,9 @@ export function createApiClient({
         request<AttendanceRecord[]>(
           `/attendance/class/${classId}?date=${date}`,
         ),
+      /** A student's whole attendance history, newest first. */
+      forStudent: (studentId: string) =>
+        request<AttendanceRecord[]>(`/attendance/student/${studentId}`),
       schoolDay: (date: string) =>
         request<SchoolDayAttendance>(`/attendance/school-day?date=${date}`),
     },
@@ -739,6 +808,8 @@ export function createApiClient({
         }),
     },
     grades: {
+      upsertBulk: (input: BulkGradesInput) =>
+        request<{ saved: number }>("/grades/bulk", { method: "POST", body: JSON.stringify(input) }),
       upsert: (input: UpsertGradeEntryInput) =>
         request<GradeEntry>("/grades", {
           method: "POST",
@@ -770,7 +841,7 @@ export function createApiClient({
           body: JSON.stringify(input),
         }),
       forClass: (classId: string) =>
-        request<Assignment[]>(`/assignments/class/${classId}`),
+        request<AssignmentWithProgress[]>(`/assignments/class/${classId}`),
       submit: (assignmentId: string, studentId: string, input: SubmitAssignmentInput) =>
         request<AssignmentSubmission>(
           `/assignments/${assignmentId}/submissions/${studentId}`,
@@ -794,8 +865,8 @@ export function createApiClient({
           method: "POST",
           body: JSON.stringify(input),
         }),
-      list: () => request<Complaint[]>("/complaints"),
-      mine: () => request<Complaint[]>("/complaints/mine"),
+      list: () => request<ComplaintSummary[]>("/complaints"),
+      mine: () => request<ComplaintSummary[]>("/complaints/mine"),
       findOne: (id: string) => request<ComplaintWithComments>(`/complaints/${id}`),
       addComment: (id: string, input: AddComplaintCommentInput) =>
         request<ComplaintComment>(`/complaints/${id}/comments`, {
@@ -815,6 +886,9 @@ export function createApiClient({
           body: JSON.stringify(input),
         }),
       threads: () => request<MessageThreadWithStudent[]>("/messages/threads"),
+      /** The teachers a parent may message about this child. */
+      contacts: (studentId: string) =>
+        request<{ id: string; firstName: string; lastName: string }[]>(`/messages/contacts/${studentId}`),
       messages: (threadId: string) =>
         request<Message[]>(`/messages/threads/${threadId}/messages`),
       send: (threadId: string, input: SendMessageInput) =>
@@ -826,8 +900,59 @@ export function createApiClient({
     analytics: {
       platform: () => request<PlatformAnalytics>("/analytics/platform"),
       school: () => request<SchoolAnalytics>("/analytics/school"),
+      schoolToday: () => request<SchoolToday>("/analytics/school/today"),
       defaulterRisk: (studentId: string) =>
         request<DefaulterRiskWithExplanation>(`/analytics/defaulter-risk/${studentId}`),
+    },
+    notifications: {
+      list: () => request<NotificationInbox>("/notifications"),
+      unreadCount: () => request<{ unreadCount: number }>("/notifications/unread-count"),
+      markRead: (ids?: string[]) =>
+        request<{ updated: number }>("/notifications/read", {
+          method: "POST",
+          body: JSON.stringify(ids ? { ids } : {}),
+        }),
+    },
+    finance: {
+      overview: (month: string) =>
+        request<FinanceOverview>(`/finance/overview?month=${encodeURIComponent(month)}`),
+      categories: () => request<BudgetCategory[]>("/finance/categories"),
+      createCategory: (input: CreateBudgetCategoryInput) =>
+        request<BudgetCategory>("/finance/categories", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      archiveCategory: (id: string, archived: boolean) =>
+        request<BudgetCategory>(`/finance/categories/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ archived }),
+        }),
+      setBudget: (input: SetBudgetInput) =>
+        request<{ updated: number }>("/finance/budget", {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      copyPreviousBudget: (month: string) =>
+        request<{ copied: number }>("/finance/budget/copy-previous", {
+          method: "POST",
+          body: JSON.stringify({ month }),
+        }),
+      expenses: (filter: { month?: string; status?: ExpenseStatus } = {}) => {
+        const query = new URLSearchParams();
+        if (filter.month) query.set("month", filter.month);
+        if (filter.status) query.set("status", filter.status);
+        const suffix = query.toString();
+        return request<Expense[]>(`/finance/expenses${suffix ? `?${suffix}` : ""}`);
+      },
+      createExpense: (input: CreateExpenseInput) =>
+        request<Expense>("/finance/expenses", { method: "POST", body: JSON.stringify(input) }),
+      reviewExpense: (id: string, input: ReviewExpenseInput) =>
+        request<Expense>(`/finance/expenses/${id}/review`, {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      deleteExpense: (id: string) =>
+        request<{ deleted: true }>(`/finance/expenses/${id}`, { method: "DELETE" }),
     },
     exams: {
       create: (input: CreateExamInput) =>

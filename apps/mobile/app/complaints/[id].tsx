@@ -1,81 +1,73 @@
 import { useAddComplaintComment, useComplaint } from "@skolara/api-client";
-import type { ComplaintStatus } from "@skolara/types";
+import { useTranslation } from "@skolara/i18n";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
-import { useTranslation } from "@skolara/i18n";
-import { colors, spacing, typography, type Tone } from "@/lib/theme";
-import { Button, Card, Input, LoadingLine, Pill, Screen } from "@/lib/ui";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { palette, useTheme } from "@/lib/school-theme";
+import { radius, spacing } from "@/lib/theme";
+import { Button, Card, ErrorState, Field, Muted, Pill, Skeleton, Txt } from "@/lib/ui";
+import { CONCERN_TONE } from "@/lib/tones";
 
-const STATUS_TONE: Record<ComplaintStatus, Tone> = {
-  OPEN: "warning",
-  IN_PROGRESS: "brand",
-  RESOLVED: "success",
-};
-
-export default function ComplaintDetailScreen() {
+/** One concern and the school's replies, with room to add to it until it is resolved. */
+export default function ConcernScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { t } = useTranslation();
-  const { data: complaint, isLoading } = useComplaint(id);
-  const addComment = useAddComplaintComment();
-  const [comment, setComment] = useState("");
+  const { t, locale } = useTranslation();
+  const { brand } = useTheme();
+  const concern = useComplaint(id);
+  const reply = useAddComplaintComment();
+  const [text, setText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const time = new Intl.DateTimeFormat(locale === "ur" ? "ur-PK" : "en-GB", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
-  async function submitComment() {
-    if (!comment) return;
-    await addComment.mutateAsync({ id, input: { body: comment } });
-    setComment("");
+  if (concern.isError) return <View style={styles.content}><ErrorState message={t("app.loadError")} retryLabel={t("app.retry")} onRetry={() => void concern.refetch()} /></View>;
+  if (!concern.data) return <View style={styles.content}><Skeleton height={120} /><Skeleton height={80} /></View>;
+  const c = concern.data;
+
+  function send() {
+    if (!text.trim()) {
+      setError(t("concerns.replyRequired"));
+      return;
+    }
+    setError(null);
+    reply.mutate({ id, input: { body: text.trim() } }, { onSuccess: () => setText(""), onError: (e) => setError(e instanceof Error ? e.message : t("common.somethingWentWrong")) });
   }
 
-  if (isLoading || !complaint) return <LoadingLine label={t("common.loading")} />;
-
   return (
-    <Screen>
+    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Card>
-        <View style={styles.headerRow}>
-          <Text style={styles.subject}>{complaint.subject}</Text>
-          <Pill
-            label={t(`complaintStatus.${complaint.status}`)}
-            tone={STATUS_TONE[complaint.status]}
-          />
-        </View>
-        <Text style={styles.body}>{complaint.body}</Text>
+        <Pill label={t(`complaintStatus.${c.status}`)} tone={CONCERN_TONE[c.status]} />
+        <Txt accessibilityRole="header" style={styles.subject}>{c.subject}</Txt>
+        {c.student && <Muted>{t("everyday.aboutChild", { child: `${c.student.user.firstName} ${c.student.user.lastName}` })}</Muted>}
+        <Muted style={{ fontSize: 12 }}>{time.format(new Date(c.createdAt))}</Muted>
+        <Txt style={{ color: palette.ink, lineHeight: 22 }}>{c.body}</Txt>
       </Card>
 
-      <FlatList
-        style={{ flex: 1 }}
-        contentContainerStyle={{ gap: spacing.xs }}
-        data={complaint.comments}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.commentRow}>
-            <Text style={styles.commentBody}>{item.body}</Text>
+      {c.comments.map((comment) => {
+        const fromSchool = comment.authorUser.role === "SCHOOL_ADMIN";
+        return (
+          <View key={comment.id} style={[styles.bubble, fromSchool ? { backgroundColor: brand[700], alignSelf: "flex-start" } : { backgroundColor: palette.surface, alignSelf: "flex-end" }]}>
+            <Text style={{ color: fromSchool ? "rgba(255,255,255,0.85)" : palette.muted, fontSize: 12, fontWeight: "700" }}>
+              {fromSchool ? t("everyday.theSchool") : t("everyday.youLabel")} · {time.format(new Date(comment.createdAt))}
+            </Text>
+            <Text style={{ color: fromSchool ? "#FFFFFF" : palette.ink, fontSize: 15, lineHeight: 21, marginTop: 2 }}>{comment.body}</Text>
           </View>
-        )}
-      />
+        );
+      })}
 
-      <View style={styles.replyRow}>
-        <Input
-          placeholder={t("mobileComplaints.addComment")}
-          value={comment}
-          onChangeText={setComment}
-          style={{ flex: 1 }}
-        />
-        <Button title={t("support.send")} onPress={submitComment} style={styles.sendButton} />
-      </View>
-    </Screen>
+      {c.status === "RESOLVED" ? (
+        <Card><Muted>{t("everyday.resolvedNote")}</Muted></Card>
+      ) : (
+        <Card>
+          <Field label={t("everyday.addToIt")} value={text} onChangeText={setText} multiline maxLength={5000} error={error} />
+          <Button title={t("concerns.sendReply")} onPress={send} loading={reply.isPending} />
+        </Card>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  subject: { ...typography.heading, flexShrink: 1 },
-  body: { ...typography.body, marginTop: spacing.xs },
-  commentRow: {
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.slate[200],
-  },
-  commentBody: { ...typography.body },
-  replyRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
-  sendButton: { paddingHorizontal: spacing.lg },
+  content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
+  subject: { color: palette.ink, fontWeight: "800", fontSize: 20 },
+  bubble: { maxWidth: "88%", borderRadius: radius.lg, padding: 12 },
 });

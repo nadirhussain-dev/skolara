@@ -18,6 +18,7 @@ import { JwtOrApiKeyGuard } from "../common/guards/jwt-or-api-key.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
+import { ClassAccessService } from "../common/class-access.service";
 import { StudentsService } from "./students.service";
 
 const assignClassSchema = z.object({ classId: z.string().uuid() });
@@ -27,7 +28,10 @@ const linkParentSchema = z.object({ parentUserId: z.string().uuid() });
 @UseGuards(JwtOrApiKeyGuard, RolesGuard)
 @Roles("SCHOOL_ADMIN")
 export class StudentsController {
-  constructor(private studentsService: StudentsService) {}
+  constructor(
+    private studentsService: StudentsService,
+    private classAccess: ClassAccessService,
+  ) {}
 
   @Post()
   admit(
@@ -41,20 +45,31 @@ export class StudentsController {
   }
 
   @Get()
-  findAllForClass(
+  @Roles("SCHOOL_ADMIN", "TEACHER")
+  async findAllForClass(
     @Query("classId") classId: string | undefined,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!user.schoolId) throw new ForbiddenException("No school context");
-    // No classId means the whole school — what the hostel and inventory
-    // screens need, since neither allocates per class.
+    if (user.role === "TEACHER") {
+      // A teacher needs the roster of a class they teach, to take its
+      // register and enter its marks, and nothing wider: not the whole
+      // school, and not a colleague's class.
+      if (!classId) throw new ForbiddenException("Choose a class");
+      await this.classAccess.assertCanTeachClass(user, classId);
+    }
+    // For an admin, no classId means the whole school.
     return this.studentsService.findAllForClass(user.schoolId, classId || undefined);
   }
 
   @Get("mine")
-  @Roles("PARENT")
+  @Roles("PARENT", "STUDENT")
   findMine(@CurrentUser() user: AuthenticatedUser) {
-    return this.studentsService.findChildrenForParent(user.id);
+    // A parent's children, or for a student account, the student themself, so
+    // the family app works the same way for both.
+    return user.role === "STUDENT"
+      ? this.studentsService.findOwnProfile(user.id)
+      : this.studentsService.findChildrenForParent(user.id);
   }
 
   @Get(":id")

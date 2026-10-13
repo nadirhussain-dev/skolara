@@ -20,6 +20,15 @@ export function useThreadMessages(threadId: string | undefined) {
   });
 }
 
+export function useMessageContacts(studentId: string | undefined) {
+  const api = useApiClient();
+  return useQuery({
+    queryKey: ["messages", "contacts", studentId],
+    queryFn: () => api.messaging.contacts(studentId as string),
+    enabled: Boolean(studentId),
+  });
+}
+
 export function useStartThread() {
   const api = useApiClient();
   const queryClient = useQueryClient();
@@ -35,7 +44,7 @@ export function useSendMessage() {
   return useMutation({
     mutationFn: ({ threadId, input }: { threadId: string; input: SendMessageInput }) =>
       api.messaging.send(threadId, input),
-    onSuccess: (_, vars) =>
-      queryClient.invalidateQueries({ queryKey: ["messages", "threads", vars.threadId] }),
+    // The thread list shows the latest line, so refresh it as well.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["messages", "threads"] }),
   });
 }

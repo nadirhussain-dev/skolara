@@ -50,19 +50,17 @@ export default function SchoolAnalyticsPage() {
         </Button>
       </div>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
-        <StatCard label={t("overview.students")} value={data.studentCount} icon="🎓" />
-        <StatCard label={t("overview.teachers")} value={data.teacherCount} icon="🧑‍🏫" />
+        <StatCard label={t("overview.students")} value={data.studentCount} />
+        <StatCard label={t("overview.teachers")} value={data.teacherCount} />
         <StatCard
           label={t("overview.attendance30d")}
           value={`${data.attendanceRateLast30Days.toFixed(0)}%`}
-          icon="✅"
         />
         <StatCard
           label={t("overview.feeCollection")}
           value={`${data.feeCollectionRate.toFixed(0)}%`}
-          icon="💰"
         />
-        <StatCard label={t("overview.paymentsPending")} value={data.pendingPaymentSubmissions} icon="⏳" />
+        <StatCard label={t("overview.paymentsPending")} value={data.pendingPaymentSubmissions} />
       </div>
 
       <Card>

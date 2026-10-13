@@ -11,7 +11,8 @@ import { ComplaintsService } from "./complaints.service";
 describe("ComplaintsService", () => {
   let service: ComplaintsService;
   let prisma: {
-    complaint: { findFirst: jest.Mock; update: jest.Mock };
+    complaint: { findFirst: jest.Mock; findUniqueOrThrow: jest.Mock; update: jest.Mock; create: jest.Mock };
+    user: { findMany: jest.Mock };
     complaintComment: { findMany: jest.Mock; create: jest.Mock };
   };
   let notifications: { sendPush: jest.Mock };
@@ -24,7 +25,14 @@ describe("ComplaintsService", () => {
 
   beforeEach(async () => {
     prisma = {
-      complaint: { findFirst: jest.fn(), update: jest.fn() },
+      complaint: {
+        findFirst: jest.fn(),
+        // findOne re-reads the complaint with names attached once access is checked.
+        findUniqueOrThrow: jest.fn(({ where }) => Promise.resolve({ id: where.id, comments: [] })),
+        update: jest.fn(),
+        create: jest.fn(),
+      },
+      user: { findMany: jest.fn().mockResolvedValue([{ id: "admin-1" }, { id: "admin-2" }]) },
       complaintComment: { findMany: jest.fn(), create: jest.fn() },
     };
 
@@ -104,6 +112,38 @@ describe("ComplaintsService", () => {
 
       const result = await service.updateStatus(SCHOOL_A, COMPLAINT_ID, "RESOLVED");
       expect(result.status).toBe("RESOLVED");
+    });
+  });
+
+  describe("create", () => {
+    it("tells the school's admins a concern was raised", async () => {
+      prisma.complaint.create.mockResolvedValue({ id: COMPLAINT_ID });
+      await service.create(SCHOOL_A, RAISER_ID, { subject: "Bus late", body: "Twice this week" });
+      expect(prisma.user.findMany).toHaveBeenCalledWith({
+        where: { schoolId: SCHOOL_A, role: "SCHOOL_ADMIN", isActive: true },
+        select: { id: true },
+      });
+      expect(notifications.sendPush).toHaveBeenCalledWith(
+        ["admin-1", "admin-2"],
+        expect.objectContaining({ data: { type: "COMPLAINT", complaintId: COMPLAINT_ID } }),
+      );
+    });
+  });
+
+  describe("addComment", () => {
+    it("moves an open concern to in progress when the school replies", async () => {
+      prisma.complaint.findFirst.mockResolvedValue({ id: COMPLAINT_ID, schoolId: SCHOOL_A, raisedByUserId: RAISER_ID, status: "OPEN" });
+      prisma.complaintComment.create.mockResolvedValue({ id: "c1" });
+      await service.addComment(SCHOOL_A, ADMIN_ID, "SCHOOL_ADMIN", COMPLAINT_ID, { body: "On it" });
+      expect(prisma.complaint.update).toHaveBeenCalledWith({ where: { id: COMPLAINT_ID }, data: { status: "IN_PROGRESS" } });
+    });
+
+    it("does not let a family post on a resolved concern", async () => {
+      prisma.complaint.findFirst.mockResolvedValue({ id: COMPLAINT_ID, schoolId: SCHOOL_A, raisedByUserId: RAISER_ID, status: "RESOLVED" });
+      await expect(
+        service.addComment(SCHOOL_A, RAISER_ID, "PARENT", COMPLAINT_ID, { body: "Again" }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.complaintComment.create).not.toHaveBeenCalled();
     });
   });
 });

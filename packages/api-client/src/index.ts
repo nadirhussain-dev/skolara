@@ -44,3 +44,6 @@ export * from "./hooks/use-leave";
 export * from "./hooks/use-meetings";
 export * from "./hooks/use-support";
 export * from "./hooks/use-broadcasts";
+export * from "./hooks/use-finance";
+export * from "./hooks/use-notifications";
+export * from "./hooks/use-classes";

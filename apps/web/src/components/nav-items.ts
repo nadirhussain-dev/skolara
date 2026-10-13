@@ -42,8 +42,14 @@ export const NAV_ITEMS: NavItem[] = [
   },
 
   {
-    href: "/school/analytics",
+    href: "/school",
     labelKey: "nav.overview",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.overview",
+  },
+  {
+    href: "/school/analytics",
+    labelKey: "nav.analytics",
     roles: ["SCHOOL_ADMIN"],
     groupKey: "nav.overview",
   },
@@ -86,16 +92,22 @@ export const NAV_ITEMS: NavItem[] = [
     groupKey: "nav.academics",
   },
   {
-    href: "/teacher/meetings",
-    labelKey: "nav.meetings",
+    href: "/teacher/leave",
+    labelKey: "nav.myLeave",
+    roles: ["TEACHER"],
+    groupKey: "nav.academics",
+  },
+  {
+    href: "/teacher/messages",
+    labelKey: "nav.messages",
     roles: ["TEACHER"],
     groupKey: "nav.communication",
   },
   {
-    href: "/teacher/gradebook",
-    labelKey: "nav.gradebook",
+    href: "/teacher/meetings",
+    labelKey: "nav.meetings",
     roles: ["TEACHER"],
-    groupKey: "nav.academics",
+    groupKey: "nav.communication",
   },
   {
     href: "/school/exams",
@@ -123,7 +135,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     href: "/school/assignments",
-    labelKey: "nav.assignments",
+    labelKey: "nav.homework",
     roles: ["SCHOOL_ADMIN", "TEACHER"],
     groupKey: "nav.academics",
   },
@@ -160,13 +172,19 @@ export const NAV_ITEMS: NavItem[] = [
 
   {
     href: "/school/invoices",
-    labelKey: "nav.invoices",
+    labelKey: "nav.fees",
     roles: ["SCHOOL_ADMIN"],
     groupKey: "nav.finance",
   },
   {
     href: "/school/payments",
     labelKey: "nav.paymentQueue",
+    roles: ["SCHOOL_ADMIN"],
+    groupKey: "nav.finance",
+  },
+  {
+    href: "/school/finance",
+    labelKey: "nav.budgetAndExpenses",
     roles: ["SCHOOL_ADMIN"],
     groupKey: "nav.finance",
   },

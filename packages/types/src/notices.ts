@@ -23,8 +23,8 @@ export type Notice = z.infer<typeof noticeSchema>;
 
 export const createNoticeSchema = z
   .object({
-    title: z.string().min(1),
-    body: z.string().min(1),
+    title: z.string().trim().min(1).max(120),
+    body: z.string().trim().min(1).max(1000),
     audience: noticeAudienceSchema,
     classId: z.string().uuid().optional(),
   })

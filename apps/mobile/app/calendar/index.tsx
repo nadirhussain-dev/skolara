@@ -1,109 +1,89 @@
 import { useCalendarEvents } from "@skolara/api-client";
+import { useTranslation } from "@skolara/i18n";
 import type { CalendarEvent, CalendarEventCategory } from "@skolara/types";
-import { useMemo } from "react";
-import { SectionList, StyleSheet, Text, View } from "react-native";
-import { useTranslation, type Locale } from "@skolara/i18n";
-import { colors, spacing, typography, type Tone } from "@/lib/theme";
-import { intlLocale } from "@/lib/intl";
-import { Card, EmptyState, LoadingLine, Pill, Screen } from "@/lib/ui";
+import { useState } from "react";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { palette } from "@/lib/school-theme";
+import { radius, spacing } from "@/lib/theme";
+import { Card, EmptyState, ErrorState, Muted, SectionLabel, Skeleton, Txt } from "@/lib/ui";
 
-const CATEGORY_TONE: Record<CalendarEventCategory, Tone> = {
-  HOLIDAY: "success",
-  EXAM: "danger",
-  MEETING: "brand",
-  ACTIVITY: "brand",
-  TERM_START: "warning",
-  TERM_END: "warning",
-  OTHER: "neutral",
+/** Same colours as the web calendar, so a holiday looks like a holiday everywhere. */
+const COLOUR: Record<CalendarEventCategory, { bg: string; fg: string }> = {
+  HOLIDAY: { bg: "#D1FAE5", fg: "#065F46" },
+  EXAM: { bg: "#FEE2E2", fg: "#991B1B" },
+  MEETING: { bg: "#EDE9FE", fg: "#5B21B6" },
+  ACTIVITY: { bg: "#FEF3C7", fg: "#92400E" },
+  TERM_START: { bg: "#E0F2FE", fg: "#075985" },
+  TERM_END: { bg: "#E0F2FE", fg: "#075985" },
+  OTHER: { bg: "#E2E8F0", fg: "#334155" },
 };
 
-function monthKey(date: Date, locale: Locale) {
-  return date.toLocaleDateString(intlLocale(locale), { month: "long", year: "numeric" });
-}
-
+/** What's coming up at school, month by month: holidays, exams and events. */
 export default function CalendarScreen() {
   const { t, locale } = useTranslation();
-  // Only what's ahead — a parent opening this wants the next thing, not
-  // last term's holidays.
-  const from = useMemo(() => new Date().toISOString(), []);
-  const { data: events, isLoading } = useCalendarEvents(from);
+  const [from] = useState(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString();
+  });
+  const events = useCalendarEvents(from);
+  const tag = locale === "ur" ? "ur-PK" : "en-GB";
+  const monthName = new Intl.DateTimeFormat(tag, { month: "long", year: "numeric", timeZone: "UTC" });
+  const dayNum = (e: CalendarEvent) => new Intl.DateTimeFormat(tag, { day: "numeric", timeZone: e.allDay ? "UTC" : undefined }).format(new Date(e.startsAt));
+  const weekday = (e: CalendarEvent) => new Intl.DateTimeFormat(tag, { weekday: "short", timeZone: e.allDay ? "UTC" : undefined }).format(new Date(e.startsAt));
+  const span = (e: CalendarEvent) => {
+    const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", timeZone: e.allDay ? "UTC" : undefined };
+    const start = new Intl.DateTimeFormat(tag, opts).format(new Date(e.startsAt));
+    const end = new Intl.DateTimeFormat(tag, opts).format(new Date(e.endsAt));
+    if (start !== end) return `${start} – ${end}`;
+    if (e.allDay) return t("calendar.allDay");
+    const time = new Intl.DateTimeFormat(tag, { hour: "numeric", minute: "2-digit" });
+    return `${time.format(new Date(e.startsAt))} – ${time.format(new Date(e.endsAt))}`;
+  };
 
-  const sections = useMemo(() => {
-    const byMonth = new Map<string, CalendarEvent[]>();
-    for (const event of events ?? []) {
-      const key = monthKey(new Date(event.startsAt), locale);
-      byMonth.set(key, [...(byMonth.get(key) ?? []), event]);
-    }
-    return [...byMonth.entries()].map(([title, data]) => ({ title, data }));
-  }, [events, locale]);
-
-  if (isLoading) {
-    return (
-      <Screen>
-        <LoadingLine label={t("common.loading")} />
-      </Screen>
-    );
-  }
-
-  if (sections.length === 0) {
-    return (
-      <Screen>
-        <EmptyState title={t("mobileFamilyWork.nothingComingUp")} />
-      </Screen>
-    );
+  const months = new Map<string, CalendarEvent[]>();
+  for (const event of events.data ?? []) {
+    const key = monthName.format(new Date(event.startsAt));
+    months.set(key, [...(months.get(key) ?? []), event]);
   }
 
   return (
-    <Screen>
-      <SectionList
-        sections={sections}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        stickySectionHeadersEnabled={false}
-        renderSectionHeader={({ section }) => (
-          <Text style={styles.month}>{section.title}</Text>
-        )}
-        renderItem={({ item }) => {
-          const start = new Date(item.startsAt);
-          return (
-            <Card style={styles.event}>
-              <View style={styles.date}>
-                <Text style={styles.day}>{start.getDate()}</Text>
-                <Text style={styles.weekday}>
-                  {start.toLocaleDateString(intlLocale(locale), { weekday: "short" })}
-                </Text>
-              </View>
-              <View style={styles.detail}>
-                <Text style={styles.title}>{item.title}</Text>
-                {item.description ? (
-                  <Text style={styles.description}>{item.description}</Text>
-                ) : null}
-              </View>
-              <Pill
-                label={t(`eventCategory.${item.category}`)}
-                tone={CATEGORY_TONE[item.category]}
-              />
-            </Card>
-          );
-        }}
-      />
-    </Screen>
+    <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={events.isRefetching} onRefresh={() => void events.refetch()} />}>
+      {events.isError ? (
+        <ErrorState message={t("app.loadError")} retryLabel={t("app.retry")} onRetry={() => void events.refetch()} />
+      ) : !events.data ? (
+        <><Skeleton height={64} /><Skeleton height={64} /></>
+      ) : events.data.length === 0 ? (
+        <Card><EmptyState title={t("calendar.nothingOnCalendar")} description={t("mobileFamilyWork.nothingComingUp")} /></Card>
+      ) : (
+        [...months.entries()].map(([month, list]) => (
+          <View key={month} style={{ gap: spacing.sm }}>
+            <SectionLabel>{month}</SectionLabel>
+            {list.map((event) => {
+              const colour = COLOUR[event.category];
+              return (
+                <View key={event.id} style={styles.event}>
+                  <View style={[styles.date, { backgroundColor: colour.bg }]}>
+                    <Text style={{ color: colour.fg, fontWeight: "800", fontSize: 20 }}>{dayNum(event)}</Text>
+                    <Text style={{ color: colour.fg, fontWeight: "700", fontSize: 11, textTransform: "uppercase" }}>{weekday(event)}</Text>
+                  </View>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Txt style={{ color: palette.ink, fontWeight: "800", fontSize: 16 }}>{event.title}</Txt>
+                    <Muted style={{ fontSize: 13 }}>{t(`eventCategory.${event.category}`)} · {span(event)}</Muted>
+                    {event.description ? <Muted style={{ fontSize: 13 }}>{event.description}</Muted> : null}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        ))
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  list: { gap: spacing.sm, paddingBottom: spacing.xl },
-  month: {
-    ...typography.subheading,
-    color: colors.slate[500],
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-  },
-  event: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  date: { minWidth: 44, alignItems: "center" },
-  day: { ...typography.title, fontSize: 22, fontVariant: ["tabular-nums"] },
-  weekday: { fontSize: 11, color: colors.slate[400], textTransform: "uppercase" },
-  detail: { flex: 1, gap: 2 },
-  title: { ...typography.subheading },
-  description: { fontSize: 13, color: colors.slate[500] },
+  content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
+  event: { flexDirection: "row", gap: spacing.md, alignItems: "center", backgroundColor: palette.surface, borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: palette.line },
+  date: { width: 56, height: 56, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
 });

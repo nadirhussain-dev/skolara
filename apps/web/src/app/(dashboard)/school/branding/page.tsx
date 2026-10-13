@@ -1,141 +1,210 @@
 "use client";
 
 import { useMySchool, useUpdateBranding, useUploadFile } from "@skolara/api-client";
-import { Button, Card, CardHeader, CardTitle, Input, PageHeader } from "@skolara/ui";
 import { useTranslation } from "@skolara/i18n";
-import { useEffect, useState } from "react";
+import type { School } from "@skolara/types";
+import { Button, Card, CardTitle, Input, Skeleton, cn } from "@skolara/ui";
+import { DEFAULT_BRAND_COLOR, brandScale, isHexColor, rgbToHex, safeBrandColor } from "@skolara/utils";
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { Field, PageTitle } from "@/components/ui-kit";
+import { safeHttpUrl } from "@/lib/safe-url";
 
-export default function BrandingPage() {
+/** Colours that already pass contrast with white text. The first is the Skolara default. */
+const PRESETS = [DEFAULT_BRAND_COLOR, "#0F766E", "#1D4ED8", "#9F1239", "#166534", "#6D28D9", "#9A3412", "#334155"];
+
+function initials(name: string) {
+  return name.split(/\s+/).map((word) => word[0] ?? "").join("").slice(0, 2).toUpperCase();
+}
+
+/** A small picture of the sidebar and the phone sign-in, drawn in the colour being chosen. */
+function Preview({ name, color, logo }: { name: string; color: string; logo: string | null }) {
   const { t } = useTranslation();
-  const { data: school, isLoading } = useMySchool();
-  const updateBranding = useUpdateBranding();
-  const uploadFile = useUploadFile();
+  const scale = brandScale(color);
+  const c = (step: 50 | 700 | 900) => rgbToHex(scale[step]);
+  const mark = logo ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={logo} alt="" className="h-8 w-8 rounded-md bg-white object-contain" />
+  ) : (
+    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-white text-xs font-extrabold" style={{ color: c(700) }}>{initials(name)}</span>
+  );
+  return (
+    <div aria-hidden className="flex flex-wrap items-end gap-4">
+      <div className="flex h-56 w-72 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+        <div className="flex w-28 flex-col gap-1.5 p-2.5" style={{ backgroundColor: c(900) }}>
+          <div className="mb-1 flex items-center gap-1.5">
+            <span className="scale-75">{mark}</span>
+            <span className="truncate text-[0.6rem] font-extrabold text-white">{name}</span>
+          </div>
+          {[0, 1, 2, 3].map((i) => (
+            <span key={i} className={cn("rounded px-2 py-1.5 text-[0.6rem] font-bold", i === 1 ? "bg-white/15 text-white" : "text-white/70")}>
+              {i === 1 ? t("branding.previewNav") : " "}
+            </span>
+          ))}
+        </div>
+        <div className="flex flex-1 flex-col gap-2 bg-slate-50 p-3 dark:bg-slate-950">
+          <div className="h-3 w-20 rounded bg-slate-300 dark:bg-slate-700" />
+          <div className="h-12 rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900" />
+          <span className="self-start rounded-md px-3 py-1.5 text-[0.65rem] font-bold text-white" style={{ backgroundColor: c(700) }}>{t("branding.previewButton")}</span>
+          <span className="self-start rounded-md px-3 py-1.5 text-[0.65rem] font-bold" style={{ backgroundColor: c(50), color: c(700) }}>{t("branding.previewButton")}</span>
+        </div>
+      </div>
+      <div className="flex h-56 w-32 flex-col overflow-hidden rounded-[1.25rem] border-[5px] border-slate-800">
+        <div className="flex flex-col items-center gap-1 px-2 py-3" style={{ backgroundColor: c(900) }}>
+          {mark}
+          <span className="text-center text-[0.55rem] font-extrabold leading-tight text-white">{name}</span>
+        </div>
+        <div className="flex flex-1 flex-col gap-1.5 rounded-t-xl bg-white p-2 dark:bg-slate-900">
+          <div className="h-4 rounded border border-slate-300 dark:border-slate-600" />
+          <div className="h-4 rounded border border-slate-300 dark:border-slate-600" />
+          <span className="rounded py-1 text-center text-[0.55rem] font-bold text-white" style={{ backgroundColor: c(700) }}>{t("branding.previewSignIn")}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  const [logoUrl, setLogoUrl] = useState("");
-  const [primaryColor, setPrimaryColor] = useState("#6D28D9");
-  const [savedMessage, setSavedMessage] = useState("");
-  const [uploadError, setUploadError] = useState("");
+function BrandingForm({ school }: { school: School }) {
+  const { t } = useTranslation();
+  const update = useUpdateBranding();
+  const upload = useUploadFile();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [logoUrl, setLogoUrl] = useState(school.logoUrl ?? "");
+  const [color, setColor] = useState(school.primaryColor ?? DEFAULT_BRAND_COLOR);
+  const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
 
-  useEffect(() => {
-    // Syncs local editable form fields from the fetched school record once
-    // it arrives — can't be a lazy useState initializer since `school` isn't
-    // available until the query resolves.
-    if (school) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLogoUrl(school.logoUrl ?? "");
-      setPrimaryColor(school.primaryColor ?? "#6D28D9");
-    }
-  }, [school]);
+  const valid = isHexColor(color);
+  const effective = valid ? safeBrandColor(color) : DEFAULT_BRAND_COLOR;
+  const adjusted = valid && effective.toLowerCase() !== color.toLowerCase();
+  const logo = logoUrl ? safeHttpUrl(logoUrl) : null;
+  const names = t("branding.colorNames").split(",");
 
-  async function handleLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+  async function pickLogo(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    // Lets the same file be picked again after a failed upload.
+    event.target.value = "";
     if (!file) return;
-    setUploadError("");
+    setMessage(null);
     try {
-      const uploaded = await uploadFile.mutateAsync({ file, purpose: "SCHOOL_LOGO" });
+      const uploaded = await upload.mutateAsync({ file, purpose: "SCHOOL_LOGO" });
       setLogoUrl(uploaded.url);
-    } catch (error) {
-      setUploadError(error instanceof Error ? error.message : t("branding.uploadFailed"));
-    } finally {
-      // Lets the same file be re-picked if the upload failed.
-      e.target.value = "";
+    } catch {
+      setMessage({ tone: "error", text: t("branding.uploadFailed") });
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!school) return;
-    await updateBranding.mutateAsync({
-      id: school.id,
-      input: {
-        logoUrl: logoUrl || undefined,
-        primaryColor: primaryColor || undefined,
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!valid) {
+      setMessage({ tone: "error", text: t("branding.invalidColor") });
+      return;
+    }
+    setMessage(null);
+    update.mutate(
+      { id: school.id, input: { logoUrl: logo ?? undefined, primaryColor: color.toUpperCase() } },
+      {
+        onSuccess: () => setMessage({ tone: "ok", text: t("branding.saved") }),
+        onError: () => setMessage({ tone: "error", text: t("common.somethingWentWrong") }),
       },
-    });
-    setSavedMessage(t("branding.saved"));
-    setTimeout(() => setSavedMessage(""), 3000);
-  }
-
-  if (isLoading || !school) {
-    return <p className="text-sm text-slate-500">{t("common.loading")}</p>;
+    );
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title={t("branding.title")} description={t("branding.description")} />
-      <Card>
-        <CardHeader>
-          <CardTitle>{school.name}</CardTitle>
-        </CardHeader>
-        <p className="text-sm text-slate-500">
-          {t("branding.schoolLine", { subdomain: school.subdomain, plan: school.plan })}
-        </p>
-      </Card>
+    <form onSubmit={submit} noValidate className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+      <Card className="flex flex-col gap-6 xl:col-span-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-4 dark:bg-slate-800/60">
+          <div>
+            <p className="text-xs font-bold text-slate-600 dark:text-slate-400">{t("branding.schoolCode")}</p>
+            <p className="font-mono text-xl font-extrabold text-slate-900 dark:text-slate-50">{school.subdomain}</p>
+          </div>
+          <p className="max-w-xs text-sm text-slate-600 dark:text-slate-400">{t("branding.schoolCodeHelp")}</p>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("branding.whiteLabeling")}</CardTitle>
-        </CardHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              {t("branding.logo")}
-              <Input
-                type="url"
-                placeholder={t("branding.logoUrlHint")}
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                className="min-w-[280px]"
-              />
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={handleLogoFile}
-                disabled={uploadFile.isPending}
-                className="mt-1 text-xs text-slate-500 file:mr-2 file:rounded-md file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs dark:file:bg-slate-800 dark:file:text-slate-200"
-              />
-              {uploadFile.isPending && (
-                <span className="text-xs text-slate-500">{t("branding.uploading")}</span>
-              )}
-              {uploadError && <span className="text-xs text-rose-600">{uploadError}</span>}
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              {t("branding.primaryColor")}
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={/^#[0-9A-Fa-f]{6}$/.test(primaryColor) ? primaryColor : "#6D28D9"}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="h-9 w-9 cursor-pointer rounded border border-slate-300 dark:border-slate-700"
-                />
-                <Input
-                  placeholder="#6D28D9"
-                  value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="max-w-[140px]"
-                />
-              </div>
-            </label>
-            <Button type="submit" disabled={updateBranding.isPending}>
-              {updateBranding.isPending ? t("branding.saving") : t("branding.save")}
+        <div>
+          <p className="mb-1 text-sm font-bold text-slate-900 dark:text-slate-50">{t("branding.logo")}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            {logo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logo} alt={t("branding.logoPreviewAlt")} className="h-16 w-16 rounded-xl border border-slate-200 bg-white object-contain dark:border-slate-700" />
+            ) : (
+              <span aria-hidden className="flex h-16 w-16 items-center justify-center rounded-xl bg-brand-700 text-xl font-extrabold text-white">{initials(school.name)}</span>
+            )}
+            <input ref={fileInput} type="file" accept="image/png,image/jpeg,image/webp" onChange={pickLogo} className="sr-only" tabIndex={-1} aria-hidden />
+            <Button type="button" variant="secondary" disabled={upload.isPending} onClick={() => fileInput.current?.click()}>
+              {upload.isPending ? t("branding.uploading") : t("branding.chooseFile")}
             </Button>
+            {logoUrl && <Button type="button" variant="ghost" onClick={() => setLogoUrl("")}>{t("branding.removeLogo")}</Button>}
           </div>
-          {savedMessage && <p className="text-sm text-emerald-600">{savedMessage}</p>}
-        </form>
+          <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{t("branding.logoHelp")}</p>
+        </div>
 
-        {logoUrl && (
-          <div className="mt-6 flex items-center gap-3 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={logoUrl} alt={t("branding.logoPreviewAlt")} className="h-12 w-12 rounded object-contain" />
-            <span
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-white"
-              style={{ backgroundColor: primaryColor }}
-            >
-              {t("branding.preview")}
-            </span>
+        <fieldset>
+          <legend className="mb-2 text-sm font-bold text-slate-900 dark:text-slate-50">{t("branding.presets")}</legend>
+          <div className="flex flex-wrap gap-2">
+            {PRESETS.map((preset, index) => {
+              const selected = color.toLowerCase() === preset.toLowerCase();
+              return (
+                <label key={preset} className={cn("flex min-h-[2.75rem] cursor-pointer items-center gap-2 rounded-xl border px-3 text-sm font-bold focus-within:outline focus-within:outline-2 focus-within:outline-brand-700", selected ? "border-slate-900 dark:border-white" : "border-slate-300 dark:border-slate-700")}>
+                  <input type="radio" name="preset" className="sr-only" checked={selected} onChange={() => setColor(preset)} />
+                  <span aria-hidden className="h-5 w-5 rounded-full" style={{ backgroundColor: preset }} />
+                  {names[index] ?? preset}
+                </label>
+              );
+            })}
           </div>
-        )}
+        </fieldset>
+
+        <Field
+          label={t("branding.custom")}
+          help={adjusted ? t("branding.adjusted", { color: effective.toUpperCase() }) : t("branding.customHelp")}
+          error={valid ? null : t("branding.invalidColor")}
+          className="max-w-xs"
+        >
+          {(props) => (
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                aria-label={t("branding.primaryColor")}
+                value={valid ? color : DEFAULT_BRAND_COLOR}
+                onChange={(e) => setColor(e.target.value)}
+                className="h-11 w-11 shrink-0 cursor-pointer rounded-lg border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-900"
+              />
+              <Input {...props} maxLength={7} autoComplete="off" spellCheck={false} value={color} onChange={(e) => setColor(e.target.value.trim())} className="font-mono uppercase" />
+            </div>
+          )}
+        </Field>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="submit" disabled={update.isPending || upload.isPending}>{update.isPending ? t("branding.saving") : t("branding.save")}</Button>
+          <p role="status" aria-live="polite" className={cn("text-sm font-bold", message?.tone === "error" ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400")}>
+            {message?.text}
+          </p>
+        </div>
       </Card>
+
+      <Card className="self-start xl:col-span-2">
+        <CardTitle>{t("branding.preview")}</CardTitle>
+        <div className="mt-4"><Preview name={school.name} color={effective} logo={logo} /></div>
+      </Card>
+    </form>
+  );
+}
+
+export default function BrandingPage() {
+  const { t } = useTranslation();
+  const school = useMySchool();
+  return (
+    <div className="flex flex-col gap-5">
+      <PageTitle title={t("branding.title")} subtitle={t("branding.description")} />
+      {school.isError ? (
+        <Card className="flex flex-wrap items-center justify-between gap-3">
+          <p role="alert" className="text-sm font-bold text-red-700 dark:text-red-400">{t("people.loadError")}</p>
+          <Button variant="secondary" onClick={() => void school.refetch()}>{t("common.retry")}</Button>
+        </Card>
+      ) : !school.data ? (
+        <Skeleton className="h-96 rounded-2xl" />
+      ) : (
+        <BrandingForm key={school.data.id} school={school.data} />
+      )}
     </div>
   );
 }

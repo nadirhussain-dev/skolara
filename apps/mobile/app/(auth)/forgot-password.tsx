@@ -1,77 +1,60 @@
 import { useForgotPassword } from "@skolara/api-client";
+import { useTranslation } from "@skolara/i18n";
 import { router } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { useTranslation } from "@skolara/i18n";
-import { colors, spacing, typography } from "@/lib/theme";
-import { Button, Input } from "@/lib/ui";
+import { palette, useTheme } from "@/lib/school-theme";
+import { Button, Card, Field, Muted, ScreenScroll, Title, Txt } from "@/lib/ui";
 
 export default function ForgotPasswordScreen() {
   const { t } = useTranslation();
-  const forgotPassword = useForgotPassword();
+  const { school } = useTheme();
+  const forgot = useForgotPassword();
   const [email, setEmail] = useState("");
-  const [subdomain, setSubdomain] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
-  async function handleSubmit() {
-    await forgotPassword.mutateAsync({ email, subdomain: subdomain || undefined });
-    setSubmitted(true);
+  function submit() {
+    const address = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
+      setError(t("people.emailInvalid"));
+      return;
+    }
+    setError(null);
+    // The same answer whether or not the account exists, so this screen can't
+    // be used to find out who has one.
+    forgot.mutate({ email: address, subdomain: school?.subdomain }, { onSettled: () => setSentTo(address) });
   }
 
-  if (submitted) {
+  if (sentTo) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.title}>{t("mobileFamily.checkYourEmail")}</Text>
-        <Text style={styles.subtitle}>{t("auth.resetLinkSent", { email })}</Text>
-        <Button
-          title={t("auth.backToSignIn")}
-          variant="secondary"
-          onPress={() => router.back()}
-        />
-      </View>
+      <ScreenScroll>
+        <Title>{t("mobileFamily.checkYourEmail")}</Title>
+        <Card style={{ backgroundColor: palette.successBg, borderColor: palette.successBg }}>
+          <Txt accessibilityLiveRegion="polite" style={{ color: "#064E3B" }}>{t("auth.resetLinkSent", { email: sentTo })}</Txt>
+        </Card>
+        <Button title={t("auth.backToSignIn")} variant="secondary" onPress={() => router.back()} />
+      </ScreenScroll>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{t("auth.forgotPasswordTitle")}</Text>
-      <Text style={styles.subtitle}>{t("auth.forgotPasswordSubtitle")}</Text>
-      <Input
-        placeholder={`${t("auth.schoolSubdomain")} (${t("common.optional")})`}
-        autoCapitalize="none"
-        value={subdomain}
-        onChangeText={setSubdomain}
-      />
-      <Input
-        placeholder={t("auth.email")}
-        autoCapitalize="none"
-        keyboardType="email-address"
+    <ScreenScroll>
+      <Title>{t("auth.forgotPasswordTitle")}</Title>
+      <Muted>{t("auth.forgotPasswordSubtitle")}</Muted>
+      <Field
+        label={t("auth.email")}
+        error={error}
         value={email}
         onChangeText={setEmail}
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType="email-address"
+        autoComplete="email"
+        maxLength={200}
+        returnKeyType="send"
+        onSubmitEditing={submit}
       />
-      {forgotPassword.isError && (
-        <Text style={styles.error}>{t("common.somethingWentWrong")}</Text>
-      )}
-      <Button
-        title={t("auth.sendResetLink")}
-        onPress={handleSubmit}
-        loading={forgotPassword.isPending}
-        style={styles.button}
-      />
-    </View>
+      <Button title={t("auth.sendResetLink")} onPress={submit} loading={forgot.isPending} />
+    </ScreenScroll>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    padding: spacing.xl,
-    gap: spacing.md,
-    backgroundColor: colors.white,
-  },
-  title: { ...typography.title, fontSize: 24 },
-  subtitle: { ...typography.body, color: colors.slate[500], marginBottom: spacing.sm },
-  button: { marginTop: spacing.sm },
-  error: { color: colors.danger, fontSize: 13 },
-});

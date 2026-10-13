@@ -35,9 +35,13 @@ export function useClassTimetable(classId: string | undefined) {
   });
 }
 
-export function useMyTimetable() {
+export function useMyTimetable(options: { enabled?: boolean } = {}) {
   const api = useApiClient();
-  return useQuery({ queryKey: ["timetable", "mine"], queryFn: () => api.timetable.mine() });
+  return useQuery({
+    queryKey: ["timetable", "mine"],
+    queryFn: () => api.timetable.mine(),
+    enabled: options.enabled ?? true,
+  });
 }
 
 export function useStudentTimetable(studentId: string | undefined) {

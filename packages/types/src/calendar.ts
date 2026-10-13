@@ -29,8 +29,8 @@ export type CalendarEvent = z.infer<typeof calendarEventSchema>;
 
 export const createCalendarEventSchema = z
   .object({
-    title: z.string().min(1),
-    description: z.string().optional(),
+    title: z.string().trim().min(1).max(140),
+    description: z.string().trim().max(2000).optional(),
     category: calendarEventCategorySchema.default("OTHER"),
     startsAt: z.coerce.date(),
     endsAt: z.coerce.date(),

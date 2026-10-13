@@ -31,10 +31,13 @@ export const PLANS: Record<SubscriptionPlan, PlanDetails> = {
     tagline: "For a single small school getting off paper.",
     features: [
       "Students, teachers, classes",
-      "Attendance and gradebook",
+      "Attendance, gradebook and exam results",
+      "Report cards and online quizzes",
       "Fee invoices and manual payment verification",
-      "Notices and WhatsApp alerts",
+      "Budget, expenses and monthly statements",
+      "Notices and in-app notifications",
       "Parent and teacher mobile apps",
+      "Your school's own logo and colour",
     ],
   },
   STANDARD: {
@@ -45,7 +48,6 @@ export const PLANS: Record<SubscriptionPlan, PlanDetails> = {
     tagline: "For an established school running everything in one place.",
     features: [
       "Everything in Basic",
-      "Exams, report cards and rank lists",
       "Homework and assignment submissions",
       "Parent–teacher messaging and complaints",
       "Library and transport",
@@ -64,7 +66,7 @@ export const PLANS: Record<SubscriptionPlan, PlanDetails> = {
       "AI fee-defaulter risk flagging",
       "Payroll and payslips",
       "Analytics dashboards",
-      "White-labelling and custom subdomain",
+      "Custom subdomain",
       "API access",
     ],
   },
@@ -121,11 +123,12 @@ export const FEATURES = [
 ] as const;
 export type Feature = (typeof FEATURES)[number];
 
-const BASIC_FEATURES: Feature[] = [];
+// Exams sit in Basic because results are one of the core loops every school
+// runs from day one: marks in, report card out, parents told.
+const BASIC_FEATURES: Feature[] = ["EXAMS"];
 
 const STANDARD_FEATURES: Feature[] = [
   ...BASIC_FEATURES,
-  "EXAMS",
   "ASSIGNMENTS",
   "MESSAGING",
   "COMPLAINTS",

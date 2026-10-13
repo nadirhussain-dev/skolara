@@ -15,15 +15,15 @@ the full product thinking.
 |---|---|
 | Monorepo | Turborepo + pnpm workspaces |
 | Web | Next.js 15 (App Router) — super-admin and school-admin dashboards |
-| Mobile | Expo / React Native — teacher, student and parent apps |
+| Mobile | Expo / React Native. One app for parents, students, teachers and school admins, themed by school code |
 | API | NestJS + Prisma |
 | Database | PostgreSQL (Supabase in production) |
 | Auth | JWT access + rotating refresh tokens, RBAC |
 | Storage | Supabase Storage, local disk in development |
 | Push | Expo push notifications |
-| SMS | Twilio, console fallback — off unless a school opts in |
+| Notifications | In-app inbox plus push. WhatsApp and SMS are off unless `PHONE_ALERTS_ENABLED=true` |
 | AI | Claude (report-card comments, fee-defaulter risk) |
-| i18n | English and Urdu with RTL, 1,208 keys — UI only, see below |
+| i18n | English and Urdu with RTL, about 1,700 keys. UI only (see below); the public landing and pricing pages are English |
 
 ```
 apps/

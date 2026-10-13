@@ -1,131 +1,101 @@
 "use client";
 
-import {
-  useApiClient,
-  useGenerateClassReportCards,
-  type GeneratedReportCard,
-} from "@skolara/api-client";
-import type { SchoolClass } from "@skolara/types";
-import {
-  Button,
-  Card,
-  CardHeader,
-  CardTitle,
-  EmptyState,
-  Input,
-  PageHeader,
-} from "@skolara/ui";
+import { useClassGrades, useClasses, useGenerateClassReportCards, type GeneratedReportCard } from "@skolara/api-client";
 import { useTranslation } from "@skolara/i18n";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { Button, Card, CardTitle, EmptyState, Input, Select } from "@skolara/ui";
+import { useMemo, useState, type FormEvent } from "react";
+import { Avatar, Field, PageTitle } from "@/components/ui-kit";
+import { classLabel } from "../home-helpers";
+import { safeHttpUrl } from "@/lib/safe-url";
 
 export default function ReportCardsPage() {
-  const api = useApiClient();
   const { t } = useTranslation();
-  const { data: classes } = useQuery<SchoolClass[]>({
-    queryKey: ["classes"],
-    queryFn: () => api.classes.list(),
-  });
+  const classes = useClasses();
   const generate = useGenerateClassReportCards();
-
   const [classId, setClassId] = useState("");
   const [term, setTerm] = useState("");
-  const [cards, setCards] = useState<GeneratedReportCard[]>([]);
-  const [error, setError] = useState("");
+  const [cards, setCards] = useState<GeneratedReportCard[] | null>(null);
+  const [errors, setErrors] = useState<{ classId?: string; term?: string }>({});
+  const [failure, setFailure] = useState<string | null>(null);
+  // Terms that already have marks for this class, offered as one-tap choices.
+  const grades = useClassGrades(classId);
+  const terms = useMemo(() => [...new Set((grades.data ?? []).map((g) => g.term))].sort(), [grades.data]);
 
-  async function handleGenerate(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setCards([]);
-    try {
-      setCards(await generate.mutateAsync({ classId, term }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("reportCards.couldNotGenerate"));
-    }
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    const found: typeof errors = {};
+    if (!classId) found.classId = t("people.required");
+    if (!term.trim()) found.term = t("people.required");
+    setErrors(found);
+    setFailure(null);
+    if (Object.keys(found).length > 0) return;
+    setCards(null);
+    generate.mutate(
+      { classId, term: term.trim() },
+      { onSuccess: setCards, onError: () => setFailure(t("reportCards.couldNotGenerate")) },
+    );
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title={t("reportCards.title")}
-        description={t("reportCards.description")}
-      />
+    <div className="flex flex-col gap-5">
+      <PageTitle title={t("reportCards.title")} subtitle={t("reportCards.description")} />
 
       <Card>
-        <CardHeader>
-          <CardTitle>{t("reportCards.generateForClass")}</CardTitle>
-        </CardHeader>
-        <form onSubmit={handleGenerate} className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1 text-sm">
-            {t("reportCards.class")}
-            <select
-              value={classId}
-              onChange={(e) => setClassId(e.target.value)}
-              required
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-            >
-              <option value="">{t("reportCards.selectAClass")}</option>
-              {classes?.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} {c.section}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            {t("fields.term")}
-            <Input
-              placeholder={t("reportCards.termHint")}
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-              required
-            />
-          </label>
-          <Button type="submit" disabled={generate.isPending}>
-            {generate.isPending ? t("reportCards.generating") : t("reportCards.generate")}
-          </Button>
+        <CardTitle>{t("reportCards.generateForClass")}</CardTitle>
+        <form onSubmit={submit} noValidate className="mt-4 flex flex-wrap items-start gap-4">
+          <Field label={t("reportCards.class")} error={errors.classId} className="w-48">
+            {(props) => (
+              <Select {...props} value={classId} onChange={(e) => { setClassId(e.target.value); setCards(null); }}>
+                <option value="">{t("fields.selectClass")}</option>
+                {(classes.data ?? []).map((c) => <option key={c.id} value={c.id}>{classLabel(c.name, c.section ?? null)}</option>)}
+              </Select>
+            )}
+          </Field>
+          <Field label={t("fields.term")} help={t("reportCards.termHint")} error={errors.term} className="min-w-[12rem] flex-1 sm:max-w-xs">
+            {(props) => (
+              <>
+                <Input {...props} list="report-terms" maxLength={60} autoComplete="off" value={term} onChange={(e) => setTerm(e.target.value)} />
+                <datalist id="report-terms">{terms.map((name) => <option key={name} value={name} />)}</datalist>
+              </>
+            )}
+          </Field>
+          <div className="pt-6">
+            <Button type="submit" disabled={generate.isPending}>
+              {generate.isPending ? t("reportCards.generating") : t("reportCards.generate")}
+            </Button>
+          </div>
         </form>
-
-        {generate.isPending && (
-          <p className="mt-3 text-sm text-slate-500">
-            {t("reportCards.renderingHint")}
-          </p>
-        )}
-        {error && <p className="mt-3 text-sm text-rose-600">{error}</p>}
+        <p role="status" aria-live="polite" className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+          {generate.isPending ? t("reportCards.renderingHint") : ""}
+        </p>
+        {failure && <p role="alert" className="mt-1 text-sm font-bold text-red-700 dark:text-red-400">{failure}</p>}
       </Card>
 
-      {cards.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {cards.length === 1
-                ? t("reportCards.cardGenerated", { count: cards.length })
-                : t("reportCards.cardsGenerated", { count: cards.length })}
-            </CardTitle>
-          </CardHeader>
-          <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
-            {cards.map((card) => (
-              <li
-                key={card.studentId}
-                className="flex items-center justify-between gap-4 py-3"
-              >
-                <span className="font-medium">{card.studentName}</span>
-                <a
-                  href={card.file.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm text-brand-700 underline"
-                >
-                  {t("reportCards.openPdf")}
-                </a>
-              </li>
-            ))}
+      {cards === null ? (
+        !generate.isPending && <Card><EmptyState title={t("reportCards.pickClassAndTerm")} /></Card>
+      ) : (
+        <Card className="p-0">
+          <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+            <CardTitle>{cards.length === 1 ? t("reportCards.cardGenerated", { count: 1 }) : t("reportCards.cardsGenerated", { count: cards.length })}</CardTitle>
+          </div>
+          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+            {cards.map((card) => {
+              const url = safeHttpUrl(card.file.url);
+              return (
+                <li key={card.studentId} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                  <Avatar name={card.studentName} />
+                  <span className="min-w-0 flex-1 font-bold text-slate-900 dark:text-slate-50">{card.studentName}</span>
+                  {url && (
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[2.75rem] items-center rounded-lg bg-brand-50 px-4 text-sm font-extrabold text-brand-700 hover:bg-brand-100 dark:bg-brand-900/40 dark:text-brand-200">
+                      {t("reportCards.openPdf")}
+                      <span className="sr-only"> {card.studentName}</span>
+                    </a>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </Card>
-      )}
-
-      {cards.length === 0 && !generate.isPending && !error && (
-        <EmptyState title={t("reportCards.pickClassAndTerm")} />
       )}
     </div>
   );

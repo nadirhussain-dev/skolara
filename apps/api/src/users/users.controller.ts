@@ -71,6 +71,6 @@ export class UsersController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!user.schoolId) throw new ForbiddenException("No school context");
-    return this.usersService.setActive(user.schoolId, id, body.isActive);
+    return this.usersService.setActive(user.schoolId, id, body.isActive, user.id);
   }
 }

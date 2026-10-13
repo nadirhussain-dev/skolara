@@ -26,6 +26,6 @@ export const messageSchema = z.object({
 export type Message = z.infer<typeof messageSchema>;
 
 export const sendMessageSchema = z.object({
-  body: z.string().min(1),
+  body: z.string().trim().min(1).max(4000),
 });
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
