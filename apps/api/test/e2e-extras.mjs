@@ -52,6 +52,7 @@ const has = (feature) => ({ BASIC: ['EXAMS'], STANDARD: ['EXAMS', 'ASSIGNMENTS',
 const gated = (feature, status) => (has(feature) ? status : 403);
 console.log(`(school is on the ${school.plan} plan; features outside it must answer 403)`);
 
+await expect('a teacher gets the school\'s look but not its plan or billing', call('GET', '/schools/me', { token: T }), 200, d => d.name && 'primaryColor' in d && !('plan' in d) && !('subscriptionStatus' in d));
 const children = await expect('parent loads their children', call('GET', '/students/mine', { token: P }), 200, d => d.length >= 1);
 const child = children[0];
 const classId = child.classId;
@@ -81,6 +82,7 @@ await expect('another family\'s timetable is refused', call('GET', `/timetable/s
 const hw = await expect('teacher sets homework', call('POST', '/assignments', { token: T, body: { classId, subject: 'English', title: `Essay ${run}`, description: 'My summer', dueDate: day(3) } }), gated('ASSIGNMENTS', 201), d => !has('ASSIGNMENTS') || d.id);
 if (has('ASSIGNMENTS')) {
   await expect('a teacher not on the class cannot set homework there', call('POST', '/assignments', { token: T2, body: { classId: foreignClass.id, subject: 'x', title: 'x', dueDate: day(3) } }), 403);
+  await expect('the family is told about the homework', call('GET', '/notifications', { token: P }), 200, d => d.items.some(i => i.data?.assignmentId === hw.id));
   await expect('the student sees the homework', call('GET', `/assignments/class/${classId}`, { token: S }), 200, d => JSON.stringify(d).includes(`Essay ${run}`));
   await expect('a family cannot read another class\'s homework', call('GET', `/assignments/class/${foreignClass.id}`, { token: P }), 403);
   await expect('a javascript: file link is refused', call('POST', `/assignments/${hw.id}/submissions/${child.id}`, { token: S, body: { fileUrl: 'javascript:alert(1)' } }), 400);
@@ -125,8 +127,11 @@ void live;
 
 // ---- Messages and meetings
 if (has('MESSAGING')) {
+  await expect('the parent sees who they can message', call('GET', `/messages/contacts/${child.id}`, { token: P }), 200, d => d.some(c => c.id === teacherUserId) && !JSON.stringify(d).includes('email'));
+  await expect('a parent cannot message someone who does not teach their child', call('POST', '/messages/threads', { token: P, body: { studentId: child.id, teacherUserId: admin.user.id } }), 403);
   const thread = await expect('parent starts a conversation with the teacher', call('POST', '/messages/threads', { token: P, body: { studentId: child.id, teacherUserId } }), 201, d => d.id);
   await expect('parent writes', call('POST', `/messages/threads/${thread.id}/messages`, { token: P, body: { body: `Is the trip on Friday? ${run}` } }), 201);
+  await expect('the teacher\'s inbox shows who wrote and the latest line', call('GET', '/messages/threads', { token: T }), 200, d => { const th = d.find(x => x.id === thread.id); return th?.parentUser?.firstName && th.lastMessage?.body.includes(run); });
   await expect('teacher reads it', call('GET', `/messages/threads/${thread.id}/messages`, { token: T }), 200, d => JSON.stringify(d).includes(run));
   await expect('teacher replies', call('POST', `/messages/threads/${thread.id}/messages`, { token: T, body: { body: 'Yes, 9 am.' } }), 201);
   await expect('another teacher cannot read the conversation', call('GET', `/messages/threads/${thread.id}/messages`, { token: T2 }), [403, 404]);
@@ -143,11 +148,16 @@ if (has('MESSAGING')) {
 // ---- Complaints
 if (has('COMPLAINTS')) {
   const complaint = await expect('parent raises a concern', call('POST', '/complaints', { token: P, body: { studentId: child.id, subject: `Bus late ${run}`, body: 'The bus was 40 minutes late twice this week.' } }), 201, d => d.id);
-  await expect('admin sees it', call('GET', '/complaints', { token: A }), 200, d => d.some(c => c.id === complaint.id));
+  await expect('admin sees it with who raised it and about which child', call('GET', '/complaints', { token: A }), 200, d => { const c = d.find(x => x.id === complaint.id); return c?.raisedByUser?.firstName && c.student?.user?.firstName; });
+  await expect('admin is told about it', call('GET', '/notifications', { token: A }), 200, d => d.items.some(i => i.data?.complaintId === complaint.id));
+  const strangerChild = (await call('GET', '/students', { token: A })).data.find(s => !children.some(c => c.id === s.id));
+  await expect('a concern about someone else\'s child is refused', call('POST', '/complaints', { token: P, body: { studentId: strangerChild.id, subject: 'Not mine', body: 'Should be refused' } }), 403);
   await expect('admin replies', call('POST', `/complaints/${complaint.id}/comments`, { token: A, body: { body: 'We have spoken to the driver.' } }), 201);
+  await expect('replying picks it up', call('GET', `/complaints/${complaint.id}`, { token: A }), 200, d => d.status === 'IN_PROGRESS' && d.comments[0]?.authorUser?.role === 'SCHOOL_ADMIN');
   await expect('admin marks it resolved', call('PATCH', `/complaints/${complaint.id}/status`, { token: A, body: { status: 'RESOLVED' } }), 200, d => d.status === 'RESOLVED');
   await expect('the parent sees the reply and status', call('GET', `/complaints/${complaint.id}`, { token: P }), 200, d => d.status === 'RESOLVED' && JSON.stringify(d).includes('spoken to the driver'));
   await expect('another family cannot read it', call('GET', `/complaints/${complaint.id}`, { token: (await login('nadia.iqbal@example.com'))?.accessToken ?? S }), [403, 404]);
+  await expect('the family cannot post on a resolved concern', call('POST', `/complaints/${complaint.id}/comments`, { token: P, body: { body: 'again' } }), 403);
   await expect('a parent cannot change its status', call('PATCH', `/complaints/${complaint.id}/status`, { token: P, body: { status: 'OPEN' } }), 403);
 }
 

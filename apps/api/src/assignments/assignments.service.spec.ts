@@ -1,6 +1,7 @@
 import { NotFoundException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { PrismaService } from "../prisma/prisma.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { AssignmentsService } from "./assignments.service";
 
 // Regression coverage for the cross-tenant bug fixed here: submit/grade/
@@ -38,7 +39,11 @@ describe("AssignmentsService", () => {
     };
 
     const module = await Test.createTestingModule({
-      providers: [AssignmentsService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        AssignmentsService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: NotificationsService, useValue: { sendPush: jest.fn() } },
+      ],
     }).compile();
 
     service = module.get(AssignmentsService);
@@ -103,7 +108,7 @@ describe("AssignmentsService", () => {
   describe("grade", () => {
     it("scopes the submission lookup through the assignment's school", async () => {
       prisma.assignmentSubmission.findFirst.mockResolvedValue({ id: SUBMISSION_ID });
-      prisma.assignmentSubmission.update.mockResolvedValue({});
+      prisma.assignmentSubmission.update.mockResolvedValue({ assignmentId: ASSIGNMENT_ID, assignment: { title: "Essay" }, student: { userId: "s1", parentLinks: [] } });
 
       await service.grade(SCHOOL_A, SUBMISSION_ID, { grade: "A" });
 

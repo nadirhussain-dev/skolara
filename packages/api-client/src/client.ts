@@ -38,6 +38,8 @@ import type {
   CalendarEvent,
   Complaint,
   ComplaintComment,
+  ComplaintSummary,
+  ComplaintWithComments,
   CreateApiKeyInput,
   CreateApiKeyResponse,
   CreateAssignmentInput,
@@ -198,16 +200,28 @@ export interface AssignmentSubmissionWithStudent extends AssignmentSubmission {
   student: { id: string; user: { id: string; firstName: string; lastName: string } };
 }
 
+/** Homework as a class list shows it: with how many have handed it in. */
+export interface AssignmentWithProgress extends Assignment {
+  submittedCount: number;
+  classSize: number;
+}
+
 export interface AssignmentSubmissionWithAssignment extends AssignmentSubmission {
   assignment: Assignment;
 }
 
-export interface MessageThreadWithStudent extends MessageThread {
-  student: { id: string; user: { id: string; firstName: string; lastName: string } };
+interface ThreadPerson {
+  id: string;
+  firstName: string;
+  lastName: string;
 }
 
-export interface ComplaintWithComments extends Complaint {
-  comments: ComplaintComment[];
+/** A conversation as the inbox lists it: who it is with, about whom, and the latest line. */
+export interface MessageThreadWithStudent extends MessageThread {
+  student: { id: string; user: ThreadPerson; class: { name: string; section: string | null } | null };
+  teacherUser: ThreadPerson;
+  parentUser: ThreadPerson;
+  lastMessage: Message | null;
 }
 
 export interface DefaulterRiskWithExplanation extends DefaulterRisk {
@@ -827,7 +841,7 @@ export function createApiClient({
           body: JSON.stringify(input),
         }),
       forClass: (classId: string) =>
-        request<Assignment[]>(`/assignments/class/${classId}`),
+        request<AssignmentWithProgress[]>(`/assignments/class/${classId}`),
       submit: (assignmentId: string, studentId: string, input: SubmitAssignmentInput) =>
         request<AssignmentSubmission>(
           `/assignments/${assignmentId}/submissions/${studentId}`,
@@ -851,8 +865,8 @@ export function createApiClient({
           method: "POST",
           body: JSON.stringify(input),
         }),
-      list: () => request<Complaint[]>("/complaints"),
-      mine: () => request<Complaint[]>("/complaints/mine"),
+      list: () => request<ComplaintSummary[]>("/complaints"),
+      mine: () => request<ComplaintSummary[]>("/complaints/mine"),
       findOne: (id: string) => request<ComplaintWithComments>(`/complaints/${id}`),
       addComment: (id: string, input: AddComplaintCommentInput) =>
         request<ComplaintComment>(`/complaints/${id}/comments`, {
@@ -872,6 +886,9 @@ export function createApiClient({
           body: JSON.stringify(input),
         }),
       threads: () => request<MessageThreadWithStudent[]>("/messages/threads"),
+      /** The teachers a parent may message about this child. */
+      contacts: (studentId: string) =>
+        request<{ id: string; firstName: string; lastName: string }[]>(`/messages/contacts/${studentId}`),
       messages: (threadId: string) =>
         request<Message[]>(`/messages/threads/${threadId}/messages`),
       send: (threadId: string, input: SendMessageInput) =>

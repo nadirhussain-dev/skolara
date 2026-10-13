@@ -2,8 +2,10 @@
  * What the sidebar shows during the MVP.
  *
  * The MVP goes deep on six loops — onboarding, fees, attendance, results,
- * communication and finance — and keeps everything else out of sight until
- * it has been redesigned to the same standard. The pages below still exist
+ * communication and finance — plus the everyday school screens redesigned to
+ * the same standard: timetable, homework, calendar, messages, meetings,
+ * concerns, staff leave and pupil absences. Everything else stays out of
+ * sight until it has been brought up to that standard. The pages below still exist
  * and still work; they are only removed from navigation.
  *
  * This is presentation, not access control. What a school may actually use
@@ -20,18 +22,13 @@ const DEFERRED_HREFS: ReadonlySet<string> = new Set([
   "/support",
   // Outside the six loops for now
   "/school/analytics",
-  "/school/timetable",
-  "/school/assignments",
   "/school/roles",
-  "/teacher/timetable",
   // Learning
   "/school/materials",
   "/school/quizzes",
   "/school/lesson-plans",
   "/school/live-classes",
   "/school/performance",
-  "/school/calendar",
-  "/teacher/meetings",
   // Operations
   "/school/library",
   "/school/hostel",

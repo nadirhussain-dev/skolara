@@ -54,7 +54,10 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
     let best: string | null = null;
     for (const [, items] of groups) {
       for (const { href } of items) {
-        const matches = pathname === href || pathname.startsWith(`${href}/`);
+        // A section root such as "/school" only matches itself: a page that
+        // has no link of its own shouldn't light up the dashboard.
+        const isRoot = href.split("/").filter(Boolean).length < 2;
+        const matches = pathname === href || (!isRoot && pathname.startsWith(`${href}/`));
         if (matches && (best === null || href.length > best.length)) best = href;
       }
     }

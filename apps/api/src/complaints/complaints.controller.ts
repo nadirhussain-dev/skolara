@@ -24,21 +24,27 @@ import { FeatureGuard } from "../common/guards/feature.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import type { AuthenticatedUser } from "../auth/jwt-payload.interface";
+import { StudentAccessService } from "../common/student-access.service";
 import { ComplaintsService } from "./complaints.service";
 
 @Controller("complaints")
 @RequiresFeature("COMPLAINTS")
 @UseGuards(JwtAuthGuard, RolesGuard, FeatureGuard)
 export class ComplaintsController {
-  constructor(private complaintsService: ComplaintsService) {}
+  constructor(
+    private complaintsService: ComplaintsService,
+    private studentAccess: StudentAccessService,
+  ) {}
 
   @Post()
   @Roles("PARENT", "STUDENT")
-  create(
+  async create(
     @Body(new ZodValidationPipe(createComplaintSchema)) body: CreateComplaintInput,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!user.schoolId) throw new ForbiddenException("No school context");
+    // A concern can only be about the caller's own child (or themselves).
+    if (body.studentId) await this.studentAccess.assertCanAccessStudent(user, body.studentId);
     return this.complaintsService.create(user.schoolId, user.id, body);
   }
 

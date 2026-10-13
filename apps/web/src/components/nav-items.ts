@@ -92,6 +92,18 @@ export const NAV_ITEMS: NavItem[] = [
     groupKey: "nav.academics",
   },
   {
+    href: "/teacher/leave",
+    labelKey: "nav.myLeave",
+    roles: ["TEACHER"],
+    groupKey: "nav.academics",
+  },
+  {
+    href: "/teacher/messages",
+    labelKey: "nav.messages",
+    roles: ["TEACHER"],
+    groupKey: "nav.communication",
+  },
+  {
     href: "/teacher/meetings",
     labelKey: "nav.meetings",
     roles: ["TEACHER"],
@@ -123,7 +135,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     href: "/school/assignments",
-    labelKey: "nav.assignments",
+    labelKey: "nav.homework",
     roles: ["SCHOOL_ADMIN", "TEACHER"],
     groupKey: "nav.academics",
   },

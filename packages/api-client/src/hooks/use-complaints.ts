@@ -46,8 +46,9 @@ export function useAddComplaintComment() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: AddComplaintCommentInput }) =>
       api.complaints.addComment(id, input),
-    onSuccess: (_, vars) =>
-      queryClient.invalidateQueries({ queryKey: ["complaints", vars.id] }),
+    // A reply from the school can move the complaint along, so refresh the
+    // list as well as the thread.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["complaints"] }),
   });
 }
 

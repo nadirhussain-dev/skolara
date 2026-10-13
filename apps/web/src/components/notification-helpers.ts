@@ -13,6 +13,9 @@ const ADMIN_ROUTES = new Map(Object.entries({
 
 const TEACHER_ROUTES = new Map(Object.entries({
   MEETING: "/teacher/meetings",
+  MESSAGE: "/teacher/messages",
+  LEAVE: "/teacher/leave",
+  HOMEWORK: "/school/assignments",
 }));
 
 /**

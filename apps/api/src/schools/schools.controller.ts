@@ -77,10 +77,20 @@ export class SchoolsController {
   }
 
   @Get("me")
-  @Roles("SCHOOL_ADMIN")
-  findMine(@CurrentUser() user: AuthenticatedUser) {
+  @Roles("SCHOOL_ADMIN", "TEACHER", "PARENT", "STUDENT")
+  async findMine(@CurrentUser() user: AuthenticatedUser) {
     if (!user.schoolId) throw new ForbiddenException("No school context");
-    return this.schoolsService.findOne(user.schoolId);
+    const school = await this.schoolsService.findOne(user.schoolId);
+    if (user.role === "SCHOOL_ADMIN") return school;
+    // Everyone else gets what they need to wear the school's look — its name,
+    // logo and colour — and nothing about its plan or billing.
+    return {
+      id: school.id,
+      name: school.name,
+      subdomain: school.subdomain,
+      logoUrl: school.logoUrl,
+      primaryColor: school.primaryColor,
+    };
   }
 
   @Patch(":id/approve")

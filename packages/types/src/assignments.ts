@@ -16,9 +16,9 @@ export type Assignment = z.infer<typeof assignmentSchema>;
 
 export const createAssignmentSchema = z.object({
   classId: z.string().uuid(),
-  subject: z.string().min(1),
-  title: z.string().min(1),
-  description: z.string().optional(),
+  subject: z.string().trim().min(1).max(60),
+  title: z.string().trim().min(1).max(140),
+  description: z.string().trim().max(2000).optional(),
   dueDate: z.coerce.date(),
 });
 export type CreateAssignmentInput = z.infer<typeof createAssignmentSchema>;
@@ -43,7 +43,7 @@ export const submitAssignmentSchema = z.object({
 export type SubmitAssignmentInput = z.infer<typeof submitAssignmentSchema>;
 
 export const gradeAssignmentSchema = z.object({
-  grade: z.string().min(1),
-  feedback: z.string().optional(),
+  grade: z.string().trim().min(1).max(20),
+  feedback: z.string().trim().max(1000).optional(),
 });
 export type GradeAssignmentInput = z.infer<typeof gradeAssignmentSchema>;

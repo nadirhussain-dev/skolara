@@ -180,3 +180,48 @@ export function generatePassword(): string {
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
 }
+
+/** A row of pill tabs that filter the list below, with an optional count on each. */
+export function FilterTabs<T extends string>({
+  value,
+  options,
+  onChange,
+  label,
+}: {
+  value: T;
+  options: { value: T; label: string; count?: number }[];
+  onChange: (value: T) => void;
+  label: string;
+}) {
+  return (
+    <div role="tablist" aria-label={label} className="flex flex-wrap gap-2">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          role="tab"
+          type="button"
+          aria-selected={value === option.value}
+          onClick={() => onChange(option.value)}
+          className={cn(
+            "inline-flex min-h-[2.75rem] items-center gap-2 rounded-full px-4 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700",
+            value === option.value
+              ? "bg-brand-700 text-white"
+              : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800",
+          )}
+        >
+          {option.label}
+          {option.count !== undefined && (
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-xs tabular-nums",
+                value === option.value ? "bg-white/20" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200",
+              )}
+            >
+              {option.count}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}

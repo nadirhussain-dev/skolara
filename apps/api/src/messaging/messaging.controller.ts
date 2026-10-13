@@ -44,6 +44,14 @@ export class MessagingController {
     return this.messagingService.startThread(user.schoolId, user.id, body);
   }
 
+  @Get("contacts/:studentId")
+  @Roles("PARENT")
+  async contacts(@Param("studentId") studentId: string, @CurrentUser() user: AuthenticatedUser) {
+    if (!user.schoolId) throw new ForbiddenException("No school context");
+    await this.studentAccess.assertCanAccessStudent(user, studentId);
+    return this.messagingService.contactsFor(user.schoolId, studentId);
+  }
+
   @Get("threads")
   @Roles("TEACHER", "PARENT")
   findThreads(@CurrentUser() user: AuthenticatedUser) {
