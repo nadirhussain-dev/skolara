@@ -11,6 +11,7 @@ describe("AssignmentsService", () => {
   let service: AssignmentsService;
   let prisma: {
     assignment: { findFirst: jest.Mock };
+    studentProfile: { findFirst: jest.Mock };
     assignmentSubmission: {
       findFirst: jest.Mock;
       upsert: jest.Mock;
@@ -27,6 +28,7 @@ describe("AssignmentsService", () => {
   beforeEach(async () => {
     prisma = {
       assignment: { findFirst: jest.fn() },
+      studentProfile: { findFirst: jest.fn().mockResolvedValue({ classId: "class-1" }) },
       assignmentSubmission: {
         findFirst: jest.fn(),
         upsert: jest.fn(),
@@ -44,7 +46,7 @@ describe("AssignmentsService", () => {
 
   describe("submit", () => {
     it("scopes the assignment lookup to the caller's school", async () => {
-      prisma.assignment.findFirst.mockResolvedValue({ id: ASSIGNMENT_ID, schoolId: SCHOOL_A });
+      prisma.assignment.findFirst.mockResolvedValue({ id: ASSIGNMENT_ID, schoolId: SCHOOL_A, classId: "class-1" });
       prisma.assignmentSubmission.upsert.mockResolvedValue({});
 
       await service.submit(SCHOOL_A, "student-1", ASSIGNMENT_ID, {
@@ -54,6 +56,15 @@ describe("AssignmentsService", () => {
       expect(prisma.assignment.findFirst).toHaveBeenCalledWith({
         where: { id: ASSIGNMENT_ID, schoolId: SCHOOL_A },
       });
+    });
+
+    it("rejects handing in homework set for a different class", async () => {
+      prisma.assignment.findFirst.mockResolvedValue({ id: ASSIGNMENT_ID, schoolId: SCHOOL_A, classId: "class-2" });
+
+      await expect(
+        service.submit(SCHOOL_A, "student-1", ASSIGNMENT_ID, { fileUrl: "https://example.com/f.pdf" }),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.assignmentSubmission.upsert).not.toHaveBeenCalled();
     });
 
     it("rejects submitting against another school's assignment", async () => {

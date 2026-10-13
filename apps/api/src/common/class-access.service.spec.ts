@@ -67,3 +67,52 @@ describe("ClassAccessService.assertCanTeachClass", () => {
     ]);
   });
 });
+
+describe("ClassAccessService.assertCanReadClass", () => {
+  const prisma = {
+    schoolClass: { findFirst: jest.fn() },
+    studentProfile: { findFirst: jest.fn() },
+  };
+  const service = new ClassAccessService(prisma as unknown as PrismaService);
+  const parent = { id: "parent-1", role: "PARENT" as const, schoolId: "school-1" };
+  const student = { id: "student-user-1", role: "STUDENT" as const, schoolId: "school-1" };
+
+  beforeEach(() => {
+    prisma.schoolClass.findFirst.mockReset().mockResolvedValue({ id: "class-1" });
+    prisma.studentProfile.findFirst.mockReset();
+  });
+
+  it("lets a parent read a class one of their children is in", async () => {
+    prisma.studentProfile.findFirst.mockResolvedValue({ id: "child-1" });
+    await expect(service.assertCanReadClass(parent, "class-1")).resolves.toBeUndefined();
+    expect(prisma.studentProfile.findFirst).toHaveBeenCalledWith({
+      where: { classId: "class-1", parentLinks: { some: { parentUserId: "parent-1" } } },
+      select: { id: true },
+    });
+  });
+
+  it("refuses a parent with no child in the class", async () => {
+    prisma.studentProfile.findFirst.mockResolvedValue(null);
+    await expect(service.assertCanReadClass(parent, "class-1")).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  it("scopes a student to their own class", async () => {
+    prisma.studentProfile.findFirst.mockResolvedValue(null);
+    await expect(service.assertCanReadClass(student, "class-2")).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(prisma.studentProfile.findFirst).toHaveBeenCalledWith({
+      where: { classId: "class-2", userId: "student-user-1" },
+      select: { id: true },
+    });
+  });
+
+  it("hides a class from another school", async () => {
+    prisma.schoolClass.findFirst.mockResolvedValue(null);
+    await expect(service.assertCanReadClass(parent, "class-x")).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+});

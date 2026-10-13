@@ -41,6 +41,15 @@ export class AssignmentsService {
       where: { id: assignmentId, schoolId },
     });
     if (!assignment) throw new NotFoundException("Assignment not found");
+    const student = await this.prisma.studentProfile.findFirst({
+      where: { id: studentId, schoolId },
+      select: { classId: true },
+    });
+    // Handing in work for another class's homework would put a submission in
+    // a teacher's list for a pupil they don't teach.
+    if (!student || student.classId !== assignment.classId) {
+      throw new NotFoundException("Assignment not found");
+    }
 
     return this.prisma.assignmentSubmission.upsert({
       where: { assignmentId_studentId: { assignmentId, studentId } },
@@ -85,6 +94,24 @@ export class AssignmentsService {
       where: { id: submissionId },
       data: { grade: input.grade, feedback: input.feedback },
     });
+  }
+
+  async classOfAssignment(schoolId: string, assignmentId: string): Promise<string> {
+    const assignment = await this.prisma.assignment.findFirst({
+      where: { id: assignmentId, schoolId },
+      select: { classId: true },
+    });
+    if (!assignment) throw new NotFoundException("Assignment not found");
+    return assignment.classId;
+  }
+
+  async classOfSubmission(schoolId: string, submissionId: string): Promise<string> {
+    const submission = await this.prisma.assignmentSubmission.findFirst({
+      where: { id: submissionId, assignment: { schoolId } },
+      select: { assignment: { select: { classId: true } } },
+    });
+    if (!submission) throw new NotFoundException("Submission not found");
+    return submission.assignment.classId;
   }
 
   findForStudent(studentId: string) {

@@ -14,7 +14,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts",
-    "test:e2e": "node test/e2e.mjs"
+    "test:e2e": "node test/e2e.mjs && node test/e2e-extras.mjs"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

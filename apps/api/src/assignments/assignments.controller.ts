@@ -53,11 +53,13 @@ export class AssignmentsController {
 
   @Get("class/:classId")
   @Roles("TEACHER", "SCHOOL_ADMIN", "STUDENT", "PARENT")
-  findForClass(
+  async findForClass(
     @Param("classId") classId: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!user.schoolId) throw new ForbiddenException("No school context");
+    // Families only see homework for a class their own child is in.
+    await this.classAccess.assertCanReadClass(user, classId);
     return this.assignmentsService.findForClass(user.schoolId, classId);
   }
 
@@ -76,19 +78,24 @@ export class AssignmentsController {
 
   @Get(":id/submissions")
   @Roles("TEACHER", "SCHOOL_ADMIN")
-  findSubmissions(@Param("id") assignmentId: string, @CurrentUser() user: AuthenticatedUser) {
+  async findSubmissions(@Param("id") assignmentId: string, @CurrentUser() user: AuthenticatedUser) {
     if (!user.schoolId) throw new ForbiddenException("No school context");
+    const classId = await this.assignmentsService.classOfAssignment(user.schoolId, assignmentId);
+    await this.classAccess.assertCanTeachClass(user, classId);
     return this.assignmentsService.findSubmissions(user.schoolId, assignmentId);
   }
 
   @Patch("submissions/:submissionId/grade")
   @Roles("TEACHER", "SCHOOL_ADMIN")
-  grade(
+  async grade(
     @Param("submissionId") submissionId: string,
     @Body(new ZodValidationPipe(gradeAssignmentSchema)) body: GradeAssignmentInput,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!user.schoolId) throw new ForbiddenException("No school context");
+    // Only someone who teaches the class may mark its homework.
+    const classId = await this.assignmentsService.classOfSubmission(user.schoolId, submissionId);
+    await this.classAccess.assertCanTeachClass(user, classId);
     return this.assignmentsService.grade(user.schoolId, submissionId, body);
   }
 
