@@ -23,6 +23,11 @@ describe("HealthService", () => {
   }
 
   beforeEach(() => {
+    // Heap use depends on whatever else the test run has allocated; pin it so
+    // these tests are about the database, not about how busy the runner is.
+    jest.spyOn(process, "memoryUsage").mockReturnValue({
+      rss: 100e6, heapTotal: 100e6, heapUsed: 40e6, external: 0, arrayBuffers: 0,
+    });
     env = {};
     prisma = {
       $queryRaw: jest.fn().mockResolvedValue([]),
@@ -194,3 +199,5 @@ describe("HealthService", () => {
     });
   });
 });
+
+afterAll(() => jest.restoreAllMocks());

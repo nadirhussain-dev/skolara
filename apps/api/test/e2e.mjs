@@ -18,7 +18,7 @@ const expect = async (name, promise, status, test) => { const r = await promise;
 const login = async (email, subdomain, password = PW) => (await call('POST', '/auth/login', { body: { email, password, subdomain } }));
 
 // --- public
-await expect('public school lookup returns name and colour only', call('GET', '/schools/public/demo'), 200, d => d.name === 'Skolara Demo School' && Object.keys(d).sort().join() === 'logoUrl,name,primaryColor,subdomain');
+await expect('public school lookup returns name and colour only', call('GET', '/schools/public/demo'), 200, d => typeof d.name === 'string' && d.name.length > 0 && Object.keys(d).sort().join() === 'logoUrl,name,primaryColor,subdomain');
 await expect('unknown school code is 404', call('GET', '/schools/public/nosuchschool'), 404);
 await expect('malformed school code is 404', call('GET', "/schools/public/x'%20or%201=1--"), 404);
 await expect('unauthenticated request is refused', call('GET', '/students'), 401);

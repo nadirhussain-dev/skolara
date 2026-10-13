@@ -1,5 +1,5 @@
 import { useTranslation } from "@skolara/i18n";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { todayKey } from "@/lib/dates";
 import { palette, useTheme } from "@/lib/school-theme";
@@ -54,6 +54,7 @@ export function DayRangePicker({
   const month = new Intl.DateTimeFormat(tag, { month: "short" });
   const today = todayKey();
   const startIndex = Math.max(0, days.findIndex((d) => d.key >= today) - 1);
+  const strip = useRef<ScrollView>(null);
 
   function tap(key: string) {
     if (!value.start || value.end || key < value.start) onChange({ start: key, end: null });
@@ -65,7 +66,10 @@ export function DayRangePicker({
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.row}
-      contentOffset={{ x: startIndex * 62, y: 0 }}
+      ref={strip}
+      // Open on today rather than a week ago. contentOffset isn't honoured
+      // everywhere, so scroll once the strip has a size.
+      onLayout={() => strip.current?.scrollTo({ x: startIndex * 62, animated: false })}
     >
       {days.map(({ key, date }) => {
         const inRange = value.start !== null && key >= value.start && key <= (value.end ?? value.start);
